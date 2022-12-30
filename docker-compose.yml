@@ -1,0 +1,25 @@
+name: Adrastos
+version: '3.9'
+
+services:
+  crdb:
+    image: cockroachdb/cockroach:latest
+    ports:
+      - 26257:26257
+      - 8080:8080
+    command: start-single-node --insecure
+    volumes:
+      - crdb:/cockroach/cockroach-data
+
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    ulimits:
+      memlock: -1
+    ports:
+      - 6379:6379
+    volumes:
+      - dragonfly:/data
+
+volumes:
+  crdb:
+  dragonfly:
