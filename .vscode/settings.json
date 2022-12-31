@@ -1,9 +1,13 @@
 {
 	"cSpell.words": [
 		"actix",
+		"Adrastos",
 		"deadpool",
 		"dotenvy",
+		"GETDEL",
 		"libinjection",
+		"pkce",
+		"SETEX",
 		"sqli"
 	]
 }

@@ -2,4 +2,5 @@
 .env
 
 # directories
+/certs
 /target

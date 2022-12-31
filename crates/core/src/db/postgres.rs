@@ -3,10 +3,14 @@ use deadpool_postgres::{
     Manager, ManagerConfig, Pool, RecyclingMethod,
 };
 
-use crate::config;
+use crate::config::{self, ConfigKey};
 
 pub fn create_pool(config: config::Config) -> Pool {
-    let pg_config = config.cockroach_url.unwrap().parse::<Config>().unwrap();
+    let pg_config = config
+        .get(ConfigKey::CockroachUrl)
+        .unwrap()
+        .parse::<Config>()
+        .unwrap();
     let mgr = Manager::from_config(
         pg_config,
         NoTls,
@@ -15,8 +19,5 @@ pub fn create_pool(config: config::Config) -> Pool {
         },
     );
 
-    deadpool_postgres::Pool::builder(mgr)
-        .max_size(16)
-        .build()
-        .unwrap()
+    Pool::builder(mgr).max_size(16).build().unwrap()
 }
