@@ -2,14 +2,14 @@
 
 use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, web, App, HttpServer};
-use auth::oauth2::OAuth2;
-use config::ConfigKey;
-use db::{postgres, redis};
 use dotenvy::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use std::process::exit;
 
+use crate::auth::oauth2::OAuth2;
 use crate::config::Config;
+use crate::config::ConfigKey;
+use crate::db::{postgres, redis};
 
 mod auth;
 mod config;
@@ -26,17 +26,22 @@ async fn main() -> std::io::Result<()> {
     match config {
         Ok(config) => {
             let cfg = config.clone();
+            let db_pool = postgres::create_pool(config.clone());
+
+            entities::migrations::migrate(db_pool.clone()).await;
 
             let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
             builder
                 .set_private_key_file("../../certs/key.pem", SslFiletype::PEM)
                 .unwrap();
-            builder.set_certificate_chain_file("../../certs/cert.pem").unwrap();
+            builder
+                .set_certificate_chain_file("../../certs/cert.pem")
+                .unwrap();
 
             let server = HttpServer::new(move || {
                 App::new()
                     .app_data(web::Data::new(cfg.clone()))
-                    .app_data(web::Data::new(postgres::create_pool(cfg.clone())))
+                    .app_data(web::Data::new(db_pool.clone()))
                     .app_data(web::Data::new(redis::create_pool(cfg.clone())))
                     .app_data(web::Data::new(OAuth2::new(cfg.clone())))
                     .wrap(SessionMiddleware::new(
@@ -48,10 +53,15 @@ async fn main() -> std::io::Result<()> {
                         ),
                         Key::from(cfg.get(ConfigKey::SecretKey).as_ref().unwrap().as_bytes()),
                     ))
+                    .service(handlers::auth::signup)
+                    .service(handlers::auth::login)
                     .service(handlers::auth::oauth2::login)
                     .service(handlers::auth::oauth2::callback)
             })
-            .bind_openssl(config.get(ConfigKey::Url).as_ref().unwrap().to_string(), builder)?
+            .bind_openssl(
+                config.get(ConfigKey::Url).as_ref().unwrap().to_string(),
+                builder,
+            )?
             .run();
 
             let (server, _) =

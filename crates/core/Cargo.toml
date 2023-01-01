@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 actix-session = { version = "0.7.2", features = ["redis-actor-session"] }
 actix-web = { version = "4.2.1", features = ["openssl"] }
+argon2 = "0.4.1"
 chrono = "0.4.23"
 deadpool-postgres = "0.10.3"
 deadpool-redis = "0.11.1"
@@ -15,6 +16,8 @@ nanoid = "0.4.0"
 oauth2 = "4.3.0"
 openssl = "0.10.45"
 regex = "1.7.0"
-sea-query = { version = "0.28.1", features = ["attr"] }
+sea-query = { version = "0.28.1", features = ["attr", "with-chrono"] }
 serde = { version = "1.0.152", features = ["derive"] }
 tokio = { version = "1.23.0", features = ["macros"] }
+tokio-postgres = { version = "0.7.7", features = ["with-chrono-0_4"] }
+validator = { version = "0.16.0", features = ["derive"] }
