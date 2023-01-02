@@ -1,10 +1,14 @@
-use super::User;
+use super::{Connection, RefreshTokenTree, User};
 
 pub async fn migrate(db_pool: deadpool_postgres::Pool) {
-    let mutations = vec![User::migrate()];
+    let migrations = vec![
+        User::migrate(),
+        Connection::migrate(),
+        RefreshTokenTree::migrate(),
+    ];
 
-    for mutation in mutations {
+    for migration in migrations {
         let conn = db_pool.get().await.unwrap();
-        conn.execute(mutation.as_str(), &[]).await.unwrap();
+        conn.execute(migration.as_str(), &[]).await.unwrap();
     }
 }

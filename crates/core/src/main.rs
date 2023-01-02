@@ -1,9 +1,11 @@
 #![feature(let_chains)]
 
 use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
-use actix_web::{cookie::Key, web, App, HttpServer};
+use actix_web::HttpResponse;
+use actix_web::{cookie::Key, error, web, App, HttpServer};
 use dotenvy::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
+use serde_json::json;
 use std::process::exit;
 
 use crate::auth::oauth2::OAuth2;
@@ -44,6 +46,19 @@ async fn main() -> std::io::Result<()> {
                     .app_data(web::Data::new(db_pool.clone()))
                     .app_data(web::Data::new(redis::create_pool(cfg.clone())))
                     .app_data(web::Data::new(OAuth2::new(cfg.clone())))
+                    .app_data(web::JsonConfig::default().error_handler(|err, _| {
+                        let err_string = err.to_string();
+                        error::InternalError::from_response(
+                            err,
+                            HttpResponse::BadRequest()
+                                .json(json!({
+                                    "message": "Validation failed",
+                                    "error": err_string
+                                }))
+                                .into(),
+                        )
+                        .into()
+                    }))
                     .wrap(SessionMiddleware::new(
                         RedisActorSessionStore::new(
                             cfg.get(ConfigKey::DragonflyUrl)
@@ -55,17 +70,25 @@ async fn main() -> std::io::Result<()> {
                     ))
                     .service(handlers::auth::signup)
                     .service(handlers::auth::login)
+                    .service(handlers::auth::logout)
+                    .service(handlers::auth::token::refresh)
                     .service(handlers::auth::oauth2::login)
                     .service(handlers::auth::oauth2::callback)
             })
             .bind_openssl(
-                config.get(ConfigKey::Url).as_ref().unwrap().to_string(),
+                config
+                    .get(ConfigKey::ServerUrl)
+                    .as_ref()
+                    .unwrap()
+                    .to_string(),
                 builder,
             )?
             .run();
 
-            let (server, _) =
-                tokio::join!(server, server_started(config.get(ConfigKey::Url).unwrap()));
+            let (server, _) = tokio::join!(
+                server,
+                server_started(config.get(ConfigKey::ServerUrl).unwrap())
+            );
 
             server
         }

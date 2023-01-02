@@ -2,12 +2,15 @@
 	"cSpell.words": [
 		"actix",
 		"Adrastos",
+		"chrono",
 		"deadpool",
 		"dotenvy",
 		"GETDEL",
 		"Iden",
+		"jsonwebtoken",
 		"libinjection",
 		"pkce",
+		"reqwest",
 		"SETEX",
 		"sqli"
 	]

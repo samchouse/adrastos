@@ -2,8 +2,8 @@ use std::{collections::HashMap, env};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum ConfigKey {
+    ServerUrl,
     SecretKey,
-    Url,
     CockroachUrl,
     DragonflyUrl,
     GoogleClientId,
@@ -18,20 +18,11 @@ pub enum ConfigKey {
     DiscordClientSecret,
 }
 
-struct Entry<'a> {
-    keys: Vec<ConfigKey>,
-    required: bool,
-    default: Option<&'a str>,
-}
-
-#[derive(Clone)]
-pub struct Config(HashMap<ConfigKey, Option<String>>);
-
 impl ToString for ConfigKey {
     fn to_string(&self) -> String {
         match self {
+            ConfigKey::ServerUrl => "SERVER_URL".to_string(),
             ConfigKey::SecretKey => "SECRET_KEY".to_string(),
-            ConfigKey::Url => "URL".to_string(),
             ConfigKey::CockroachUrl => "COCKROACH_URL".to_string(),
             ConfigKey::DragonflyUrl => "DRAGONFLY_URL".to_string(),
             ConfigKey::GoogleClientId => "GOOGLE_CLIENT_ID".to_string(),
@@ -48,18 +39,27 @@ impl ToString for ConfigKey {
     }
 }
 
+struct Entry<'a> {
+    keys: Vec<ConfigKey>,
+    required: bool,
+    default: Option<&'a str>,
+}
+
+#[derive(Clone)]
+pub struct Config(HashMap<ConfigKey, Option<String>>);
+
 impl Config {
     fn options() -> Vec<Entry<'static>> {
         vec![
             Entry {
+                keys: vec![ConfigKey::ServerUrl],
+                required: false,
+                default: Some("127.0.0.1:8000"),
+            },
+            Entry {
                 keys: vec![ConfigKey::SecretKey],
                 required: true,
                 default: Some("l19OOJaOvpal21ofSlsxYyNVQN2EeTY6gEuq6p_hobH_QmJb3dPELmoGKFstBpCI"),
-            },
-            Entry {
-                keys: vec![ConfigKey::Url],
-                required: false,
-                default: Some("127.0.0.1:8000"),
             },
             Entry {
                 keys: vec![ConfigKey::CockroachUrl, ConfigKey::DragonflyUrl],
