@@ -6,6 +6,7 @@ use chrono::Utc;
 use sea_query::{Expr, Query};
 use serde::Deserialize;
 use serde_json::json;
+use utoipa::ToSchema;
 
 use crate::{
     auth::{self, TokenType},
@@ -13,28 +14,43 @@ use crate::{
     entities::{Queries, RefreshTokenTree, User, UserIden},
     handlers::Error,
     id::Id,
+    openapi,
 };
 
 pub mod oauth2;
 pub mod token;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct SignupBody {
     #[serde(rename = "firstName")]
+    #[schema(max_length = 50)]
     first_name: String,
     #[serde(rename = "lastName")]
+    #[schema(max_length = 50)]
     last_name: String,
-    username: String,
+    #[schema(schema_with = openapi::email)]
     email: String,
+    #[schema(min_length = 5, max_length = 64)]
+    username: String,
+    #[schema(min_length = 8, max_length = 64)]
     password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct LoginBody {
     email: String,
     password: String,
 }
 
+#[utoipa::path(
+    post,
+    path = "/auth/signup",
+    request_body = SignupBody,
+    responses(
+        (status = 200, description = "User created successfully", body = User),
+        (status = 400, description = "Validation failed"),
+    )
+)]
 #[post("/auth/signup")]
 pub async fn signup(
     body: web::Json<SignupBody>,
@@ -82,6 +98,15 @@ pub async fn signup(
     }))
 }
 
+#[utoipa::path(
+    post,
+    path = "/auth/login",
+    request_body = LoginBody,
+    responses(
+        (status = 200, description = "User created successfully", body = User),
+        (status = 400, description = "Validation failed"),
+    )
+)]
 #[post("/auth/login")]
 pub async fn login(
     body: web::Json<LoginBody>,

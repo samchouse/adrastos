@@ -4,9 +4,12 @@ use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
 use actix_web::HttpResponse;
 use actix_web::{cookie::Key, error, web, App, HttpServer};
 use dotenvy::dotenv;
+use openapi::ApiDoc;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use serde_json::json;
+use utoipa::OpenApi;
 use std::process::exit;
+use utoipa_swagger_ui::SwaggerUi;
 
 use crate::auth::oauth2::OAuth2;
 use crate::config::Config;
@@ -19,6 +22,7 @@ mod db;
 mod entities;
 mod handlers;
 mod id;
+mod openapi;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -74,6 +78,10 @@ async fn main() -> std::io::Result<()> {
                     .service(handlers::auth::token::refresh)
                     .service(handlers::auth::oauth2::login)
                     .service(handlers::auth::oauth2::callback)
+                    .service(
+                        SwaggerUi::new("/swagger-ui/{_:.*}")
+                            .url("/api-doc/openapi.json", ApiDoc::openapi()),
+                    )
             })
             .bind_openssl(
                 config

@@ -9,9 +9,11 @@
 		"Iden",
 		"jsonwebtoken",
 		"libinjection",
+		"openapi",
 		"pkce",
 		"reqwest",
 		"SETEX",
-		"sqli"
+		"sqli",
+		"utoipa"
 	]
 }

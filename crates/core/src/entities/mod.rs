@@ -7,6 +7,7 @@ use sea_query::{
     PostgresQueryBuilder, Query, SelectStatement, Table,
 };
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use validator::{Validate, ValidationErrors};
 
 use crate::auth;
@@ -272,7 +273,7 @@ impl From<&Row> for Connection {
 }
 
 #[enum_def]
-#[derive(Debug, Validate, Serialize, Deserialize, Clone)]
+#[derive(Debug, Validate, Serialize, Deserialize, Clone, ToSchema)]
 pub struct User {
     pub id: String,
     #[serde(rename = "firstName")]
@@ -290,7 +291,9 @@ pub struct User {
     pub password: String,
     pub verified: bool,
     pub banned: bool,
+    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
+    #[serde(rename = "updatedAt")]
     pub updated_at: Option<DateTime<Utc>>,
 }
 

@@ -1,6 +1,9 @@
 [package]
 name = "adrastos"
 version = "0.1.0"
+description = "A killer Backend-as-a-Service (BaaS) written in Rust"
+authors = ["Samuel Corsi-House <chouse.samuel@gmail.com>"]
+license = "AGPL-3.0-or-later"
 edition = "2021"
 
 [dependencies]
@@ -19,9 +22,20 @@ oauth2 = "4.3.0"
 openssl = "0.10.45"
 regex = "1.7.0"
 reqwest = { version = "0.11.13", features = ["json"] }
-sea-query = { version = "0.28.1", features = ["attr", "with-chrono", "postgres-array"] }
+sea-query = { version = "0.28.1", features = [
+	"attr",
+	"with-chrono",
+	"postgres-array"
+] }
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.91"
 tokio = { version = "1.23.0", features = ["macros"] }
 tokio-postgres = { version = "0.7.7", features = ["with-chrono-0_4"] }
+utoipa = { version = "2.4.2", features = [
+	"actix_extras",
+	"chrono"
+], git = "https://github.com/juhaku/utoipa", rev = "refs/pull/438/head" }
+utoipa-swagger-ui = { version = "3.0.1", features = [
+	"actix-web"
+], git = "https://github.com/juhaku/utoipa", rev = "refs/pull/438/head" }
 validator = { version = "0.16.0", features = ["derive"] }
