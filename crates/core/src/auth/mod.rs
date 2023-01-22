@@ -37,7 +37,7 @@ pub struct Claims {
     pub jti: String,
     iat: usize,
     exp: usize,
-    sub: String,
+    pub sub: String,
     #[serde(rename = "type")]
     token_type: String,
 }
@@ -102,7 +102,7 @@ impl TokenType {
         })
     }
 
-    fn verify(
+    pub fn verify(
         config: web::Data<config::Config>,
         token: String,
     ) -> Result<TokenInfo, Option<jsonwebtoken::errors::Error>> {

@@ -7,8 +7,8 @@ use dotenvy::dotenv;
 use openapi::ApiDoc;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use serde_json::json;
-use utoipa::OpenApi;
 use std::process::exit;
+use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::auth::oauth2::OAuth2;
@@ -23,6 +23,7 @@ mod entities;
 mod handlers;
 mod id;
 mod openapi;
+mod util;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

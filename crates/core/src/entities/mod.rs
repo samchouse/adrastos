@@ -1,22 +1,34 @@
 // TODO(@Xenfo): use `*Iden::Table` instead of Alias::new() once https://github.com/SeaQL/sea-query/issues/533 is fixed
 
-use chrono::{DateTime, Utc};
+use std::collections::HashMap;
+
+use chrono::{DateTime, Duration, Utc};
 use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{
-    enum_def, Alias, ColumnDef, ColumnType, ForeignKey, ForeignKeyAction, Keyword,
-    PostgresQueryBuilder, Query, SelectStatement, Table,
+    enum_def, Alias, ColumnDef, ColumnType, Expr, ForeignKey, ForeignKeyAction, Keyword,
+    PostgresQueryBuilder, Query, SimpleExpr, Table,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use utoipa::ToSchema;
-use validator::{Validate, ValidationErrors};
+use validator::{Validate, ValidationError, ValidationErrors};
 
-use crate::auth;
+use crate::{auth, util};
 
 pub mod migrations;
 
 pub trait Queries {
-    fn query_select(query_builder: &mut SelectStatement) -> String;
+    type Iden;
+
+    fn table() -> Alias;
+
+    fn query_select(expressions: Vec<SimpleExpr>) -> String;
     fn query_insert(&self) -> Result<String, Option<ValidationErrors>>;
+    fn query_update(
+        &self,
+        updated: HashMap<String, Value>,
+    ) -> Result<String, Option<ValidationErrors>>;
+    fn query_delete(expression: SimpleExpr) -> String;
 }
 
 #[enum_def]
@@ -34,14 +46,14 @@ pub struct RefreshTokenTree {
 impl ToString for RefreshTokenTreeIden {
     fn to_string(&self) -> String {
         match self {
-            RefreshTokenTreeIden::Table => "refresh_token_trees".to_string(),
-            RefreshTokenTreeIden::Id => "id".to_string(),
-            RefreshTokenTreeIden::UserId => "user_id".to_string(),
-            RefreshTokenTreeIden::InactiveAt => "inactive_at".to_string(),
-            RefreshTokenTreeIden::ExpiresAt => "expires_at".to_string(),
-            RefreshTokenTreeIden::Tokens => "tokens".to_string(),
-            RefreshTokenTreeIden::CreatedAt => "created_at".to_string(),
-            RefreshTokenTreeIden::UpdatedAt => "updated_at".to_string(),
+            Self::Table => "refresh_token_trees".to_string(),
+            Self::Id => "id".to_string(),
+            Self::UserId => "user_id".to_string(),
+            Self::InactiveAt => "inactive_at".to_string(),
+            Self::ExpiresAt => "expires_at".to_string(),
+            Self::Tokens => "tokens".to_string(),
+            Self::CreatedAt => "created_at".to_string(),
+            Self::UpdatedAt => "updated_at".to_string(),
         }
     }
 }
@@ -49,51 +61,54 @@ impl ToString for RefreshTokenTreeIden {
 impl RefreshTokenTree {
     fn migrate() -> String {
         Table::create()
-            .table(Alias::new(RefreshTokenTreeIden::Table.to_string().as_str()))
+            .table(Self::table())
             .if_not_exists()
             .col(
-                ColumnDef::new(RefreshTokenTreeIden::Id)
+                ColumnDef::new(<RefreshTokenTree as Queries>::Iden::Id)
                     .string()
                     .not_null()
                     .primary_key(),
             )
             .col(
-                ColumnDef::new(RefreshTokenTreeIden::UserId)
+                ColumnDef::new(<RefreshTokenTree as Queries>::Iden::UserId)
                     .string()
                     .not_null(),
             )
             .col(
-                ColumnDef::new(RefreshTokenTreeIden::InactiveAt)
+                ColumnDef::new(<RefreshTokenTree as Queries>::Iden::InactiveAt)
                     .timestamp_with_time_zone()
                     .not_null(),
             )
             .col(
-                ColumnDef::new(RefreshTokenTreeIden::ExpiresAt)
+                ColumnDef::new(<RefreshTokenTree as Queries>::Iden::ExpiresAt)
                     .timestamp_with_time_zone()
                     .not_null(),
             )
             .col(
-                ColumnDef::new(RefreshTokenTreeIden::Tokens)
+                ColumnDef::new(<RefreshTokenTree as Queries>::Iden::Tokens)
                     .array(ColumnType::String(None))
                     .not_null(),
             )
             .col(
-                ColumnDef::new(RefreshTokenTreeIden::CreatedAt)
+                ColumnDef::new(<RefreshTokenTree as Queries>::Iden::CreatedAt)
                     .timestamp_with_time_zone()
                     .not_null()
                     .default(Keyword::CurrentTimestamp),
             )
-            .col(ColumnDef::new(RefreshTokenTreeIden::UpdatedAt).timestamp_with_time_zone())
+            .col(
+                ColumnDef::new(<RefreshTokenTree as Queries>::Iden::UpdatedAt)
+                    .timestamp_with_time_zone(),
+            )
             .foreign_key(
                 ForeignKey::create()
                     .name("FK_refresh_token_tree_user_id")
                     .from(
-                        Alias::new(RefreshTokenTreeIden::Table.to_string().as_str()),
-                        RefreshTokenTreeIden::UserId,
+                        RefreshTokenTree::table(),
+                        <RefreshTokenTree as Queries>::Iden::UserId,
                     )
                     .to(
-                        Alias::new(UserIden::Table.to_string().as_str()),
-                        UserIden::Id,
+                        User::table(),
+                        <User as Queries>::Iden::Id,
                     )
                     .on_update(ForeignKeyAction::Cascade)
                     .on_delete(ForeignKeyAction::Cascade),
@@ -103,33 +118,46 @@ impl RefreshTokenTree {
 }
 
 impl Queries for RefreshTokenTree {
-    fn query_select(query_builder: &mut SelectStatement) -> String {
-        query_builder
-            .from(Alias::new(RefreshTokenTreeIden::Table.to_string().as_str()))
-            .columns(vec![
-                RefreshTokenTreeIden::Id,
-                RefreshTokenTreeIden::UserId,
-                RefreshTokenTreeIden::InactiveAt,
-                RefreshTokenTreeIden::ExpiresAt,
-                RefreshTokenTreeIden::Tokens,
-                RefreshTokenTreeIden::CreatedAt,
-                RefreshTokenTreeIden::UpdatedAt,
+    type Iden = RefreshTokenTreeIden;
+
+    fn table() -> Alias {
+        Alias::new(Self::Iden::Table.to_string().as_str())
+    }
+
+    fn query_select(expressions: Vec<SimpleExpr>) -> String {
+        let mut query = Query::select();
+
+        for expression in expressions {
+            query.and_where(expression);
+        }
+
+        query
+            .from(Self::table())
+            .columns([
+                Self::Iden::Id,
+                Self::Iden::UserId,
+                Self::Iden::InactiveAt,
+                Self::Iden::ExpiresAt,
+                Self::Iden::Tokens,
+                Self::Iden::CreatedAt,
+                Self::Iden::UpdatedAt,
             ])
+            .limit(1)
             .to_string(PostgresQueryBuilder)
     }
 
     fn query_insert(&self) -> Result<String, Option<ValidationErrors>> {
         Ok(Query::insert()
-            .into_table(Alias::new(RefreshTokenTreeIden::Table.to_string().as_str()))
-            .columns(vec![
-                RefreshTokenTreeIden::Id,
-                RefreshTokenTreeIden::UserId,
-                RefreshTokenTreeIden::InactiveAt,
-                RefreshTokenTreeIden::ExpiresAt,
-                RefreshTokenTreeIden::Tokens,
-                RefreshTokenTreeIden::CreatedAt,
+            .into_table(Self::table())
+            .columns([
+                Self::Iden::Id,
+                Self::Iden::UserId,
+                Self::Iden::InactiveAt,
+                Self::Iden::ExpiresAt,
+                Self::Iden::Tokens,
+                Self::Iden::CreatedAt,
             ])
-            .values_panic(vec![
+            .values_panic([
                 self.id.clone().into(),
                 self.user_id.clone().into(),
                 self.inactive_at.clone().into(),
@@ -137,22 +165,92 @@ impl Queries for RefreshTokenTree {
                 self.tokens.clone().into(),
                 self.created_at.clone().into(),
             ])
+            .to_string(PostgresQueryBuilder))
+    }
+
+    fn query_update(
+        &self,
+        updated: HashMap<String, Value>,
+    ) -> Result<String, Option<ValidationErrors>> {
+        let mut errors = ValidationErrors::new();
+        let Some(tokens) = updated.get(Self::Iden::Tokens.to_string().as_str()) else {
+            errors.add(util::string_to_static_str(Self::Iden::Tokens.to_string()), ValidationError::new("required"));
+            return Err(Some(errors));
+        };
+        let Some(tokens) = tokens.as_array() else {
+            errors.add(util::string_to_static_str(Self::Iden::Tokens.to_string()), ValidationError::new("invalid_type"));
+            return Err(Some(errors));
+        };
+
+        let tokens = tokens
+            .iter()
+            .map(|token| {
+                if let Some(token) = token.as_str() {
+                    Some(token.to_string())
+                } else {
+                    None
+                }
+            })
+            .filter(|token| token.is_some())
+            .map(|token| token.unwrap())
+            .collect::<Vec<String>>();
+
+        Ok(Query::update()
+            .table(Self::table())
+            .values([
+                (
+                    Self::Iden::InactiveAt,
+                    (Utc::now() + Duration::days(15)).into(),
+                ),
+                (Self::Iden::Tokens, tokens.into()),
+                (Self::Iden::UpdatedAt, Utc::now().into()),
+            ])
+            .and_where(Expr::col(Self::Iden::Id).eq(self.id.clone()))
+            .to_string(PostgresQueryBuilder))
+    }
+
+    fn query_delete(expression: SimpleExpr) -> String {
+        Query::delete()
+            .from_table(Self::table())
+            .and_where(expression)
             .to_string(PostgresQueryBuilder)
-            .replace("'{'", "'{")
-            .replace("'}'", "}'"))
     }
 }
 
 impl From<&Row> for RefreshTokenTree {
     fn from(row: &Row) -> Self {
         Self {
-            id: row.get(RefreshTokenTreeIden::Id.to_string().as_str()),
-            user_id: row.get(RefreshTokenTreeIden::UserId.to_string().as_str()),
-            inactive_at: row.get(RefreshTokenTreeIden::InactiveAt.to_string().as_str()),
-            expires_at: row.get(RefreshTokenTreeIden::ExpiresAt.to_string().as_str()),
-            tokens: row.get(RefreshTokenTreeIden::Tokens.to_string().as_str()),
-            created_at: row.get(RefreshTokenTreeIden::CreatedAt.to_string().as_str()),
-            updated_at: row.get(RefreshTokenTreeIden::UpdatedAt.to_string().as_str()),
+            id: row.get(<RefreshTokenTree as Queries>::Iden::Id.to_string().as_str()),
+            user_id: row.get(
+                <RefreshTokenTree as Queries>::Iden::UserId
+                    .to_string()
+                    .as_str(),
+            ),
+            inactive_at: row.get(
+                <RefreshTokenTree as Queries>::Iden::InactiveAt
+                    .to_string()
+                    .as_str(),
+            ),
+            expires_at: row.get(
+                <RefreshTokenTree as Queries>::Iden::ExpiresAt
+                    .to_string()
+                    .as_str(),
+            ),
+            tokens: row.get(
+                <RefreshTokenTree as Queries>::Iden::Tokens
+                    .to_string()
+                    .as_str(),
+            ),
+            created_at: row.get(
+                <RefreshTokenTree as Queries>::Iden::CreatedAt
+                    .to_string()
+                    .as_str(),
+            ),
+            updated_at: row.get(
+                <RefreshTokenTree as Queries>::Iden::UpdatedAt
+                    .to_string()
+                    .as_str(),
+            ),
         }
     }
 }
@@ -171,13 +269,13 @@ pub struct Connection {
 impl ToString for ConnectionIden {
     fn to_string(&self) -> String {
         match self {
-            ConnectionIden::Table => "connections".to_string(),
-            ConnectionIden::Id => "id".to_string(),
-            ConnectionIden::Provider => "provider".to_string(),
-            ConnectionIden::UserId => "user_id".to_string(),
-            ConnectionIden::ProviderId => "provider_id".to_string(),
-            ConnectionIden::CreatedAt => "created_at".to_string(),
-            ConnectionIden::UpdatedAt => "updated_at".to_string(),
+            Self::Table => "connections".to_string(),
+            Self::Id => "id".to_string(),
+            Self::Provider => "provider".to_string(),
+            Self::UserId => "user_id".to_string(),
+            Self::ProviderId => "provider_id".to_string(),
+            Self::CreatedAt => "created_at".to_string(),
+            Self::UpdatedAt => "updated_at".to_string(),
         }
     }
 }
@@ -185,35 +283,43 @@ impl ToString for ConnectionIden {
 impl Connection {
     fn migrate() -> String {
         Table::create()
-            .table(Alias::new(ConnectionIden::Table.to_string().as_str()))
+            .table(Self::table())
             .if_not_exists()
             .col(
-                ColumnDef::new(ConnectionIden::Id)
+                ColumnDef::new(<Connection as Queries>::Iden::Id)
                     .string()
                     .not_null()
                     .primary_key(),
             )
-            .col(ColumnDef::new(ConnectionIden::UserId).string().not_null())
-            .col(ColumnDef::new(ConnectionIden::Provider).text().not_null())
-            .col(ColumnDef::new(ConnectionIden::ProviderId).text().not_null())
             .col(
-                ColumnDef::new(ConnectionIden::CreatedAt)
+                ColumnDef::new(<Connection as Queries>::Iden::UserId)
+                    .string()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(<Connection as Queries>::Iden::Provider)
+                    .text()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(<Connection as Queries>::Iden::ProviderId)
+                    .text()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(<Connection as Queries>::Iden::CreatedAt)
                     .timestamp_with_time_zone()
                     .not_null()
                     .default(Keyword::CurrentTimestamp),
             )
-            .col(ColumnDef::new(ConnectionIden::UpdatedAt).timestamp_with_time_zone())
+            .col(
+                ColumnDef::new(<Connection as Queries>::Iden::UpdatedAt).timestamp_with_time_zone(),
+            )
             .foreign_key(
                 ForeignKey::create()
                     .name("FK_connection_user_id")
-                    .from(
-                        Alias::new(ConnectionIden::Table.to_string().as_str()),
-                        ConnectionIden::UserId,
-                    )
-                    .to(
-                        Alias::new(UserIden::Table.to_string().as_str()),
-                        UserIden::Id,
-                    )
+                    .from(Connection::table(), <Connection as Queries>::Iden::UserId)
+                    .to(User::table(), <User as Queries>::Iden::Id)
                     .on_update(ForeignKeyAction::Cascade)
                     .on_delete(ForeignKeyAction::Cascade),
             )
@@ -222,30 +328,43 @@ impl Connection {
 }
 
 impl Queries for Connection {
-    fn query_select(query_builder: &mut SelectStatement) -> String {
-        query_builder
-            .from(Alias::new(ConnectionIden::Table.to_string().as_str()))
+    type Iden = ConnectionIden;
+
+    fn table() -> Alias {
+        Alias::new(Self::Iden::Table.to_string().as_str())
+    }
+
+    fn query_select(expressions: Vec<SimpleExpr>) -> String {
+        let mut query = Query::select();
+
+        for expression in expressions {
+            query.and_where(expression);
+        }
+
+        query
+            .from(Self::table())
             .columns(vec![
-                ConnectionIden::Id,
-                ConnectionIden::Provider,
-                ConnectionIden::UserId,
-                ConnectionIden::ProviderId,
-                ConnectionIden::CreatedAt,
-                ConnectionIden::UpdatedAt,
+                Self::Iden::Id,
+                Self::Iden::Provider,
+                Self::Iden::UserId,
+                Self::Iden::ProviderId,
+                Self::Iden::CreatedAt,
+                Self::Iden::UpdatedAt,
             ])
+            .limit(1)
             .to_string(PostgresQueryBuilder)
     }
 
     fn query_insert(&self) -> Result<String, Option<ValidationErrors>> {
         Ok(Query::insert()
-            .into_table(Alias::new(UserIden::Table.to_string().as_str()))
+            .into_table(Self::table())
             .columns(vec![
-                ConnectionIden::Id,
-                ConnectionIden::Provider,
-                ConnectionIden::UserId,
-                ConnectionIden::ProviderId,
-                ConnectionIden::CreatedAt,
-                ConnectionIden::UpdatedAt,
+                Self::Iden::Id,
+                Self::Iden::Provider,
+                Self::Iden::UserId,
+                Self::Iden::ProviderId,
+                Self::Iden::CreatedAt,
+                Self::Iden::UpdatedAt,
             ])
             .values_panic(vec![
                 self.id.clone().into(),
@@ -257,29 +376,51 @@ impl Queries for Connection {
             ])
             .to_string(PostgresQueryBuilder))
     }
+
+    fn query_update(&self, _: HashMap<String, Value>) -> Result<String, Option<ValidationErrors>> {
+        Err(None)
+    }
+
+    fn query_delete(expression: SimpleExpr) -> String {
+        Query::delete()
+            .from_table(Self::table())
+            .and_where(expression)
+            .to_string(PostgresQueryBuilder)
+    }
 }
 
 impl From<&Row> for Connection {
     fn from(row: &Row) -> Self {
         Self {
-            id: row.get(ConnectionIden::Id.to_string().as_str()),
-            provider: row.get(ConnectionIden::Provider.to_string().as_str()),
-            user_id: row.get(ConnectionIden::UserId.to_string().as_str()),
-            provider_id: row.get(ConnectionIden::ProviderId.to_string().as_str()),
-            created_at: row.get(ConnectionIden::CreatedAt.to_string().as_str()),
-            updated_at: row.get(ConnectionIden::UpdatedAt.to_string().as_str()),
+            id: row.get(<Connection as Queries>::Iden::Id.to_string().as_str()),
+            provider: row.get(<Connection as Queries>::Iden::Provider.to_string().as_str()),
+            user_id: row.get(<Connection as Queries>::Iden::UserId.to_string().as_str()),
+            provider_id: row.get(
+                <Connection as Queries>::Iden::ProviderId
+                    .to_string()
+                    .as_str(),
+            ),
+            created_at: row.get(
+                <Connection as Queries>::Iden::CreatedAt
+                    .to_string()
+                    .as_str(),
+            ),
+            updated_at: row.get(
+                <Connection as Queries>::Iden::UpdatedAt
+                    .to_string()
+                    .as_str(),
+            ),
         }
     }
 }
 
 #[enum_def]
 #[derive(Debug, Validate, Serialize, Deserialize, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: String,
-    #[serde(rename = "firstName")]
     #[validate(length(max = 50))]
     pub first_name: String,
-    #[serde(rename = "lastName")]
     #[validate(length(max = 50))]
     pub last_name: String,
     #[validate(email)]
@@ -291,26 +432,24 @@ pub struct User {
     pub password: String,
     pub verified: bool,
     pub banned: bool,
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
-    #[serde(rename = "updatedAt")]
     pub updated_at: Option<DateTime<Utc>>,
 }
 
 impl ToString for UserIden {
     fn to_string(&self) -> String {
         match self {
-            UserIden::Table => "users".to_string(),
-            UserIden::Id => "id".to_string(),
-            UserIden::FirstName => "first_name".to_string(),
-            UserIden::LastName => "last_name".to_string(),
-            UserIden::Email => "email".to_string(),
-            UserIden::Username => "username".to_string(),
-            UserIden::Password => "password".to_string(),
-            UserIden::Verified => "verified".to_string(),
-            UserIden::Banned => "banned".to_string(),
-            UserIden::CreatedAt => "created_at".to_string(),
-            UserIden::UpdatedAt => "updated_at".to_string(),
+            Self::Table => "users".to_string(),
+            Self::Id => "id".to_string(),
+            Self::FirstName => "first_name".to_string(),
+            Self::LastName => "last_name".to_string(),
+            Self::Email => "email".to_string(),
+            Self::Username => "username".to_string(),
+            Self::Password => "password".to_string(),
+            Self::Verified => "verified".to_string(),
+            Self::Banned => "banned".to_string(),
+            Self::CreatedAt => "created_at".to_string(),
+            Self::UpdatedAt => "updated_at".to_string(),
         }
     }
 }
@@ -318,68 +457,93 @@ impl ToString for UserIden {
 impl User {
     fn migrate() -> String {
         Table::create()
-            .table(Alias::new(UserIden::Table.to_string().as_str()))
+            .table(Self::table())
             .if_not_exists()
             .col(
-                ColumnDef::new(UserIden::Id)
+                ColumnDef::new(<User as Queries>::Iden::Id)
                     .string()
                     .not_null()
                     .primary_key(),
             )
-            .col(ColumnDef::new(UserIden::FirstName).string().not_null())
-            .col(ColumnDef::new(UserIden::LastName).string().not_null())
             .col(
-                ColumnDef::new(UserIden::Email)
+                ColumnDef::new(<User as Queries>::Iden::FirstName)
+                    .string()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(<User as Queries>::Iden::LastName)
+                    .string()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(<User as Queries>::Iden::Email)
                     .string()
                     .not_null()
                     .unique_key(),
             )
             .col(
-                ColumnDef::new(UserIden::Username)
+                ColumnDef::new(<User as Queries>::Iden::Username)
                     .string()
                     .not_null()
                     .unique_key(),
             )
-            .col(ColumnDef::new(UserIden::Password).string().not_null())
             .col(
-                ColumnDef::new(UserIden::Verified)
+                ColumnDef::new(<User as Queries>::Iden::Password)
+                    .string()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(<User as Queries>::Iden::Verified)
                     .boolean()
                     .not_null()
                     .default(false),
             )
             .col(
-                ColumnDef::new(UserIden::Banned)
+                ColumnDef::new(<User as Queries>::Iden::Banned)
                     .boolean()
                     .not_null()
                     .default(false),
             )
             .col(
-                ColumnDef::new(UserIden::CreatedAt)
+                ColumnDef::new(<User as Queries>::Iden::CreatedAt)
                     .timestamp_with_time_zone()
                     .not_null()
                     .default(Keyword::CurrentTimestamp),
             )
-            .col(ColumnDef::new(UserIden::UpdatedAt).timestamp_with_time_zone())
+            .col(ColumnDef::new(<User as Queries>::Iden::UpdatedAt).timestamp_with_time_zone())
             .to_string(PostgresQueryBuilder)
     }
 }
 
 impl Queries for User {
-    fn query_select(query_builder: &mut SelectStatement) -> String {
-        query_builder
-            .from(Alias::new(UserIden::Table.to_string().as_str()))
-            .columns(vec![
-                UserIden::Id,
-                UserIden::FirstName,
-                UserIden::LastName,
-                UserIden::Email,
-                UserIden::Username,
-                UserIden::Password,
-                UserIden::Verified,
-                UserIden::Banned,
-                UserIden::CreatedAt,
-                UserIden::UpdatedAt,
+    type Iden = UserIden;
+
+    fn table() -> Alias {
+        Alias::new(Self::Iden::Table.to_string().as_str())
+    }
+
+    fn query_select(expressions: Vec<SimpleExpr>) -> String {
+        let mut query = Query::select();
+
+        for expression in expressions {
+            query.and_where(expression);
+        }
+
+        query
+            .from(Self::table())
+            .columns([
+                Self::Iden::Id,
+                Self::Iden::FirstName,
+                Self::Iden::LastName,
+                Self::Iden::Email,
+                Self::Iden::Username,
+                Self::Iden::Password,
+                Self::Iden::Verified,
+                Self::Iden::Banned,
+                Self::Iden::CreatedAt,
+                Self::Iden::UpdatedAt,
             ])
+            .limit(1)
             .to_string(PostgresQueryBuilder)
     }
 
@@ -391,14 +555,14 @@ impl Queries for User {
         };
 
         Ok(Query::insert()
-            .into_table(Alias::new(UserIden::Table.to_string().as_str()))
-            .columns(vec![
-                UserIden::Id,
-                UserIden::FirstName,
-                UserIden::LastName,
-                UserIden::Email,
-                UserIden::Username,
-                UserIden::Password,
+            .into_table(Self::table())
+            .columns([
+                Self::Iden::Id,
+                Self::Iden::FirstName,
+                Self::Iden::LastName,
+                Self::Iden::Email,
+                Self::Iden::Username,
+                Self::Iden::Password,
             ])
             .values_panic(vec![
                 self.id.clone().into(),
@@ -410,21 +574,74 @@ impl Queries for User {
             ])
             .to_string(PostgresQueryBuilder))
     }
+
+    fn query_update(
+        &self,
+        updated: HashMap<String, Value>,
+    ) -> Result<String, Option<ValidationErrors>> {
+        let mut updated_for_validation = self.clone();
+        let mut query = Query::update();
+
+        if let Some(first_name) = updated.get(Self::Iden::FirstName.to_string().as_str()) {
+            if let Some(first_name) = first_name.as_str() {
+                updated_for_validation.first_name = first_name.clone().to_string();
+                query.values([(Self::Iden::FirstName, first_name.clone().into())]);
+            }
+        }
+        if let Some(last_name) = updated.get(Self::Iden::LastName.to_string().as_str()) {
+            if let Some(last_name) = last_name.as_str() {
+                updated_for_validation.last_name = last_name.clone().to_string();
+                query.values([(Self::Iden::LastName, last_name.clone().into())]);
+            }
+        }
+        if let Some(email) = updated.get(Self::Iden::Email.to_string().as_str()) {
+            if let Some(email) = email.as_str() {
+                updated_for_validation.email = email.clone().to_string();
+                query.values([(Self::Iden::Email, email.clone().into())]);
+            }
+        }
+        if let Some(username) = updated.get(Self::Iden::Username.to_string().as_str()) {
+            if let Some(username) = username.as_str() {
+                updated_for_validation.username = username.clone().to_string();
+                query.values([(Self::Iden::Username, username.clone().into())]);
+            }
+        }
+        if let Some(password) = updated.get(Self::Iden::Password.to_string().as_str()) {
+            if let Some(password) = password.as_str() {
+                updated_for_validation.password = password.clone().to_string();
+                query.values([(Self::Iden::Password, password.clone().into())]);
+            }
+        }
+
+        updated_for_validation.validate()?;
+
+        Ok(query
+            .table(Self::table())
+            .and_where(Expr::col(Self::Iden::Id).eq(self.id.clone()))
+            .to_string(PostgresQueryBuilder))
+    }
+
+    fn query_delete(expression: SimpleExpr) -> String {
+        Query::delete()
+            .from_table(Self::table())
+            .and_where(expression)
+            .to_string(PostgresQueryBuilder)
+    }
 }
 
 impl From<&Row> for User {
     fn from(row: &Row) -> Self {
         Self {
-            id: row.get(UserIden::Id.to_string().as_str()),
-            first_name: row.get(UserIden::FirstName.to_string().as_str()),
-            last_name: row.get(UserIden::LastName.to_string().as_str()),
-            email: row.get(UserIden::Email.to_string().as_str()),
-            username: row.get(UserIden::Username.to_string().as_str()),
-            password: row.get(UserIden::Password.to_string().as_str()),
-            verified: row.get(UserIden::Verified.to_string().as_str()),
-            banned: row.get(UserIden::Banned.to_string().as_str()),
-            created_at: row.get(UserIden::CreatedAt.to_string().as_str()),
-            updated_at: row.get(UserIden::UpdatedAt.to_string().as_str()),
+            id: row.get(<User as Queries>::Iden::Id.to_string().as_str()),
+            first_name: row.get(<User as Queries>::Iden::FirstName.to_string().as_str()),
+            last_name: row.get(<User as Queries>::Iden::LastName.to_string().as_str()),
+            email: row.get(<User as Queries>::Iden::Email.to_string().as_str()),
+            username: row.get(<User as Queries>::Iden::Username.to_string().as_str()),
+            password: row.get(<User as Queries>::Iden::Password.to_string().as_str()),
+            verified: row.get(<User as Queries>::Iden::Verified.to_string().as_str()),
+            banned: row.get(<User as Queries>::Iden::Banned.to_string().as_str()),
+            created_at: row.get(<User as Queries>::Iden::CreatedAt.to_string().as_str()),
+            updated_at: row.get(<User as Queries>::Iden::UpdatedAt.to_string().as_str()),
         }
     }
 }

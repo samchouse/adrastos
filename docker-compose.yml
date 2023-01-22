@@ -8,6 +8,8 @@ services:
       - 26257:26257
       - 8080:8080
     command: start-single-node --insecure
+    environment:
+      - COCKROACH_DATABASE=adrastos
     volumes:
       - crdb:/cockroach/cockroach-data
 

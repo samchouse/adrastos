@@ -10,9 +10,9 @@ edition = "2021"
 actix-session = { version = "0.7.2", features = ["redis-actor-session"] }
 actix-web = { version = "4.2.1", features = ["openssl", "cookies"] }
 argon2 = "0.4.1"
-async-trait = "0.1.60"
+async-trait = "0.1.62"
 chrono = "0.4.23"
-deadpool-postgres = "0.10.3"
+deadpool-postgres = "0.10.4"
 deadpool-redis = "0.11.1"
 dotenvy = "0.15.6"
 jsonwebtoken = "8.2.0"
@@ -20,22 +20,22 @@ libinjection = "0.3.2"
 nanoid = "0.4.0"
 oauth2 = "4.3.0"
 openssl = "0.10.45"
-regex = "1.7.0"
-reqwest = { version = "0.11.13", features = ["json"] }
-sea-query = { version = "0.28.1", features = [
+regex = "1.7.1"
+reqwest = { version = "0.11.14", features = ["json"] }
+sea-query = { features = [
 	"attr",
 	"with-chrono",
 	"postgres-array"
-] }
+], git = "https://github.com/SeaQL/sea-query" }
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.91"
-tokio = { version = "1.23.0", features = ["macros"] }
+tokio = { version = "1.24.2", features = ["macros"] }
 tokio-postgres = { version = "0.7.7", features = ["with-chrono-0_4"] }
-utoipa = { version = "2.4.2", features = [
+utoipa = { features = [
 	"actix_extras",
 	"chrono"
 ], git = "https://github.com/juhaku/utoipa", rev = "refs/pull/438/head" }
-utoipa-swagger-ui = { version = "3.0.1", features = [
+utoipa-swagger-ui = { features = [
 	"actix-web"
 ], git = "https://github.com/juhaku/utoipa", rev = "refs/pull/438/head" }
 validator = { version = "0.16.0", features = ["derive"] }

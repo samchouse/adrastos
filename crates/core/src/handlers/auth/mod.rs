@@ -3,7 +3,7 @@ use actix_web::{
     get, post, web, HttpRequest, HttpResponse, Responder,
 };
 use chrono::Utc;
-use sea_query::{Expr, Query};
+use sea_query::Expr;
 use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
@@ -21,11 +21,10 @@ pub mod oauth2;
 pub mod token;
 
 #[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct SignupBody {
-    #[serde(rename = "firstName")]
     #[schema(max_length = 50)]
     first_name: String,
-    #[serde(rename = "lastName")]
     #[schema(max_length = 50)]
     last_name: String,
     #[schema(schema_with = openapi::email)]
@@ -113,7 +112,16 @@ pub async fn login(
     config: web::Data<config::Config>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> impl Responder {
-    let Ok(rows) = db_pool.get().await.unwrap().query(User::query_select(Query::select().and_where(Expr::col(UserIden::Email).like(body.email.clone())).limit(1)).as_str(), &[]).await else {
+    let rows = db_pool
+        .get()
+        .await
+        .unwrap()
+        .query(
+            User::query_select(vec![Expr::col(UserIden::Email).eq(body.email.clone())]).as_str(),
+            &[],
+        )
+        .await;
+    let Ok(rows) = rows else {
         return HttpResponse::InternalServerError().json(Error {
             message: "An error occurred while fetching the user".to_string(),
         });

@@ -1,7 +1,7 @@
 use actix_session::Session;
 use actix_web::{get, http::header, web, HttpResponse, Responder};
 use oauth2::TokenResponse;
-use sea_query::{Expr, Query};
+use sea_query::Expr;
 use serde::Deserialize;
 
 use crate::{
@@ -89,7 +89,20 @@ pub async fn callback(
                 });
             };
 
-            let Ok(rows) = db_pool.get().await.unwrap().query(Connection::query_select(Query::select().and_where(Expr::col(ConnectionIden::Provider).like(provider.clone().to_string())).and_where(Expr::col(ConnectionIden::ProviderId).like(oauth2_user.id)).limit(1)).as_str(), &[]).await else {
+            let rows = db_pool
+                .get()
+                .await
+                .unwrap()
+                .query(
+                    Connection::query_select(vec![
+                        Expr::col(ConnectionIden::Provider).eq(provider.clone().to_string()),
+                        Expr::col(ConnectionIden::ProviderId).eq(oauth2_user.id),
+                    ])
+                    .as_str(),
+                    &[],
+                )
+                .await;
+            let Ok(rows) = rows else {
                 return HttpResponse::InternalServerError().json(Error {
                     message: "An error occurred while fetching the connection".to_string(),
                 });
