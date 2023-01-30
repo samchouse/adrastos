@@ -3,7 +3,7 @@ use actix_web::{
     get, post, web, HttpRequest, HttpResponse, Responder,
 };
 use chrono::Utc;
-use sea_query::{Expr, Query};
+use sea_query::Expr;
 use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
@@ -11,7 +11,7 @@ use utoipa::ToSchema;
 use crate::{
     auth::{self, TokenType},
     config,
-    entities::{Queries, RefreshTokenTree, User, UserIden},
+    entities::{Mutate, RefreshTokenTree, User, UserIden},
     handlers::Error,
     id::Id,
     openapi,
@@ -21,11 +21,10 @@ pub mod oauth2;
 pub mod token;
 
 #[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct SignupBody {
-    #[serde(rename = "firstName")]
     #[schema(max_length = 50)]
     first_name: String,
-    #[serde(rename = "lastName")]
     #[schema(max_length = 50)]
     last_name: String,
     #[schema(schema_with = openapi::email)]
@@ -55,9 +54,9 @@ pub struct LoginBody {
 pub async fn signup(
     body: web::Json<SignupBody>,
     db_pool: web::Data<deadpool_postgres::Pool>,
-) -> impl Responder {
+) -> actix_web::Result<impl Responder, Error> {
     let user = User {
-        id: Id::new(),
+        id: Id::new().to_string(),
         first_name: body.first_name.clone(),
         last_name: body.last_name.clone(),
         username: body.username.clone(),
@@ -69,33 +68,12 @@ pub async fn signup(
         updated_at: None,
     };
 
-    let query = user.query_insert();
-    if let Err(error) = query {
-        match error {
-            Some(errors) => {
-                return HttpResponse::BadRequest().json(json!({
-                    "message": "Validation failed",
-                    "errors": errors
-                }));
-            }
-            None => {
-                return HttpResponse::InternalServerError().json(Error {
-                    message: "An error occurred while hashing the password".to_string(),
-                });
-            }
-        }
-    }
+    user.create(&db_pool).await?;
 
-    let Ok(_) = db_pool.get().await.unwrap().execute(query.unwrap().as_str(), &[]).await else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "An error occurred while inserting the user".to_string(),
-        });
-    };
-
-    HttpResponse::Ok().json(json!({
+    Ok(HttpResponse::Ok().json(json!({
         "success": true,
         "user": user
-    }))
+    })))
 }
 
 #[utoipa::path(
@@ -112,43 +90,36 @@ pub async fn login(
     body: web::Json<LoginBody>,
     config: web::Data<config::Config>,
     db_pool: web::Data<deadpool_postgres::Pool>,
-) -> impl Responder {
-    let Ok(rows) = db_pool.get().await.unwrap().query(User::query_select(Query::select().and_where(Expr::col(UserIden::Email).like(body.email.clone())).limit(1)).as_str(), &[]).await else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "An error occurred while fetching the user".to_string(),
-        });
-    };
+) -> actix_web::Result<impl Responder, Error> {
+    let user = User::find(
+        &db_pool,
+        vec![Expr::col(UserIden::Email).eq(body.email.clone())],
+    )
+    .await?;
 
-    let Some(row) = rows.iter().next() else {
-        return HttpResponse::BadRequest().json(Error {
-            message: "No user was found".to_string(),
-        });
-    };
-
-    let user = User::from(row);
-
-    let Ok(is_valid) = auth::verify_password(body.password.as_str(), &user.password) else {
-        return HttpResponse::BadRequest().json(Error {
-            message: "Unable to parse password hash".to_string(),
-        });
-    };
+    let is_valid = auth::verify_password(body.password.as_str(), &user.password).map_err(|_| {
+        Error::BadRequest {
+            message: "Unable to parse password hash".into(),
+        }
+    })?;
     if !is_valid {
-        return HttpResponse::BadRequest().json(Error {
-            message: "No user was found with this email/password combo".to_string(),
+        return Err(Error::BadRequest {
+            message: "No user was found with this email/password combo".into(),
         });
     }
 
-    let Ok(access_token) = TokenType::Access.sign(config.clone(), user.clone()) else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "An error occurred while signing the access token".to_string(),
-        });
-    };
-
-    let Ok(refresh_token) = TokenType::Refresh.sign(config, user.clone()) else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "An error occurred while signing the refresh token".to_string(),
-        });
-    };
+    let access_token =
+        TokenType::Access
+            .sign(&config, &user)
+            .map_err(|_| Error::InternalServerError {
+                error: "An error occurred while signing the access token".into(),
+            })?;
+    let refresh_token =
+        TokenType::Refresh
+            .sign(&config, &user)
+            .map_err(|_| Error::InternalServerError {
+                error: "An error occurred while signing the refresh token".into(),
+            })?;
 
     let refresh_token_tree = RefreshTokenTree {
         id: Id::new().to_string(),
@@ -160,20 +131,16 @@ pub async fn login(
         updated_at: None,
     };
 
-    let query = refresh_token_tree.query_insert();
-    let Ok(_) = db_pool.get().await.unwrap().execute(query.unwrap().as_str(), &[]).await else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "An error occurred while inserting the refresh token tree".to_string(),
-        });
-    };
+    refresh_token_tree.create(&db_pool).await?;
 
-    let Ok(cookie_expiration) = OffsetDateTime::from_unix_timestamp(refresh_token.expires_at.timestamp()) else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "An error occurred while parsing the cookie expiration".to_string(),
-        });
-    };
+    let cookie_expiration = OffsetDateTime::from_unix_timestamp(
+        refresh_token.expires_at.timestamp(),
+    )
+    .map_err(|_| Error::InternalServerError {
+        error: "An error occurred while parsing the cookie expiration".into(),
+    })?;
 
-    HttpResponse::Ok()
+    Ok(HttpResponse::Ok()
         .cookie(
             Cookie::build("refreshToken", refresh_token.token)
                 .secure(true)
@@ -185,27 +152,26 @@ pub async fn login(
             "success": true,
             "user": user,
             "accessToken": access_token.clone().token,
-        }))
+        })))
 }
 
 #[get("/auth/logout")]
-pub async fn logout(req: HttpRequest) -> impl Responder {
-    let Ok(cookies) = req.cookies() else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "An error occurred while fetching the cookies".to_string(),
-        });
-    };
+pub async fn logout(req: HttpRequest) -> actix_web::Result<impl Responder, Error> {
+    let cookies = req.cookies().map_err(|_| Error::InternalServerError {
+        error: "An error occurred while fetching the cookies".into(),
+    })?;
 
-    let Some(cookie) = cookies.iter().find(|cookie| cookie.name() == "refreshToken") else {
-        return HttpResponse::BadRequest().json(Error {
-            message: "No refresh token was found".to_string(),
-        });
-    };
+    let cookie = cookies
+        .iter()
+        .find(|cookie| cookie.name() == "refreshToken")
+        .ok_or_else(|| Error::BadRequest {
+            message: "No refresh token was found".into(),
+        })?;
 
     let mut cookie = cookie.clone();
     cookie.make_removal();
 
-    HttpResponse::Ok().cookie(cookie).json(json!({
+    Ok(HttpResponse::Ok().cookie(cookie).json(json!({
         "success": true
-    }))
+    })))
 }

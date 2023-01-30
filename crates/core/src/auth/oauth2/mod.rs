@@ -18,7 +18,7 @@ use self::providers::{OAuth2Provider, OAuth2ProviderInfo, OAuth2User, OAuth2User
 
 pub mod providers;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct OAuth2(HashMap<OAuth2Provider, BasicClient>);
 
 struct ClientInfo {
@@ -40,7 +40,7 @@ trait AddRequiredScopes {
 
 impl AddRequiredScopes for AuthorizationRequest<'_> {
     fn add_required_scopes(self, info: &OAuth2ProviderInfo) -> Self {
-        self.add_scopes(info.scopes.iter().map(|s| Scope::new(s.to_string())))
+        self.add_scopes(info.scopes.iter().map(|s| Scope::new(s.into())))
     }
 }
 
@@ -66,9 +66,7 @@ impl OAuth2 {
             BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url))
                 .set_redirect_uri(
                     RedirectUrl::new(format!(
-                        "https://{}/auth/oauth2/callback?provider={}",
-                        server_url,
-                        provider.to_string()
+                        "https://{server_url}/auth/oauth2/callback?provider={provider}"
                     ))
                     .unwrap(),
                 ),
@@ -81,8 +79,8 @@ impl OAuth2 {
         Self::providers().iter().for_each(|provider| {
             let info = provider.info();
 
-            if let Some(client_id) = config.get(info.client_info.0.clone()) && let Some(client_secret) = config.get(info.client_info.1.clone()) {
-                oauth2.create_client(provider, config.get(ConfigKey::ServerUrl).unwrap().as_ref(), ClientInfo {
+            if let Ok(Some(client_id)) = config.get(info.client_info.0.clone()) && let Ok(Some(client_secret)) = config.get(info.client_info.1.clone()) {
+                oauth2.create_client(provider, config.get(ConfigKey::ServerUrl).unwrap().unwrap().as_ref(), ClientInfo {
                     client_id,
                     client_secret,
                     auth_url: info.auth_url,
@@ -136,7 +134,7 @@ impl OAuth2 {
             || params_csrf_token.secret().is_empty()
             || session_csrf_token.secret() != params_csrf_token.secret()
         {
-            return Err("Invalid CSRF token".to_string());
+            return Err("Invalid CSRF token".into());
         }
 
         let mut conn = redis_pool.get().await.unwrap();
@@ -170,10 +168,10 @@ impl OAuth2 {
             .iter()
             .all(|scope| token_scopes.contains(scope))
         {
-            return Err("Invalid scopes".to_string());
+            return Err("Invalid scopes".into());
         }
 
-        Ok(token.clone())
+        Ok(token)
     }
 
     pub async fn fetch_user<T: OAuth2UserMethods + DeserializeOwned>(
@@ -196,11 +194,5 @@ impl OAuth2 {
             id: user_info.get_id(),
             email: user_info.get_email(),
         })
-    }
-}
-
-impl Default for OAuth2 {
-    fn default() -> Self {
-        OAuth2(HashMap::new())
     }
 }

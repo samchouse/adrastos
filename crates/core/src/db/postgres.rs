@@ -9,6 +9,7 @@ pub fn create_pool(config: config::Config) -> Pool {
     let pg_config = config
         .get(ConfigKey::CockroachUrl)
         .unwrap()
+        .unwrap()
         .parse::<Config>()
         .unwrap();
     let mgr = Manager::from_config(

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use oauth2::{basic::BasicTokenType, EmptyExtraTokenFields, StandardTokenResponse};
 use serde::{Deserialize, Serialize};
 
@@ -19,36 +21,36 @@ impl OAuth2Provider {
         match self {
             OAuth2Provider::Google => OAuth2ProviderInfo {
                 client_info: (ConfigKey::GoogleClientId, ConfigKey::GoogleClientSecret),
-                auth_url: "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
-                token_url: "https://oauth2.googleapis.com/token".to_string(),
+                auth_url: "https://accounts.google.com/o/oauth2/v2/auth".into(),
+                token_url: "https://oauth2.googleapis.com/token".into(),
                 scopes: vec![
-                    "https://www.googleapis.com/auth/userinfo.email".to_string(),
-                    "https://www.googleapis.com/auth/userinfo.profile".to_string(),
+                    "https://www.googleapis.com/auth/userinfo.email".into(),
+                    "https://www.googleapis.com/auth/userinfo.profile".into(),
                 ],
             },
             OAuth2Provider::Facebook => OAuth2ProviderInfo {
                 client_info: (ConfigKey::FacebookClientId, ConfigKey::FacebookClientSecret),
-                auth_url: "https://www.facebook.com/v15.0/dialog/oauth".to_string(),
-                token_url: "https://graph.facebook.com/v15.0/oauth/access_token".to_string(),
-                scopes: vec!["public_profile".to_string()],
+                auth_url: "https://www.facebook.com/v15.0/dialog/oauth".into(),
+                token_url: "https://graph.facebook.com/v15.0/oauth/access_token".into(),
+                scopes: vec!["public_profile".into()],
             },
             OAuth2Provider::GitHub => OAuth2ProviderInfo {
                 client_info: (ConfigKey::GitHubClientId, ConfigKey::GitHubClientSecret),
-                auth_url: "https://github.com/login/oauth/authorize".to_string(),
-                token_url: "https://github.com/login/oauth/access_token".to_string(),
-                scopes: vec!["read:user".to_string()],
+                auth_url: "https://github.com/login/oauth/authorize".into(),
+                token_url: "https://github.com/login/oauth/access_token".into(),
+                scopes: vec!["read:user".into()],
             },
             OAuth2Provider::Twitter => OAuth2ProviderInfo {
                 client_info: (ConfigKey::TwitterClientId, ConfigKey::TwitterClientSecret),
-                auth_url: "https://twitter.com/i/oauth2/authorize".to_string(),
-                token_url: "https://api.twitter.com/2/oauth2/token".to_string(),
-                scopes: vec!["users.read".to_string()],
+                auth_url: "https://twitter.com/i/oauth2/authorize".into(),
+                token_url: "https://api.twitter.com/2/oauth2/token".into(),
+                scopes: vec!["users.read".into()],
             },
             OAuth2Provider::Discord => OAuth2ProviderInfo {
                 client_info: (ConfigKey::DiscordClientId, ConfigKey::DiscordClientSecret),
-                auth_url: "https://discord.com/oauth2/authorize".to_string(),
-                token_url: "https://discord.com/api/oauth2/token".to_string(),
-                scopes: vec!["identify".to_string(), "email".to_string()],
+                auth_url: "https://discord.com/oauth2/authorize".into(),
+                token_url: "https://discord.com/api/oauth2/token".into(),
+                scopes: vec!["identify".into(), "email".into()],
             },
         }
     }
@@ -68,15 +70,17 @@ impl OAuth2Provider {
     }
 }
 
-impl ToString for OAuth2Provider {
-    fn to_string(&self) -> String {
-        match self {
-            OAuth2Provider::Google => "google".to_string(),
-            OAuth2Provider::Facebook => "facebook".to_string(),
-            OAuth2Provider::GitHub => "github".to_string(),
-            OAuth2Provider::Twitter => "twitter".to_string(),
-            OAuth2Provider::Discord => "discord".to_string(),
-        }
+impl fmt::Display for OAuth2Provider {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            OAuth2Provider::Google => "google",
+            OAuth2Provider::Facebook => "facebook",
+            OAuth2Provider::GitHub => "github",
+            OAuth2Provider::Twitter => "twitter",
+            OAuth2Provider::Discord => "discord",
+        };
+
+        write!(f, "{name}")
     }
 }
 
@@ -147,7 +151,7 @@ pub trait OAuth2UserMethods {
 
 impl OAuth2UserMethods for GoogleUser {
     fn get_user_info_url() -> String {
-        "https://openidconnect.googleapis.com/v1/userinfo".to_string()
+        "https://openidconnect.googleapis.com/v1/userinfo".into()
     }
 
     fn get_id(&self) -> String {
@@ -165,7 +169,7 @@ impl OAuth2UserMethods for GoogleUser {
 
 impl OAuth2UserMethods for FacebookUser {
     fn get_user_info_url() -> String {
-        "https://graph.facebook.com/me?fields=id,email".to_string()
+        "https://graph.facebook.com/me?fields=id,email".into()
     }
 
     fn get_id(&self) -> String {
@@ -175,7 +179,7 @@ impl OAuth2UserMethods for FacebookUser {
 
 impl OAuth2UserMethods for GitHubUser {
     fn get_user_info_url() -> String {
-        "https://api.github.com/user".to_string()
+        "https://api.github.com/user".into()
     }
 
     fn get_id(&self) -> String {
@@ -185,7 +189,7 @@ impl OAuth2UserMethods for GitHubUser {
 
 impl OAuth2UserMethods for TwitterUser {
     fn get_user_info_url() -> String {
-        "https://api.twitter.com/2/users/me".to_string()
+        "https://api.twitter.com/2/users/me".into()
     }
 
     fn get_id(&self) -> String {
@@ -195,7 +199,7 @@ impl OAuth2UserMethods for TwitterUser {
 
 impl OAuth2UserMethods for DiscordUser {
     fn get_user_info_url() -> String {
-        "https://discord.com/api/users/@me".to_string()
+        "https://discord.com/api/users/@me".into()
     }
 
     fn get_id(&self) -> String {

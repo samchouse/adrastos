@@ -1,7 +1,10 @@
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, fmt};
+
+use crate::handlers::Error;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum ConfigKey {
+    ClientUrl,
     ServerUrl,
     SecretKey,
     CockroachUrl,
@@ -18,24 +21,27 @@ pub enum ConfigKey {
     DiscordClientSecret,
 }
 
-impl ToString for ConfigKey {
-    fn to_string(&self) -> String {
-        match self {
-            ConfigKey::ServerUrl => "SERVER_URL".to_string(),
-            ConfigKey::SecretKey => "SECRET_KEY".to_string(),
-            ConfigKey::CockroachUrl => "COCKROACH_URL".to_string(),
-            ConfigKey::DragonflyUrl => "DRAGONFLY_URL".to_string(),
-            ConfigKey::GoogleClientId => "GOOGLE_CLIENT_ID".to_string(),
-            ConfigKey::GoogleClientSecret => "GOOGLE_CLIENT_SECRET".to_string(),
-            ConfigKey::FacebookClientId => "FACEBOOK_CLIENT_ID".to_string(),
-            ConfigKey::FacebookClientSecret => "FACEBOOK_CLIENT_SECRET".to_string(),
-            ConfigKey::GitHubClientId => "GITHUB_CLIENT_ID".to_string(),
-            ConfigKey::GitHubClientSecret => "GITHUB_CLIENT_SECRET".to_string(),
-            ConfigKey::TwitterClientId => "TWITTER_CLIENT_ID".to_string(),
-            ConfigKey::TwitterClientSecret => "TWITTER_CLIENT_SECRET".to_string(),
-            ConfigKey::DiscordClientId => "DISCORD_CLIENT_ID".to_string(),
-            ConfigKey::DiscordClientSecret => "DISCORD_CLIENT_SECRET".to_string(),
-        }
+impl fmt::Display for ConfigKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            ConfigKey::ClientUrl => "CLIENT_URL",
+            ConfigKey::ServerUrl => "SERVER_URL",
+            ConfigKey::SecretKey => "SECRET_KEY",
+            ConfigKey::CockroachUrl => "COCKROACH_URL",
+            ConfigKey::DragonflyUrl => "DRAGONFLY_URL",
+            ConfigKey::GoogleClientId => "GOOGLE_CLIENT_ID",
+            ConfigKey::GoogleClientSecret => "GOOGLE_CLIENT_SECRET",
+            ConfigKey::FacebookClientId => "FACEBOOK_CLIENT_ID",
+            ConfigKey::FacebookClientSecret => "FACEBOOK_CLIENT_SECRET",
+            ConfigKey::GitHubClientId => "GITHUB_CLIENT_ID",
+            ConfigKey::GitHubClientSecret => "GITHUB_CLIENT_SECRET",
+            ConfigKey::TwitterClientId => "TWITTER_CLIENT_ID",
+            ConfigKey::TwitterClientSecret => "TWITTER_CLIENT_SECRET",
+            ConfigKey::DiscordClientId => "DISCORD_CLIENT_ID",
+            ConfigKey::DiscordClientSecret => "DISCORD_CLIENT_SECRET",
+        };
+
+        write!(f, "{name}")
     }
 }
 
@@ -45,12 +51,17 @@ struct Entry<'a> {
     default: Option<&'a str>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Config(HashMap<ConfigKey, Option<String>>);
 
 impl Config {
     fn options() -> Vec<Entry<'static>> {
         vec![
+            Entry {
+                keys: vec![ConfigKey::ClientUrl],
+                required: false,
+                default: Some("https://127.0.0.1:3000"),
+            },
             Entry {
                 keys: vec![ConfigKey::ServerUrl],
                 required: false,
@@ -91,7 +102,7 @@ impl Config {
 
         Config::options().iter().for_each(|entry| {
             entry.keys.iter().for_each(|key| {
-                let value = match env::var(key.to_string().clone()) {
+                let value = match env::var(key.to_string()) {
                     Ok(value) => Some(value),
                     Err(error) => match error {
                         env::VarError::NotPresent => {
@@ -99,7 +110,7 @@ impl Config {
                                 Some(default.to_string())
                             } else {
                                 if entry.required {
-                                    missing_keys.push(key.to_string().clone())
+                                    missing_keys.push(key.to_string())
                                 }
 
                                 None
@@ -113,20 +124,20 @@ impl Config {
             });
         });
 
-        if missing_keys.len() != 0 {
+        if !missing_keys.is_empty() {
             return Err(missing_keys);
         }
 
         Ok(config)
     }
 
-    pub fn get(&self, key: ConfigKey) -> Option<String> {
-        self.0.get(&key)?.to_owned()
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self(HashMap::new())
+    pub fn get(&self, key: ConfigKey) -> Result<Option<String>, Error> {
+        Ok(self
+            .0
+            .get(&key)
+            .ok_or(Error::InternalServerError {
+                error: "Unable to get config value".into(),
+            })?
+            .to_owned())
     }
 }

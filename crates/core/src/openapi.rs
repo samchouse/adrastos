@@ -15,6 +15,6 @@ pub struct ApiDoc;
 pub fn email() -> Object {
     ObjectBuilder::new()
         .schema_type(SchemaType::String)
-        .format(Some(SchemaFormat::Custom("email".to_string())))
+        .format(Some(SchemaFormat::Custom("email".into())))
         .build()
 }

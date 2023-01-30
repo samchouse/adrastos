@@ -1,6 +1,6 @@
-use super::{Connection, RefreshTokenTree, User};
+use super::{Connection, Migrate, RefreshTokenTree, User};
 
-pub async fn migrate(db_pool: deadpool_postgres::Pool) {
+pub async fn migrate(db_pool: &deadpool_postgres::Pool) {
     let migrations = vec![
         User::migrate(),
         Connection::migrate(),
