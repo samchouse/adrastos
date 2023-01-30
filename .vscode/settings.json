@@ -1,11 +1,11 @@
 {
+	"rust-analyzer.check.command": "clippy",
 	"cSpell.words": [
 		"actix",
 		"Adrastos",
 		"chrono",
 		"deadpool",
 		"dotenvy",
-		"genericmap",
 		"GETDEL",
 		"Iden",
 		"jsonwebtoken",
@@ -15,7 +15,6 @@
 		"reqwest",
 		"SETEX",
 		"sqli",
-		"structmap",
 		"utoipa"
 	]
 }

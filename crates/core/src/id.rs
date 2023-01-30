@@ -1,17 +1,25 @@
+use std::fmt;
+
 use nanoid::{alphabet, nanoid};
 use regex::Regex;
 
 #[derive(Debug)]
-pub struct Id;
+pub struct Id(String);
 
 impl Id {
-    pub fn new() -> String {
+    pub fn new() -> Self {
         let regex = Regex::new(r"[\da-zA-Z]").unwrap();
         let alphabet = alphabet::SAFE
             .into_iter()
             .filter(|char| regex.is_match(&char.to_string()))
             .collect::<Vec<char>>();
 
-        nanoid!(20, &alphabet)
+        Id(nanoid!(20, &alphabet))
+    }
+}
+
+impl fmt::Display for Id {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
