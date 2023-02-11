@@ -1,4 +1,4 @@
-#![feature(let_chains, inherent_associated_types)]
+#![feature(let_chains)]
 
 use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, error::InternalError, web, App, HttpResponse, HttpServer};
@@ -81,16 +81,28 @@ async fn main() -> std::io::Result<()> {
                         .as_bytes(),
                 ),
             ))
-            .service(handlers::auth::signup)
-            .service(handlers::auth::login)
-            .service(handlers::auth::logout)
-            .service(handlers::auth::token::refresh)
-            .service(handlers::auth::oauth2::login)
-            .service(handlers::auth::oauth2::callback)
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", ApiDoc::openapi()),
             )
+            .service(
+                web::scope("/auth")
+                    .service((
+                        handlers::auth::signup,
+                        handlers::auth::login,
+                        handlers::auth::logout,
+                        handlers::auth::token::refresh,
+                    ))
+                    .service(web::scope("/oauth2").service((
+                        handlers::auth::oauth2::login,
+                        handlers::auth::oauth2::callback,
+                    ))),
+            )
+            .service(
+                web::scope("/tables")
+                    .service(web::scope("/{table_name}").service(handlers::tables::custom::rows)),
+            )
+            .default_service(web::route().to(handlers::not_found))
     })
     .bind_openssl(
         config

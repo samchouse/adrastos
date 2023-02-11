@@ -4,7 +4,7 @@ use chrono::{DateTime, Duration, Utc};
 use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, ForeignKey, ForeignKeyAction, Keyword,
-    PostgresQueryBuilder, Query as SeaQLQuery, SimpleExpr, Table,
+    PostgresQueryBuilder, SelectStatement, SimpleExpr, Table,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -15,7 +15,7 @@ use crate::{handlers::Error, util};
 use super::{Identity, Migrate, Query, User};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RefreshTokenTree {
     pub id: String,
     pub user_id: String,
@@ -89,8 +89,8 @@ impl Migrate for RefreshTokenTree {
 }
 
 impl Query for RefreshTokenTree {
-    fn query_select(expressions: Vec<SimpleExpr>) -> String {
-        let mut query = SeaQLQuery::select();
+    fn query_select(expressions: Vec<SimpleExpr>) -> SelectStatement {
+        let mut query = sea_query::Query::select();
 
         for expression in expressions {
             query.and_where(expression);
@@ -107,12 +107,11 @@ impl Query for RefreshTokenTree {
                 <Self as Identity>::Iden::CreatedAt,
                 <Self as Identity>::Iden::UpdatedAt,
             ])
-            .limit(1)
-            .to_string(PostgresQueryBuilder)
+            .to_owned()
     }
 
     fn query_insert(&self) -> Result<String, Error> {
-        Ok(SeaQLQuery::insert()
+        Ok(sea_query::Query::insert()
             .into_table(Self::table())
             .columns([
                 <Self as Identity>::Iden::Id,
@@ -155,7 +154,7 @@ impl Query for RefreshTokenTree {
             .filter_map(|token| token.as_str().map(|token| token.to_string()))
             .collect::<Vec<String>>();
 
-        Ok(SeaQLQuery::update()
+        Ok(sea_query::Query::update()
             .table(Self::table())
             .values([
                 (
@@ -170,7 +169,7 @@ impl Query for RefreshTokenTree {
     }
 
     fn query_delete(&self) -> String {
-        SeaQLQuery::delete()
+        sea_query::Query::delete()
             .from_table(Self::table())
             .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)

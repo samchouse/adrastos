@@ -5,18 +5,17 @@ use actix_web::{
     get, web, HttpRequest, HttpResponse, Responder,
 };
 use chrono::Utc;
-use sea_query::{extension::postgres::PgExpr, Expr};
 use serde_json::{json, Value};
 
 use crate::{
     auth::{self, TokenType},
     config,
-    entities::{Mutate, RefreshTokenTree, RefreshTokenTreeIden, User, UserIden},
+    entities::{Mutate, RefreshTokenTree, RefreshTokenTreeIden, User},
     handlers::Error,
     util,
 };
 
-#[get("/auth/token/refresh")]
+#[get("/token/refresh")]
 pub async fn refresh(
     req: HttpRequest,
     config: web::Data<config::Config>,
@@ -29,15 +28,24 @@ pub async fn refresh(
         });
     }
 
-    let refresh_token_tree: RefreshTokenTree = RefreshTokenTree::find(
-        &db_pool,
-        vec![
-            Expr::col(RefreshTokenTreeIden::UserId).eq(refresh_token.claims.sub.clone()),
-            Expr::col(RefreshTokenTreeIden::Tokens)
-                .contains(vec![refresh_token.claims.jti.clone()]),
-        ],
-    )
-    .await?;
+    let user = User::select()
+        .by_id(&refresh_token.claims.sub)
+        .join::<RefreshTokenTree>()
+        .finish(&db_pool)
+        .await?;
+
+    let refresh_token_tree = &user
+        .refresh_token_trees
+        .clone()
+        .ok_or_else(|| Error::Forbidden {
+            message: "Refresh token tree is invalid".into(),
+        })?
+        .into_iter()
+        .find(|tree| tree.tokens.contains(&refresh_token.claims.jti))
+        .ok_or_else(|| Error::Forbidden {
+            message: "Refresh token tree is invalid".into(),
+        })?;
+
     let last_token = refresh_token_tree
         .tokens
         .last()
@@ -56,12 +64,6 @@ pub async fn refresh(
             message: "Refresh token is invalid".into(),
         });
     }
-
-    let user = User::find(
-        &db_pool,
-        vec![Expr::col(UserIden::Id).eq(refresh_token.claims.sub)],
-    )
-    .await?;
 
     let access_token = TokenType::Access.sign(&config, &user)?;
     let refresh_token = TokenType::Access.sign(&config, &user)?;

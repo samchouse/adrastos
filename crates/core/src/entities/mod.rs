@@ -1,11 +1,11 @@
 // TODO(@Xenfo): use `*Iden::Table` instead of Alias::new() once https://github.com/SeaQL/sea-query/issues/533 is fixed
 
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 use actix_web::web;
 use async_trait::async_trait;
 use deadpool_postgres::tokio_postgres::Row;
-use sea_query::{Alias, SimpleExpr};
+use sea_query::{Alias, Iden, PostgresQueryBuilder, SelectStatement, SimpleExpr};
 use serde_json::Value;
 
 use crate::handlers::Error;
@@ -15,6 +15,7 @@ pub use refresh_token_tree::*;
 pub use user::*;
 
 pub mod connection;
+pub mod custom;
 pub mod migrations;
 pub mod refresh_token_tree;
 pub mod user;
@@ -23,18 +24,48 @@ trait Migrate {
     fn migrate() -> String;
 }
 
-trait Identity {
+pub trait Identity {
     type Iden;
 
     fn table() -> Alias;
     fn error_identifier() -> String;
 }
 
-trait Query {
-    fn query_select(expressions: Vec<SimpleExpr>) -> String;
+pub trait Query {
+    fn query_select(expressions: Vec<SimpleExpr>) -> SelectStatement;
     fn query_insert(&self) -> Result<String, Error>;
     fn query_update(&self, updated: HashMap<String, Value>) -> Result<String, Error>;
     fn query_delete(&self) -> String;
+}
+
+enum JoinKeys {
+    Connection,
+    RefreshTokenTree,
+}
+
+impl fmt::Display for JoinKeys {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            JoinKeys::Connection => "connection",
+            JoinKeys::RefreshTokenTree => "refresh_token_tree",
+        };
+
+        write!(f, "{name}")
+    }
+}
+
+impl JoinKeys {
+    fn plural(&self) -> String {
+        self.to_string() + "s"
+    }
+
+    fn from_identity<T: Identity>() -> Self {
+        match T::table().to_string() {
+            con if con == Connection::table().to_string() => JoinKeys::Connection,
+            tree if tree == RefreshTokenTree::table().to_string() => JoinKeys::RefreshTokenTree,
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[async_trait]
@@ -62,7 +93,13 @@ impl<T: Identity + Query + Migrate + From<Row> + Sync> Mutate for T {
             .get()
             .await
             .unwrap()
-            .query(T::query_select(expressions).as_str(), &[])
+            .query(
+                T::query_select(expressions)
+                    .limit(1)
+                    .to_string(PostgresQueryBuilder)
+                    .as_str(),
+                &[],
+            )
             .await
             .map_err(|e| {
                 let error = format!(

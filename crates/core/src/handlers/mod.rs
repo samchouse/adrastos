@@ -7,9 +7,11 @@ use serde_json::json;
 use validator::ValidationErrors;
 
 pub mod auth;
+pub mod tables;
 
 #[derive(Debug, Serialize)]
 pub enum Error {
+    NotFound,
     Unauthorized,
     Forbidden {
         message: String,
@@ -29,6 +31,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
+            Self::NotFound => "Not Found",
             Self::Unauthorized => "Unauthorized",
             Self::Forbidden { .. } => "Forbidden",
             Self::BadRequest { .. } => "Bad Request",
@@ -48,6 +51,7 @@ impl error::ResponseError for Error {
         });
 
         let patch = match self {
+            Self::NotFound => json!({ "message": "Resource not found" }),
             Self::Unauthorized => json!({ "message": "User not authenticated" }),
             Self::Forbidden { message } => json!({ "message": message }),
             Self::BadRequest { message } => json!({ "message": message }),
@@ -64,6 +68,7 @@ impl error::ResponseError for Error {
 
     fn status_code(&self) -> StatusCode {
         match self {
+            Self::NotFound => StatusCode::NOT_FOUND,
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::Forbidden { .. } => StatusCode::FORBIDDEN,
             Self::BadRequest { .. } => StatusCode::BAD_REQUEST,
@@ -71,4 +76,8 @@ impl error::ResponseError for Error {
             Self::InternalServerError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
+}
+
+pub async fn not_found() -> actix_web::Result<String, Error> {
+    Err(Error::NotFound)
 }

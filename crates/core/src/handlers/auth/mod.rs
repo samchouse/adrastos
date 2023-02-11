@@ -3,7 +3,6 @@ use actix_web::{
     get, post, web, HttpRequest, HttpResponse, Responder,
 };
 use chrono::Utc;
-use sea_query::Expr;
 use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
@@ -11,7 +10,7 @@ use utoipa::ToSchema;
 use crate::{
     auth::{self, TokenType},
     config,
-    entities::{Mutate, RefreshTokenTree, User, UserIden},
+    entities::{Mutate, RefreshTokenTree, User},
     handlers::Error,
     id::Id,
     openapi,
@@ -50,7 +49,7 @@ pub struct LoginBody {
         (status = 400, description = "Validation failed"),
     )
 )]
-#[post("/auth/signup")]
+#[post("/signup")]
 pub async fn signup(
     body: web::Json<SignupBody>,
     db_pool: web::Data<deadpool_postgres::Pool>,
@@ -66,6 +65,9 @@ pub async fn signup(
         banned: false,
         created_at: Utc::now(),
         updated_at: None,
+
+        connections: None,
+        refresh_token_trees: None,
     };
 
     user.create(&db_pool).await?;
@@ -85,17 +87,16 @@ pub async fn signup(
         (status = 400, description = "Validation failed"),
     )
 )]
-#[post("/auth/login")]
+#[post("/login")]
 pub async fn login(
     body: web::Json<LoginBody>,
     config: web::Data<config::Config>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let user = User::find(
-        &db_pool,
-        vec![Expr::col(UserIden::Email).eq(body.email.clone())],
-    )
-    .await?;
+    let user = User::select()
+        .by_email(&body.email)
+        .finish(&db_pool)
+        .await?;
 
     let is_valid = auth::verify_password(body.password.as_str(), &user.password).map_err(|_| {
         Error::BadRequest {
@@ -155,7 +156,7 @@ pub async fn login(
         })))
 }
 
-#[get("/auth/logout")]
+#[get("/logout")]
 pub async fn logout(req: HttpRequest) -> actix_web::Result<impl Responder, Error> {
     let cookies = req.cookies().map_err(|_| Error::InternalServerError {
         error: "An error occurred while fetching the cookies".into(),

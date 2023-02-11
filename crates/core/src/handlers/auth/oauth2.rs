@@ -51,7 +51,7 @@ impl fmt::Display for SessionKey {
     }
 }
 
-#[get("/auth/oauth2/login")]
+#[get("/login")]
 pub async fn login(
     req: HttpRequest,
     oauth2: web::Data<OAuth2>,
@@ -96,7 +96,7 @@ pub async fn login(
         .finish())
 }
 
-#[get("/auth/oauth2/callback")]
+#[get("/callback")]
 pub async fn callback(
     config: web::Data<config::Config>,
     oauth2: web::Data<OAuth2>,
@@ -165,7 +165,7 @@ pub async fn callback(
 
                 conn.create(&db_pool).await?;
 
-                Ok(User::find(&db_pool, vec![Expr::col(UserIden::Id).eq(conn.user_id)]).await?)
+                Ok(User::select().by_id(&conn.user_id).finish(&db_pool).await?)
             } else {
                 Err(Error::Unauthorized)
             }
@@ -191,5 +191,5 @@ pub async fn callback(
                 .finish(),
         )
         .append_header(("Location", client_url))
-        .finish()) // TODO(@Xenfo): don't send the token back
+        .finish())
 }
