@@ -69,7 +69,7 @@ impl Config {
             },
             Entry {
                 keys: vec![ConfigKey::SecretKey],
-                required: true,
+                required: false,
                 default: Some("l19OOJaOvpal21ofSlsxYyNVQN2EeTY6gEuq6p_hobH_QmJb3dPELmoGKFstBpCI"),
             },
             Entry {

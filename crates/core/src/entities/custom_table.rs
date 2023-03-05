@@ -361,16 +361,6 @@ impl Query for CustomTable {
 
 impl From<Row> for CustomTable {
     fn from(row: Row) -> Self {
-        let a =
-            row.get::<_, Vec<String>>(<Self as Identity>::Iden::StringFields.to_string().as_str());
-        println!("{:#?}", a);
-
-        let a = a
-            .iter()
-            .map(|s| serde_json::from_str(s).unwrap())
-            .collect::<Vec<StringField>>();
-        println!("{:#?}", a);
-
         Self {
             id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),
             name: row.get(<Self as Identity>::Iden::Name.to_string().as_str()),
@@ -547,7 +537,7 @@ impl From<&CustomTable> for TableCreateStatement {
                 column.unique_key();
             }
 
-            columns.push(column.integer().to_owned());
+            columns.push(column.unsigned().to_owned());
         });
         table.boolean_fields.iter().for_each(|field| {
             columns.push(ColumnDef::new(Alias::new(&field.name)).boolean().to_owned());

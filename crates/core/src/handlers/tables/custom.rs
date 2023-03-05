@@ -52,6 +52,36 @@ pub async fn create(
         let value = body.get(&field.name).unwrap().as_str().unwrap();
         table_values.insert(field.name.clone(), serde_json::to_value(value).unwrap());
     });
+    custom_table.number_fields.iter().for_each(|field| {
+        let value = body.get(&field.name).unwrap().as_u64().unwrap();
+        if let Some(max) = field.max && value > max {
+            Err(Error::BadRequest(format!(
+                "The value of {} is too big. Max value is {}",
+                field.name, field.max
+            )))?;
+        }
+        table_values.insert(field.name.clone(), serde_json::to_value(value).unwrap());
+    });
+    custom_table.boolean_fields.iter().for_each(|field| {
+        let value = body.get(&field.name).unwrap().as_bool().unwrap();
+        table_values.insert(field.name.clone(), serde_json::to_value(value).unwrap());
+    });
+    // custom_table.email_fields.iter().for_each(|field| {
+    //     let value = body.get(&field.name).unwrap().as_str().unwrap();
+    //     table_values.insert(field.name.clone(), serde_json::to_value(value).unwrap());
+    // });
+    // custom_table.url_fields.iter().for_each(|field| {
+    //     let value = body.get(&field.name).unwrap().as_str().unwrap();
+    //     table_values.insert(field.name.clone(), serde_json::to_value(value).unwrap());
+    // });
+    // custom_table.select_fields.iter().for_each(|field| {
+    //     let value = body.get(&field.name).unwrap().as_array().unwrap();
+    //     table_values.insert(field.name.clone(), serde_json::to_value(value).unwrap());
+    // });
+    // custom_table.relation_fields.iter().for_each(|field| {
+    //     let value = body.get(&field.name).unwrap().as_str().unwrap();
+    //     table_values.insert(field.name.clone(), serde_json::to_value(value).unwrap());
+    // });
 
     println!("{:#?}", table_values);
 
