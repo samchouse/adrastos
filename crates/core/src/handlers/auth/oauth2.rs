@@ -105,11 +105,7 @@ pub async fn callback(
     redis_pool: web::Data<deadpool_redis::Pool>,
     session: Session,
 ) -> actix_web::Result<impl Responder, Error> {
-    let client_url = config
-        .get(ConfigKey::ClientUrl)?
-        .ok_or(Error::InternalServerError {
-            error: "Unable to get config value".into(),
-        })?;
+    let client_url = config.get(ConfigKey::ClientUrl)?;
 
     let provider =
         OAuth2Provider::try_from(params.provider.as_str()).map_err(|_| Error::BadRequest {

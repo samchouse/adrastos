@@ -35,8 +35,9 @@ async fn main() -> std::io::Result<()> {
         error!("missing required environment variables: {:#?}", err);
         process::exit(1)
     });
-    let cfg = config.clone();
-    let db_pool = postgres::create_pool(config.clone());
+    let db_pool = postgres::create_pool(&config);
+
+    let server_url = config.get(ConfigKey::ServerUrl).unwrap().to_string();
 
     entities::migrations::migrate(&db_pool).await;
 
@@ -50,10 +51,10 @@ async fn main() -> std::io::Result<()> {
 
     let server = HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(cfg.clone()))
+            .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
-            .app_data(web::Data::new(redis::create_pool(cfg.clone())))
-            .app_data(web::Data::new(OAuth2::new(cfg.clone())))
+            .app_data(web::Data::new(redis::create_pool(&config)))
+            .app_data(web::Data::new(OAuth2::new(&config)))
             .app_data(web::JsonConfig::default().error_handler(|err, _| {
                 let err_string = err.to_string();
                 InternalError::from_response(
@@ -67,19 +68,12 @@ async fn main() -> std::io::Result<()> {
             }))
             .wrap(SessionMiddleware::new(
                 RedisActorSessionStore::new(
-                    cfg.get(ConfigKey::DragonflyUrl)
-                        .unwrap()
-                        .as_ref()
+                    config
+                        .get(ConfigKey::DragonflyUrl)
                         .unwrap()
                         .replace("redis://", ""),
                 ),
-                Key::from(
-                    cfg.get(ConfigKey::SecretKey)
-                        .unwrap()
-                        .as_ref()
-                        .unwrap()
-                        .as_bytes(),
-                ),
+                Key::from(config.get(ConfigKey::SecretKey).unwrap().as_bytes()),
             ))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
@@ -100,29 +94,22 @@ async fn main() -> std::io::Result<()> {
             )
             .service(
                 web::scope("/tables")
-                    .service(web::scope("/{table_name}").service(handlers::tables::custom::rows)),
+                    .service(handlers::tables::create)
+                    .service(web::scope("/{table_name}").service((
+                        handlers::tables::custom::rows,
+                        handlers::tables::custom::create,
+                    ))),
             )
             .default_service(web::route().to(handlers::not_found))
     })
-    .bind_openssl(
-        config
-            .get(ConfigKey::ServerUrl)
-            .unwrap()
-            .as_ref()
-            .unwrap()
-            .to_string(),
-        builder,
-    )?
+    .bind_openssl(&server_url, builder)?
     .run();
 
-    let (server, _) = tokio::join!(
-        server,
-        server_started(config.get(ConfigKey::ServerUrl).unwrap().unwrap())
-    );
+    let (server, _) = tokio::join!(server, server_started(&server_url));
 
     server
 }
 
-async fn server_started(url: String) {
+async fn server_started(url: &str) {
     info!("Server started at https://{url}");
 }

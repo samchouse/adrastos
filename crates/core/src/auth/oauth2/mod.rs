@@ -73,14 +73,14 @@ impl OAuth2 {
         );
     }
 
-    pub fn new(config: config::Config) -> Self {
+    pub fn new(config: &config::Config) -> Self {
         let mut oauth2 = Self::default();
 
         Self::providers().iter().for_each(|provider| {
             let info = provider.info();
 
-            if let Ok(Some(client_id)) = config.get(info.client_info.0.clone()) && let Ok(Some(client_secret)) = config.get(info.client_info.1.clone()) {
-                oauth2.create_client(provider, config.get(ConfigKey::ServerUrl).unwrap().unwrap().as_ref(), ClientInfo {
+            if let Ok(client_id) = config.get(info.client_info.0.clone()) && let Ok(client_secret) = config.get(info.client_info.1.clone()) {
+                oauth2.create_client(provider, &config.get(ConfigKey::ServerUrl).unwrap(), ClientInfo {
                     client_id,
                     client_secret,
                     auth_url: info.auth_url,

@@ -75,12 +75,12 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, password_hash
 }
 
 impl TokenType {
-    pub fn sign(&self, config: &web::Data<config::Config>, user: &User) -> Result<TokenInfo, Error> {
-        let secret_key = config
-            .get(ConfigKey::SecretKey)?
-            .ok_or(Error::InternalServerError {
-                error: "Couldn't find config value".into(),
-            })?;
+    pub fn sign(
+        &self,
+        config: &web::Data<config::Config>,
+        user: &User,
+    ) -> Result<TokenInfo, Error> {
+        let secret_key = config.get(ConfigKey::SecretKey)?;
 
         let expires_at = match self {
             TokenType::Access => Utc::now() + Duration::minutes(15),
@@ -112,14 +112,10 @@ impl TokenType {
     }
 
     pub fn verify(config: &web::Data<config::Config>, token: String) -> Result<TokenInfo, Error> {
-        let secret_key = config
-            .get(ConfigKey::SecretKey)?
-            .ok_or(Error::InternalServerError {
-                error: "Unable to find config value".into(),
-            })?;
+        let secret_key = config.get(ConfigKey::SecretKey)?;
 
         let claims = decode::<Claims>(
-            token.as_str(),
+            &token,
             &DecodingKey::from_secret(secret_key.as_bytes()),
             &Validation::default(),
         )

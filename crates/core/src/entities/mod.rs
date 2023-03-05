@@ -15,7 +15,7 @@ pub use refresh_token_tree::*;
 pub use user::*;
 
 pub mod connection;
-pub mod custom;
+pub mod custom_table;
 pub mod migrations;
 pub mod refresh_token_tree;
 pub mod user;
@@ -43,17 +43,6 @@ enum JoinKeys {
     RefreshTokenTree,
 }
 
-impl fmt::Display for JoinKeys {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            JoinKeys::Connection => "connection",
-            JoinKeys::RefreshTokenTree => "refresh_token_tree",
-        };
-
-        write!(f, "{name}")
-    }
-}
-
 impl JoinKeys {
     fn plural(&self) -> String {
         self.to_string() + "s"
@@ -65,6 +54,17 @@ impl JoinKeys {
             tree if tree == RefreshTokenTree::table().to_string() => JoinKeys::RefreshTokenTree,
             _ => unreachable!(),
         }
+    }
+}
+
+impl fmt::Display for JoinKeys {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            JoinKeys::Connection => "connection",
+            JoinKeys::RefreshTokenTree => "refresh_token_tree",
+        };
+
+        write!(f, "{name}")
     }
 }
 

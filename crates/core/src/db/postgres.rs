@@ -5,10 +5,9 @@ use deadpool_postgres::{
 
 use crate::config::{self, ConfigKey};
 
-pub fn create_pool(config: config::Config) -> Pool {
+pub fn create_pool(config: &config::Config) -> Pool {
     let pg_config = config
         .get(ConfigKey::CockroachUrl)
-        .unwrap()
         .unwrap()
         .parse::<Config>()
         .unwrap();

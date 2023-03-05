@@ -96,8 +96,6 @@ impl UserSelectBuilder {
         &mut self,
         db_pool: &web::Data<deadpool_postgres::Pool>,
     ) -> Result<User, Error> {
-        println!("{}", self.query_builder.to_string(PostgresQueryBuilder));
-
         let row = db_pool
             .get()
             .await
@@ -129,7 +127,7 @@ impl Identity for User {
     type Iden = UserIden;
 
     fn table() -> Alias {
-        Alias::new(<Self as Identity>::Iden::Table.to_string().as_str())
+        Alias::new(&<Self as Identity>::Iden::Table.to_string())
     }
 
     fn error_identifier() -> String {
