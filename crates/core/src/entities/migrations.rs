@@ -1,4 +1,4 @@
-use super::{custom_table::CustomTable, Connection, Migrate, RefreshTokenTree, User};
+use super::{custom_table::schema::CustomTableSchema, Connection, Migrate, RefreshTokenTree, User};
 
 pub async fn migrate(db_pool: &deadpool_postgres::Pool) {
     let conn = db_pool.get().await.unwrap();
@@ -6,7 +6,7 @@ pub async fn migrate(db_pool: &deadpool_postgres::Pool) {
         User::migrate(),
         Connection::migrate(),
         RefreshTokenTree::migrate(),
-        CustomTable::migrate(),
+        CustomTableSchema::migrate(),
     ];
 
     for migration in migrations {

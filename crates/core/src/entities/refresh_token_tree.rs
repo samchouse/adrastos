@@ -30,7 +30,7 @@ impl Identity for RefreshTokenTree {
     type Iden = RefreshTokenTreeIden;
 
     fn table() -> Alias {
-        Alias::new(&Self::Iden::Table.to_string())
+        Alias::new(Self::Iden::Table.to_string())
     }
 
     fn error_identifier() -> String {

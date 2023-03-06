@@ -132,8 +132,7 @@ impl Config {
     }
 
     pub fn get(&self, key: ConfigKey) -> Result<String, Error> {
-        self
-            .0
+        self.0
             .get(&key)
             .ok_or(Error::InternalServerError {
                 error: "Unable to get config value".into(),

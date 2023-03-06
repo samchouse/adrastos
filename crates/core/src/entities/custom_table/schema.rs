@@ -4,27 +4,26 @@ use actix_web::web;
 use chrono::{DateTime, Utc};
 use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, SimpleExpr, Table,
-    TableCreateStatement,
 };
 use serde::{Deserialize, Serialize};
 use tokio_postgres::Row;
 
+use crate::entities::{Identity, Migrate, Query};
 use crate::handlers::Error;
 
-use super::{Identity, Migrate, Query};
-
-pub struct CustomTableSelectBuilder {
+pub struct CustomTableSchemaSelectBuilder {
     query_builder: sea_query::SelectStatement,
 }
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct CustomTable {
+pub struct CustomTableSchema {
     pub id: String,
     pub name: String,
     pub string_fields: Vec<StringField>,
     pub number_fields: Vec<NumberField>,
     pub boolean_fields: Vec<BooleanField>,
+    pub date_fields: Vec<DateField>,
     pub email_fields: Vec<EmailField>,
     pub url_fields: Vec<UrlField>,
     pub select_fields: Vec<SelectField>,
@@ -58,6 +57,14 @@ pub struct NumberField {
 #[serde(rename_all = "camelCase")]
 pub struct BooleanField {
     pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DateField {
+    pub name: String,
+    pub is_required: bool,
+    pub is_unique: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -101,17 +108,17 @@ pub struct RelationField {
     pub is_unique: bool,
 }
 
-impl CustomTableSelectBuilder {
+impl CustomTableSchemaSelectBuilder {
     pub fn by_id(&mut self, id: &str) -> &mut Self {
         self.query_builder
-            .and_where(Expr::col(<CustomTable as Identity>::Iden::Id).eq(id));
+            .and_where(Expr::col(<CustomTableSchema as Identity>::Iden::Id).eq(id));
 
         self
     }
 
     pub fn by_name(&mut self, name: &str) -> &mut Self {
         self.query_builder
-            .and_where(Expr::col(<CustomTable as Identity>::Iden::Name).eq(name));
+            .and_where(Expr::col(<CustomTableSchema as Identity>::Iden::Name).eq(name));
 
         self
     }
@@ -127,7 +134,7 @@ impl CustomTableSelectBuilder {
     pub async fn finish(
         &mut self,
         db_pool: &web::Data<deadpool_postgres::Pool>,
-    ) -> Result<CustomTable, Error> {
+    ) -> Result<CustomTableSchema, Error> {
         let row = db_pool
             .get()
             .await
@@ -140,14 +147,14 @@ impl CustomTableSelectBuilder {
             .map_err(|e| {
                 let error = format!(
                     "An error occurred while fetching the {}: {e}",
-                    CustomTable::error_identifier(),
+                    CustomTableSchema::error_identifier(),
                 );
                 Error::InternalServerError { error }
             })?
             .into_iter()
             .next()
             .ok_or_else(|| {
-                let message = format!("No {} was found", CustomTable::error_identifier());
+                let message = format!("No {} was found", CustomTableSchema::error_identifier());
                 Error::BadRequest { message }
             })?;
 
@@ -155,11 +162,11 @@ impl CustomTableSelectBuilder {
     }
 }
 
-impl Identity for CustomTable {
-    type Iden = CustomTableIden;
+impl Identity for CustomTableSchema {
+    type Iden = CustomTableSchemaIden;
 
     fn table() -> Alias {
-        Alias::new(&<Self as Identity>::Iden::Table.to_string())
+        Alias::new(<Self as Identity>::Iden::Table.to_string())
     }
 
     fn error_identifier() -> String {
@@ -167,7 +174,7 @@ impl Identity for CustomTable {
     }
 }
 
-impl Migrate for CustomTable {
+impl Migrate for CustomTableSchema {
     fn migrate() -> String {
         Table::create()
             .table(Self::table())
@@ -198,6 +205,12 @@ impl Migrate for CustomTable {
             )
             .col(
                 ColumnDef::new(<Self as Identity>::Iden::BooleanFields)
+                    .array(ColumnType::String(None))
+                    .not_null()
+                    .default(vec![] as Vec<String>),
+            )
+            .col(
+                ColumnDef::new(<Self as Identity>::Iden::DateFields)
                     .array(ColumnType::String(None))
                     .not_null()
                     .default(vec![] as Vec<String>),
@@ -237,9 +250,9 @@ impl Migrate for CustomTable {
     }
 }
 
-impl CustomTable {
-    pub fn select() -> CustomTableSelectBuilder {
-        CustomTableSelectBuilder {
+impl CustomTableSchema {
+    pub fn select() -> CustomTableSchemaSelectBuilder {
+        CustomTableSchemaSelectBuilder {
             query_builder: sea_query::Query::select()
                 .from(Self::table())
                 .columns([
@@ -248,6 +261,7 @@ impl CustomTable {
                     <Self as Identity>::Iden::StringFields,
                     <Self as Identity>::Iden::NumberFields,
                     <Self as Identity>::Iden::BooleanFields,
+                    <Self as Identity>::Iden::DateFields,
                     <Self as Identity>::Iden::EmailFields,
                     <Self as Identity>::Iden::UrlFields,
                     <Self as Identity>::Iden::SelectFields,
@@ -261,7 +275,7 @@ impl CustomTable {
     }
 }
 
-impl Query for CustomTable {
+impl Query for CustomTableSchema {
     fn query_select(expressions: Vec<sea_query::SimpleExpr>) -> sea_query::SelectStatement {
         let mut query = sea_query::Query::select();
 
@@ -277,6 +291,7 @@ impl Query for CustomTable {
                 <Self as Identity>::Iden::StringFields,
                 <Self as Identity>::Iden::NumberFields,
                 <Self as Identity>::Iden::BooleanFields,
+                <Self as Identity>::Iden::DateFields,
                 <Self as Identity>::Iden::EmailFields,
                 <Self as Identity>::Iden::UrlFields,
                 <Self as Identity>::Iden::SelectFields,
@@ -296,6 +311,7 @@ impl Query for CustomTable {
                 <Self as Identity>::Iden::StringFields,
                 <Self as Identity>::Iden::NumberFields,
                 <Self as Identity>::Iden::BooleanFields,
+                <Self as Identity>::Iden::DateFields,
                 <Self as Identity>::Iden::EmailFields,
                 <Self as Identity>::Iden::UrlFields,
                 <Self as Identity>::Iden::SelectFields,
@@ -317,6 +333,11 @@ impl Query for CustomTable {
                     .collect::<Vec<String>>()
                     .into(),
                 self.boolean_fields
+                    .iter()
+                    .filter_map(|f| serde_json::to_string(f).ok())
+                    .collect::<Vec<String>>()
+                    .into(),
+                self.date_fields
                     .iter()
                     .filter_map(|f| serde_json::to_string(f).ok())
                     .collect::<Vec<String>>()
@@ -359,7 +380,7 @@ impl Query for CustomTable {
     }
 }
 
-impl From<Row> for CustomTable {
+impl From<Row> for CustomTableSchema {
     fn from(row: Row) -> Self {
         Self {
             id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),
@@ -379,6 +400,11 @@ impl From<Row> for CustomTable {
                 .iter()
                 .map(|s| serde_json::from_str(s).unwrap())
                 .collect::<Vec<BooleanField>>(),
+            date_fields: row
+                .get::<_, Vec<String>>(<Self as Identity>::Iden::DateFields.to_string().as_str())
+                .iter()
+                .map(|s| serde_json::from_str(s).unwrap())
+                .collect::<Vec<DateField>>(),
             email_fields: row
                 .get::<_, Vec<String>>(<Self as Identity>::Iden::EmailFields.to_string().as_str())
                 .iter()
@@ -409,205 +435,7 @@ impl From<Row> for CustomTable {
     }
 }
 
-pub struct CustomSelectBuilder {
-    table_name: String,
-    query_builder: sea_query::SelectStatement,
-}
-
-impl CustomSelectBuilder {
-    pub fn by_id(&mut self, id: &str) -> &mut Self {
-        self.query_builder
-            .and_where(Expr::col(Alias::new("id")).eq(id));
-
-        self
-    }
-
-    pub fn and_where(&mut self, expressions: Vec<SimpleExpr>) -> &mut Self {
-        for expression in expressions {
-            self.query_builder.and_where(expression);
-        }
-
-        self
-    }
-
-    pub async fn finish(
-        &mut self,
-        db_pool: &web::Data<deadpool_postgres::Pool>,
-    ) -> Result<CustomTable, Error> {
-        let row = db_pool
-            .get()
-            .await
-            .unwrap()
-            .query(
-                self.query_builder.to_string(PostgresQueryBuilder).as_str(),
-                &[],
-            )
-            .await
-            .map_err(|e| {
-                let error = format!(
-                    "An error occurred while fetching the {}: {e}",
-                    self.table_name
-                );
-                Error::InternalServerError { error }
-            })?
-            .into_iter()
-            .next()
-            .ok_or_else(|| {
-                let message = format!(
-                    "No document was found for the custom table {}",
-                    self.table_name
-                );
-                Error::BadRequest { message }
-            })?;
-
-        Ok(row.into())
-    }
-}
-
-impl From<&CustomTable> for CustomSelectBuilder {
-    fn from(table: &CustomTable) -> Self {
-        let mut builder = sea_query::Query::select();
-
-        builder
-            .from(Alias::new(&table.name))
-            .column(Alias::new("id"))
-            .limit(1);
-
-        table.string_fields.iter().for_each(|field| {
-            builder.column(Alias::new(&field.name));
-        });
-        table.number_fields.iter().for_each(|field| {
-            builder.column(Alias::new(&field.name));
-        });
-        table.boolean_fields.iter().for_each(|field| {
-            builder.column(Alias::new(&field.name));
-        });
-        table.email_fields.iter().for_each(|field| {
-            builder.column(Alias::new(&field.name));
-        });
-        table.url_fields.iter().for_each(|field| {
-            builder.column(Alias::new(&field.name));
-        });
-        table.select_fields.iter().for_each(|field| {
-            builder.column(Alias::new(&field.name));
-        });
-        table.relation_fields.iter().for_each(|field| {
-            builder.column(Alias::new(&field.name));
-        });
-
-        CustomSelectBuilder {
-            table_name: table.name.clone(),
-            query_builder: builder,
-        }
-    }
-}
-
-impl From<&CustomTable> for TableCreateStatement {
-    fn from(table: &CustomTable) -> Self {
-        let mut builder = Table::create();
-
-        builder.table(Alias::new(&table.name)).if_not_exists().col(
-            ColumnDef::new(Alias::new("id"))
-                .string()
-                .not_null()
-                .primary_key(),
-        );
-
-        let mut columns = vec![];
-
-        table.string_fields.iter().for_each(|field| {
-            let mut column = ColumnDef::new(Alias::new(&field.name));
-
-            if field.is_required {
-                column.not_null();
-            }
-            if field.is_unique {
-                column.unique_key();
-            }
-
-            columns.push(column.string().to_owned());
-        });
-        table.number_fields.iter().for_each(|field| {
-            let mut column = ColumnDef::new(Alias::new(&field.name));
-
-            if field.is_required {
-                column.not_null();
-            }
-            if field.is_unique {
-                column.unique_key();
-            }
-
-            columns.push(column.unsigned().to_owned());
-        });
-        table.boolean_fields.iter().for_each(|field| {
-            columns.push(ColumnDef::new(Alias::new(&field.name)).boolean().to_owned());
-        });
-        table.email_fields.iter().for_each(|field| {
-            let mut column = ColumnDef::new(Alias::new(&field.name));
-
-            if field.is_required {
-                column.not_null();
-            }
-            if field.is_unique {
-                column.unique_key();
-            }
-
-            columns.push(column.string().to_owned());
-        });
-        table.url_fields.iter().for_each(|field| {
-            let mut column = ColumnDef::new(Alias::new(&field.name));
-
-            if field.is_required {
-                column.not_null();
-            }
-            if field.is_unique {
-                column.unique_key();
-            }
-
-            columns.push(column.string().to_owned());
-        });
-        table.select_fields.iter().for_each(|field| {
-            let mut column = ColumnDef::new(Alias::new(&field.name));
-
-            if field.is_required {
-                column.not_null();
-            }
-            if field.is_unique {
-                column.unique_key();
-            }
-
-            columns.push(column.array(ColumnType::String(None)).to_owned());
-        });
-
-        columns.iter_mut().for_each(|column| {
-            builder.col(column);
-        });
-
-        // custom_table.relation_fields.iter().for_each(|field| {
-        //     let mut column = ColumnDef::new(Alias::new(&field.name));dff
-
-        //     if field.is_required {
-        //         column.not_null();
-        //     }
-        //     if field.is_unique {
-        //         column.unique_key();
-        //     }
-
-        //     builder.foreign_key(
-        //         ForeignKey::create()
-        //             .name("FK_connection_user_id")
-        //             .from(Connection::table(), <Self as Identity>::Iden::UserId)
-        //             .to(User::table(), <User as Identity>::Iden::Id)
-        //             .on_update(ForeignKeyAction::Cascade)
-        //             .on_delete(ForeignKeyAction::Cascade),
-        //     )
-        // });
-
-        builder.to_owned()
-    }
-}
-
-impl fmt::Display for CustomTableIden {
+impl fmt::Display for CustomTableSchemaIden {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             Self::Table => "custom_tables",
@@ -616,6 +444,7 @@ impl fmt::Display for CustomTableIden {
             Self::StringFields => "string_fields",
             Self::NumberFields => "number_fields",
             Self::BooleanFields => "boolean_fields",
+            Self::DateFields => "date_fields",
             Self::EmailFields => "email_fields",
             Self::UrlFields => "url_fields",
             Self::SelectFields => "select_fields",

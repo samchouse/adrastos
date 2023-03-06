@@ -127,7 +127,7 @@ impl Identity for User {
     type Iden = UserIden;
 
     fn table() -> Alias {
-        Alias::new(&<Self as Identity>::Iden::Table.to_string())
+        Alias::new(<Self as Identity>::Iden::Table.to_string())
     }
 
     fn error_identifier() -> String {

@@ -6,9 +6,9 @@ use serde_json::json;
 
 use crate::{
     entities::{
-        custom_table::{
-            BooleanField, CustomTable, EmailField, NumberField, RelationField, SelectField,
-            StringField, UrlField,
+        custom_table::schema::{
+            BooleanField, CustomTableSchema, DateField, EmailField, NumberField, RelationField,
+            SelectField, StringField, UrlField,
         },
         Mutate,
     },
@@ -25,6 +25,7 @@ pub struct CreateBody {
     string_fields: Option<Vec<StringField>>,
     number_fields: Option<Vec<NumberField>>,
     boolean_fields: Option<Vec<BooleanField>>,
+    date_fields: Option<Vec<DateField>>,
     email_fields: Option<Vec<EmailField>>,
     url_fields: Option<Vec<UrlField>>,
     select_fields: Option<Vec<SelectField>>,
@@ -38,12 +39,13 @@ pub async fn create(
 ) -> actix_web::Result<impl Responder, Error> {
     let body = body.into_inner();
 
-    let custom_table = CustomTable {
+    let custom_table = CustomTableSchema {
         id: Id::new().to_string(),
         name: body.name,
         string_fields: body.string_fields.unwrap_or(vec![]),
         number_fields: body.number_fields.unwrap_or(vec![]),
         boolean_fields: body.boolean_fields.unwrap_or(vec![]),
+        date_fields: body.date_fields.unwrap_or(vec![]),
         email_fields: body.email_fields.unwrap_or(vec![]),
         url_fields: body.url_fields.unwrap_or(vec![]),
         select_fields: body.select_fields.unwrap_or(vec![]),
@@ -52,7 +54,7 @@ pub async fn create(
         updated_at: None,
     };
 
-    let found_table = CustomTable::select()
+    let found_table = CustomTableSchema::select()
         .by_name(&custom_table.name)
         .finish(&db_pool)
         .await;

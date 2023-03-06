@@ -96,6 +96,7 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/tables")
                     .service(handlers::tables::create)
                     .service(web::scope("/{table_name}").service((
+                        handlers::tables::custom::row,
                         handlers::tables::custom::rows,
                         handlers::tables::custom::create,
                     ))),
