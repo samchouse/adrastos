@@ -106,13 +106,13 @@ impl<T: Identity + Query + Migrate + From<Row> + Sync> Mutate for T {
                     "An error occurred while fetching the {}: {e}",
                     T::error_identifier(),
                 );
-                Error::InternalServerError { error }
+                Error::InternalServerError(error)
             })?
             .into_iter()
             .next()
             .ok_or_else(|| {
                 let message = format!("No {} was found", Self::error_identifier());
-                Error::BadRequest { message }
+                Error::BadRequest(message)
             })?;
 
         Ok(row.into())
@@ -130,7 +130,7 @@ impl<T: Identity + Query + Migrate + From<Row> + Sync> Mutate for T {
                     "An error occurred while creating the {}: {e}",
                     T::error_identifier(),
                 );
-                Error::InternalServerError { error }
+                Error::InternalServerError(error)
             })?;
 
         Ok(())
@@ -152,7 +152,7 @@ impl<T: Identity + Query + Migrate + From<Row> + Sync> Mutate for T {
                     "An error occurred while updating the {}: {e}",
                     T::error_identifier(),
                 );
-                Error::InternalServerError { error }
+                Error::InternalServerError(error)
             })?;
 
         Ok(())
@@ -170,7 +170,7 @@ impl<T: Identity + Query + Migrate + From<Row> + Sync> Mutate for T {
                     "An error occurred while deleting the {}: {e}",
                     T::error_identifier(),
                 );
-                Error::InternalServerError { error }
+                Error::InternalServerError(error)
             })?;
 
         Ok(())

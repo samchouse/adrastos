@@ -110,13 +110,13 @@ impl UserSelectBuilder {
                     "An error occurred while fetching the {}: {e}",
                     User::error_identifier(),
                 );
-                Error::InternalServerError { error }
+                Error::InternalServerError(error)
             })?
             .into_iter()
             .next()
             .ok_or_else(|| {
                 let message = format!("No {} was found", User::error_identifier());
-                Error::BadRequest { message }
+                Error::BadRequest(message)
             })?;
 
         Ok(row.into())
@@ -254,9 +254,9 @@ impl Query for User {
         })?;
 
         let hashed_password = auth::hash_password(self.password.as_str()).map_err(|err| {
-            Error::InternalServerError {
-                error: format!("An error occurred while hashing the password for the {err}"),
-            }
+            Error::InternalServerError(format!(
+                "An error occurred while hashing the password for the {err}"
+            ))
         })?;
 
         Ok(sea_query::Query::insert()

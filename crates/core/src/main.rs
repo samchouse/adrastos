@@ -24,6 +24,7 @@ mod entities;
 mod handlers;
 mod id;
 mod openapi;
+mod url;
 mod util;
 
 #[actix_web::main]
@@ -94,11 +95,16 @@ async fn main() -> std::io::Result<()> {
             )
             .service(
                 web::scope("/tables")
-                    .service(handlers::tables::create)
-                    .service(web::scope("/{table_name}").service((
+                    .service((
+                        handlers::tables::create,
+                        handlers::tables::update,
+                        handlers::tables::delete,
+                    ))
+                    .service(web::scope("/{name}").service((
                         handlers::tables::custom::row,
                         handlers::tables::custom::rows,
                         handlers::tables::custom::create,
+                        handlers::tables::custom::delete,
                     ))),
             )
             .default_service(web::route().to(handlers::not_found))

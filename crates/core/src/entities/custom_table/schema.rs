@@ -7,6 +7,7 @@ use sea_query::{
 };
 use serde::{Deserialize, Serialize};
 use tokio_postgres::Row;
+use utoipa::ToSchema;
 
 use crate::entities::{Identity, Migrate, Query};
 use crate::handlers::Error;
@@ -16,7 +17,7 @@ pub struct CustomTableSchemaSelectBuilder {
 }
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct CustomTableSchema {
     pub id: String,
     pub name: String,
@@ -32,7 +33,7 @@ pub struct CustomTableSchema {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct StringField {
     pub name: String,
@@ -43,7 +44,7 @@ pub struct StringField {
     pub is_unique: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NumberField {
     pub name: String,
@@ -53,13 +54,13 @@ pub struct NumberField {
     pub is_unique: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct BooleanField {
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DateField {
     pub name: String,
@@ -67,7 +68,7 @@ pub struct DateField {
     pub is_unique: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct EmailField {
     pub name: String,
@@ -77,7 +78,7 @@ pub struct EmailField {
     pub is_unique: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UrlField {
     pub name: String,
@@ -87,16 +88,18 @@ pub struct UrlField {
     pub is_unique: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SelectField {
     pub name: String,
-    pub options: String,
+    pub options: Vec<String>,
+    pub min_selected: Option<i32>,
+    pub max_selected: Option<i32>,
     pub is_required: bool,
     pub is_unique: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RelationField {
     pub name: String,
@@ -149,13 +152,13 @@ impl CustomTableSchemaSelectBuilder {
                     "An error occurred while fetching the {}: {e}",
                     CustomTableSchema::error_identifier(),
                 );
-                Error::InternalServerError { error }
+                Error::InternalServerError(error)
             })?
             .into_iter()
             .next()
             .ok_or_else(|| {
                 let message = format!("No {} was found", CustomTableSchema::error_identifier());
-                Error::BadRequest { message }
+                Error::BadRequest(message)
             })?;
 
         Ok(row.into())
@@ -368,8 +371,23 @@ impl Query for CustomTableSchema {
             .to_string(PostgresQueryBuilder))
     }
 
-    fn query_update(&self, _: HashMap<String, serde_json::Value>) -> Result<String, Error> {
-        todo!()
+    fn query_update(&self, updated: HashMap<String, serde_json::Value>) -> Result<String, Error> {
+        let mut query = sea_query::Query::update();
+
+        if let Some(name) = updated.get(<Self as Identity>::Iden::Name.to_string().as_str()) {
+            if let Some(name) = name.as_str() {
+                query.values([(<Self as Identity>::Iden::Name, name.into())]);
+            }
+        }
+
+        if query.get_values().is_empty() {
+            return Err(Error::BadRequest("No fields to update".to_string()));
+        }
+
+        Ok(query
+            .table(Self::table())
+            .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
+            .to_string(PostgresQueryBuilder))
     }
 
     fn query_delete(&self) -> String {

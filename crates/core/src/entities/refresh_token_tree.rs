@@ -8,6 +8,7 @@ use sea_query::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use utoipa::ToSchema;
 use validator::{ValidationError, ValidationErrors};
 
 use crate::{handlers::Error, util};
@@ -15,7 +16,7 @@ use crate::{handlers::Error, util};
 use super::{Identity, Migrate, Query, User};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct RefreshTokenTree {
     pub id: String,
     pub user_id: String,

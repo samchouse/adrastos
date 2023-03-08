@@ -134,12 +134,10 @@ impl Config {
     pub fn get(&self, key: ConfigKey) -> Result<String, Error> {
         self.0
             .get(&key)
-            .ok_or(Error::InternalServerError {
-                error: "Unable to get config value".into(),
-            })?
+            .ok_or(Error::InternalServerError(
+                "Unable to get config value".into(),
+            ))?
             .to_owned()
-            .ok_or(Error::InternalServerError {
-                error: "No value for config key".into(),
-            })
+            .ok_or(Error::InternalServerError("No value for config key".into()))
     }
 }

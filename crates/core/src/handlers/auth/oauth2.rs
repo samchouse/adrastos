@@ -60,33 +60,29 @@ pub async fn login(
     redis_pool: web::Data<deadpool_redis::Pool>,
     session: Session,
 ) -> actix_web::Result<impl Responder, Error> {
-    let provider =
-        OAuth2Provider::try_from(params.provider.as_str()).map_err(|_| Error::BadRequest {
-            message: "An invalid provider was provided".into(),
-        })?;
+    let provider = OAuth2Provider::try_from(params.provider.as_str())
+        .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;
 
     let (auth_url, csrf_token) = oauth2
         .initialize_login(provider, redis_pool)
         .await
-        .map_err(|_| Error::InternalServerError {
-            error: "Unable to initialize the OAuth login".into(),
-        })?;
+        .map_err(|_| Error::InternalServerError("Unable to initialize the OAuth login".into()))?;
 
     session
         .insert(
             SessionKey::CsrfToken.to_string(),
             csrf_token.secret().to_string(),
         )
-        .map_err(|_| Error::InternalServerError {
-            error: "Unable to insert CSRF token into session".to_string(),
+        .map_err(|_| {
+            Error::InternalServerError("Unable to insert CSRF token into session".to_string())
         })?;
 
     if let Ok(auth) = Authorization::<Bearer>::parse(&req) {
         if let Ok(access_token) = TokenType::verify(&config, auth.into_scheme().token().into()) {
             session
                 .insert(SessionKey::UserId.to_string(), access_token.claims.sub)
-                .map_err(|_| Error::InternalServerError {
-                    error: "Unable to insert user ID into session".to_string(),
+                .map_err(|_| {
+                    Error::InternalServerError("Unable to insert user ID into session".to_string())
                 })?;
         }
     };
@@ -107,13 +103,11 @@ pub async fn callback(
 ) -> actix_web::Result<impl Responder, Error> {
     let client_url = config.get(ConfigKey::ClientUrl)?;
 
-    let provider =
-        OAuth2Provider::try_from(params.provider.as_str()).map_err(|_| Error::BadRequest {
-            message: "An invalid provider was provided".into(),
-        })?;
+    let provider = OAuth2Provider::try_from(params.provider.as_str())
+        .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;
 
     let Ok(Some(session_csrf_token)) = session.get::<String>(&SessionKey::CsrfToken.to_string()) else {
-        return Err(Error::BadRequest { message: "The request is missing a session CSRF Token".into() });
+        return Err(Error::BadRequest("The request is missing a session CSRF Token".into()));
     };
 
     let token = oauth2
@@ -127,15 +121,11 @@ pub async fn callback(
             },
         )
         .await
-        .map_err(|err| Error::InternalServerError { error: err })?;
+        .map_err(Error::InternalServerError)?;
 
-    let oauth2_user =
-        provider
-            .fetch_user(&oauth2, &token)
-            .await
-            .map_err(|_| Error::InternalServerError {
-                error: "Unable to fetch the user from the OAuth provider".into(),
-            })?;
+    let oauth2_user = provider.fetch_user(&oauth2, &token).await.map_err(|_| {
+        Error::InternalServerError("Unable to fetch the user from the OAuth provider".into())
+    })?;
 
     let connection = Connection::find(
         &db_pool,
@@ -173,8 +163,8 @@ pub async fn callback(
     let cookie_expiration = OffsetDateTime::from_unix_timestamp(
         refresh_token.expires_at.timestamp(),
     )
-    .map_err(|_| Error::InternalServerError {
-        error: "An error occurred while parsing the cookie expiration".into(),
+    .map_err(|_| {
+        Error::InternalServerError("An error occurred while parsing the cookie expiration".into())
     })?;
 
     Ok(HttpResponse::Found()

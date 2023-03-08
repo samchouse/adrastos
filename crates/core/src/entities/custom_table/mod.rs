@@ -3,7 +3,7 @@
 use actix_web::web;
 use chrono::{DateTime, Utc};
 use sea_query::{
-    Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, SimpleExpr, Table,
+    Alias, ColumnDef, ColumnType, Keyword, PostgresQueryBuilder, SimpleExpr, Table,
     TableCreateStatement,
 };
 use serde_json::json;
@@ -15,7 +15,7 @@ use self::schema::CustomTableSchema;
 
 pub mod schema;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum ColType {
     String,
     Number,
@@ -35,9 +35,10 @@ impl ColType {
             ColType::Number => json!({ camel_case_name: row.get::<_, i64>(name) }),
             ColType::Boolean => json!({ camel_case_name: row.get::<_, bool>(name) }),
             ColType::Date => json!({ camel_case_name: row.get::<_, DateTime<Utc>>(name) }),
-            ColType::Array(col_type) => {
-                ColType::patch_from_row_column(row, name, col_type.as_ref().to_owned())
-            }
+            ColType::Array(col_type) => match col_type.as_ref().to_owned() {
+                ColType::String => json!({ camel_case_name: row.get::<_, Vec<String>>(name) }),
+                _ => todo!(),
+            },
             ColType::OptionalDate => {
                 json!({ camel_case_name: row.get::<_, Option<DateTime<Utc>>>(name) })
             }
@@ -51,13 +52,6 @@ pub struct CustomTableSelectBuilder {
 }
 
 impl CustomTableSelectBuilder {
-    pub fn by_id(&mut self, id: &str) -> &mut Self {
-        self.query_builder
-            .and_where(Expr::col(Alias::new("id")).eq(id));
-
-        self
-    }
-
     pub fn and_where(&mut self, expressions: Vec<SimpleExpr>) -> &mut Self {
         for expression in expressions {
             self.query_builder.and_where(expression);
@@ -90,7 +84,7 @@ impl CustomTableSelectBuilder {
                     "An error occurred while fetching the {}: {e}",
                     self.schema.name
                 );
-                Error::InternalServerError { error }
+                Error::InternalServerError(error)
             })?
             .into_iter()
             .next()
@@ -99,7 +93,7 @@ impl CustomTableSelectBuilder {
                     "No document was found for the custom table {}",
                     self.schema.name
                 );
-                Error::BadRequest { message }
+                Error::BadRequest(message)
             })?;
 
         let mut data = json!({});
@@ -129,11 +123,11 @@ impl CustomTableSelectBuilder {
         self.schema
             .email_fields
             .iter()
-            .for_each(|f| columns.push((&f.name, ColType::Array(Box::new(ColType::String)))));
+            .for_each(|f| columns.push((&f.name, ColType::String)));
         self.schema
             .url_fields
             .iter()
-            .for_each(|f| columns.push((&f.name, ColType::Array(Box::new(ColType::String)))));
+            .for_each(|f| columns.push((&f.name, ColType::String)));
         self.schema
             .select_fields
             .iter()

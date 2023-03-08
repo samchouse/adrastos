@@ -13,15 +13,9 @@ pub mod tables;
 pub enum Error {
     NotFound,
     Unauthorized,
-    Forbidden {
-        message: String,
-    },
-    BadRequest {
-        message: String,
-    },
-    InternalServerError {
-        error: String,
-    },
+    Forbidden(String),
+    BadRequest(String),
+    InternalServerError(String),
     ValidationErrors {
         message: String,
         errors: ValidationErrors,
@@ -53,9 +47,9 @@ impl error::ResponseError for Error {
         let patch = match self {
             Self::NotFound => json!({ "message": "Resource not found" }),
             Self::Unauthorized => json!({ "message": "User not authenticated" }),
-            Self::Forbidden { message } => json!({ "message": message }),
-            Self::BadRequest { message } => json!({ "message": message }),
-            Self::InternalServerError { error } => json!({ "error": error }),
+            Self::Forbidden(message) => json!({ "message": message }),
+            Self::BadRequest(message) => json!({ "message": message }),
+            Self::InternalServerError(error) => json!({ "error": error }),
             Self::ValidationErrors { message, errors } => {
                 json!({ "message": message, "errors": errors })
             }
@@ -70,10 +64,10 @@ impl error::ResponseError for Error {
         match self {
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
-            Self::Forbidden { .. } => StatusCode::FORBIDDEN,
-            Self::BadRequest { .. } => StatusCode::BAD_REQUEST,
+            Self::Forbidden(..) => StatusCode::FORBIDDEN,
+            Self::BadRequest(..) => StatusCode::BAD_REQUEST,
             Self::ValidationErrors { .. } => StatusCode::BAD_REQUEST,
-            Self::InternalServerError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::InternalServerError(..) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

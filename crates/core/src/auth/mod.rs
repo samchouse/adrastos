@@ -99,8 +99,8 @@ impl TokenType {
             &claims,
             &EncodingKey::from_secret(secret_key.as_bytes()),
         )
-        .map_err(|err| Error::InternalServerError {
-            error: format!("Unable to encode {self} token: {err}"),
+        .map_err(|err| {
+            Error::InternalServerError(format!("Unable to encode {self} token: {err}"))
         })?;
 
         Ok(TokenInfo {
@@ -122,18 +122,16 @@ impl TokenType {
         .map(|data| data.claims)
         .map_err(|err| match err.into_kind() {
             ErrorKind::ExpiredSignature => Error::Unauthorized,
-            _ => Error::InternalServerError {
-                error: "Unable to decode token".into(),
-            },
+            _ => Error::InternalServerError("Unable to decode token".into()),
         })?;
 
         let token_type = match claims.token_type.as_str() {
             "access" => TokenType::Access,
             "refresh" => TokenType::Refresh,
             _ => {
-                return Err(Error::InternalServerError {
-                    error: "Token has an invalid token type".into(),
-                })
+                return Err(Error::InternalServerError(
+                    "Token has an invalid token type".into(),
+                ))
             }
         };
 

@@ -8,13 +8,14 @@ use sea_query::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use utoipa::ToSchema;
 
 use crate::handlers::Error;
 
 use super::{Identity, Migrate, Query, User};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct Connection {
     pub id: String,
     pub provider: String,
