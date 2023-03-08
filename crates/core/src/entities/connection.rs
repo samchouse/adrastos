@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::ToSchema;
 
-use crate::handlers::Error;
+use crate::error::Error;
 
 use super::{Identity, Migrate, Query, User};
 

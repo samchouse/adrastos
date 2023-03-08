@@ -8,7 +8,7 @@ use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{Alias, Iden, PostgresQueryBuilder, SelectStatement, SimpleExpr};
 use serde_json::Value;
 
-use crate::handlers::Error;
+use crate::error::Error;
 
 pub use connection::*;
 pub use refresh_token_tree::*;
@@ -176,3 +176,5 @@ impl<T: Identity + Query + Migrate + From<Row> + Sync> Mutate for T {
         Ok(())
     }
 }
+
+

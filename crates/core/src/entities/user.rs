@@ -14,7 +14,7 @@ use serde_json::Value;
 use utoipa::ToSchema;
 use validator::Validate;
 
-use crate::{auth, handlers::Error};
+use crate::{auth, error::Error};
 
 use super::{Connection, Identity, JoinKeys, Migrate, Query, RefreshTokenTree};
 

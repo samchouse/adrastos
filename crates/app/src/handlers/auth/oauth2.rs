@@ -9,19 +9,18 @@ use actix_web::{
 };
 use actix_web_httpauth::headers::authorization::{Authorization, Bearer};
 use chrono::Utc;
-use sea_query::Expr;
-use serde::Deserialize;
-
-use crate::{
+use core::{
     auth::{
         oauth2::{providers::OAuth2Provider, OAuth2, OAuth2LoginInfo},
         TokenType,
     },
     config::{self, ConfigKey},
     entities::{Connection, ConnectionIden, Mutate, User, UserIden},
-    handlers::Error,
+    error::Error,
     id::Id,
 };
+use sea_query::Expr;
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct LoginParams {

@@ -6,9 +6,6 @@ use serde::Serialize;
 use serde_json::json;
 use validator::ValidationErrors;
 
-pub mod auth;
-pub mod tables;
-
 #[derive(Debug, Serialize)]
 pub enum Error {
     NotFound,
@@ -70,8 +67,4 @@ impl error::ResponseError for Error {
             Self::InternalServerError(..) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
-}
-
-pub async fn not_found() -> actix_web::Result<String, Error> {
-    Err(Error::NotFound)
 }

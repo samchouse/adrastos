@@ -11,7 +11,7 @@ use serde_json::Value;
 use utoipa::ToSchema;
 use validator::{ValidationError, ValidationErrors};
 
-use crate::{handlers::Error, util};
+use crate::{error::Error, util};
 
 use super::{Identity, Migrate, Query, User};
 

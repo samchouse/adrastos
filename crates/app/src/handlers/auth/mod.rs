@@ -6,15 +6,15 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
-
-use crate::{
+use core::{
     auth::{self, TokenType},
     config,
     entities::{Mutate, RefreshTokenTree, User},
-    handlers::Error,
+    error::Error,
     id::Id,
-    openapi,
 };
+
+use crate::openapi;
 
 pub mod oauth2;
 pub mod token;

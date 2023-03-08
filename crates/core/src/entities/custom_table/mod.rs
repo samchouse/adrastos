@@ -9,7 +9,7 @@ use sea_query::{
 use serde_json::json;
 use tokio_postgres::Row;
 
-use crate::handlers::Error;
+use crate::error::Error;
 
 use self::schema::CustomTableSchema;
 

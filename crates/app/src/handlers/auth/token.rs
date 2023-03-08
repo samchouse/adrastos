@@ -5,15 +5,14 @@ use actix_web::{
     get, web, HttpRequest, HttpResponse, Responder,
 };
 use chrono::Utc;
-use serde_json::{json, Value};
-
-use crate::{
+use core::{
     auth::{self, TokenType},
     config,
     entities::{Mutate, RefreshTokenTree, RefreshTokenTreeIden, User},
-    handlers::Error,
+    error::Error,
     util,
 };
+use serde_json::{json, Value};
 
 #[utoipa::path(
     get,

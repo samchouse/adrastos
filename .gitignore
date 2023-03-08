@@ -4,3 +4,13 @@
 # directories
 /certs
 /target
+dashboard/.vscode
+
+# yarn
+dashboard/.pnp.*
+dashboard/.yarn/*
+!dashboard/.yarn/patches
+!dashboard/.yarn/plugins
+!dashboard/.yarn/releases
+!dashboard/.yarn/sdks
+!dashboard/.yarn/versions

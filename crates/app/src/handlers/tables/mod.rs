@@ -7,8 +7,7 @@ use sea_query::{Alias, PostgresQueryBuilder, Table, TableCreateStatement};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use utoipa::ToSchema;
-
-use crate::{
+use core::{
     entities::{
         custom_table::schema::{
             BooleanField, CustomTableSchema, CustomTableSchemaIden, DateField, EmailField,
@@ -16,7 +15,7 @@ use crate::{
         },
         Mutate,
     },
-    handlers::Error,
+    error::Error,
     id::Id,
 };
 

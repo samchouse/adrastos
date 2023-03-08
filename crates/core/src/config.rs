@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env, fmt};
 
-use crate::handlers::Error;
+use crate::error::Error;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum ConfigKey {

@@ -1,20 +1,22 @@
 {
-	"rust-analyzer.check.command": "clippy",
-	"cSpell.words": [
-		"actix",
-		"Adrastos",
-		"chrono",
-		"deadpool",
-		"dotenvy",
-		"GETDEL",
-		"Iden",
-		"jsonwebtoken",
-		"libinjection",
-		"openapi",
-		"pkce",
-		"reqwest",
-		"SETEX",
-		"sqli",
-		"utoipa"
-	]
+  "rust-analyzer.check.command": "clippy",
+  "typescript.tsdk": "dashboard/node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "cSpell.words": [
+    "actix",
+    "Adrastos",
+    "chrono",
+    "deadpool",
+    "dotenvy",
+    "GETDEL",
+    "Iden",
+    "jsonwebtoken",
+    "libinjection",
+    "openapi",
+    "pkce",
+    "reqwest",
+    "SETEX",
+    "sqli",
+    "utoipa"
+  ]
 }

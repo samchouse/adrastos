@@ -10,7 +10,7 @@ use tokio_postgres::Row;
 use utoipa::ToSchema;
 
 use crate::entities::{Identity, Migrate, Query};
-use crate::handlers::Error;
+use crate::error::Error;
 
 pub struct CustomTableSchemaSelectBuilder {
     query_builder: sea_query::SelectStatement,

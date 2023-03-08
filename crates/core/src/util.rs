@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use actix_web::HttpRequest;
 use validator::ValidationError;
 
-use crate::handlers::Error;
+use crate::error::Error;
 
 pub fn string_to_static_str(s: String) -> &'static str {
     Box::leak(s.into_boxed_str())

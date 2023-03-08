@@ -1,51 +1,50 @@
 use std::{borrow::Cow, collections::HashMap};
 
-use actix_web::{delete, get, post, web, HttpResponse, Responder};
+use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use chrono::{DateTime, Utc};
+use core::{
+    db::postgres,
+    entities::custom_table::{schema::CustomTableSchema, CustomTableSelectBuilder},
+    error::Error,
+    id::Id,
+    url::Url,
+    util,
+};
 use heck::{AsLowerCamelCase, AsSnakeCase};
 use regex::Regex;
 use sea_query::{Alias, Expr, PostgresQueryBuilder, SimpleExpr, Value};
 use serde_json::json;
 use validator::{ValidationError, ValidationErrors};
 
-use crate::{
-    db::postgres,
-    entities::custom_table::{schema::CustomTableSchema, CustomTableSelectBuilder},
-    handlers::Error,
-    id::Id,
-    url::Url,
-    util,
-};
+// #[get("/rows")]
+// pub async fn rows(
+//     path: web::Path<String>,
+//     web::Query(query): web::Query<HashMap<String, String>>,
+//     db_pool: web::Data<deadpool_postgres::Pool>,
+// ) -> actix_web::Result<impl Responder, Error> {
+//     todo!();
 
-#[get("/rows")]
-pub async fn rows(
-    path: web::Path<String>,
-    web::Query(query): web::Query<HashMap<String, String>>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
-) -> actix_web::Result<impl Responder, Error> {
-    todo!();
+//     let custom_table = CustomTableSchema::select()
+//         .by_name(&path.into_inner())
+//         .finish(&db_pool)
+//         .await?;
 
-    let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
-        .finish(&db_pool)
-        .await?;
+//     let rows = CustomTableSelectBuilder::from(&custom_table)
+//         .and_where(
+//             query
+//                 .iter()
+//                 .map(|(field, equals)| Expr::col(Alias::new(field)).eq(equals))
+//                 .collect(),
+//         )
+//         .limit(None) // TODO(@Xenfo): properly convert rows to JSON array
+//         .finish(&db_pool)
+//         .await?;
 
-    let rows = CustomTableSelectBuilder::from(&custom_table)
-        .and_where(
-            query
-                .iter()
-                .map(|(field, equals)| Expr::col(Alias::new(field)).eq(equals))
-                .collect(),
-        )
-        .limit(None) // TODO(@Xenfo): properly convert rows to JSON array
-        .finish(&db_pool)
-        .await?;
-
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "data": rows
-    })))
-}
+//     Ok(HttpResponse::Ok().json(json!({
+//         "success": true,
+//         "data": rows
+//     })))
+// }
 
 #[get("/row")]
 pub async fn row(
@@ -508,6 +507,43 @@ pub async fn create(
     Ok(HttpResponse::Ok().json(json!({
         "success": true,
         "data": data
+    })))
+}
+
+#[patch("/update")]
+pub async fn update(
+    path: web::Path<String>,
+    web::Query(query): web::Query<HashMap<String, String>>,
+    db_pool: web::Data<deadpool_postgres::Pool>,
+) -> actix_web::Result<impl Responder, Error> {
+    let custom_table = CustomTableSchema::select()
+        .by_name(&path.into_inner())
+        .finish(&db_pool)
+        .await?;
+
+    let mut db_query = sea_query::Query::update();
+
+    query.iter().for_each(|(field, equals)| {
+        db_query.and_where(Expr::col(Alias::new(AsSnakeCase(field).to_string())).eq(equals));
+    });
+
+    db_pool
+        .get()
+        .await
+        .unwrap()
+        .execute(
+            db_query
+                .table(Alias::new(&custom_table.name))
+                .to_string(PostgresQueryBuilder)
+                .as_str(),
+            &[],
+        )
+        .await
+        .unwrap();
+
+    Ok(HttpResponse::Ok().json(json!({
+        "success": true,
+        "message": "Row updated successfully"
     })))
 }
 

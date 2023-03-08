@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     config::{self, ConfigKey},
     entities::User,
-    handlers::Error,
+    error::Error,
     id::Id,
 };
 

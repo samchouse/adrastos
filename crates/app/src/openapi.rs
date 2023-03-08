@@ -1,9 +1,10 @@
+use core::entities;
 use utoipa::{
     openapi::{Object, ObjectBuilder, SchemaFormat, SchemaType},
     OpenApi,
 };
 
-use crate::{entities, handlers};
+use crate::handlers;
 
 #[derive(OpenApi)]
 #[openapi(

@@ -1,7 +1,10 @@
-#![feature(let_chains)]
-
 use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, error::InternalError, web, App, HttpResponse, HttpServer};
+use core::{
+    auth::oauth2::OAuth2,
+    config::{Config, ConfigKey},
+    db::{postgres, redis},
+};
 use dotenvy::dotenv;
 use openapi::ApiDoc;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
@@ -11,21 +14,8 @@ use tracing::{error, info};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::{
-    auth::oauth2::OAuth2,
-    config::{Config, ConfigKey},
-    db::{postgres, redis},
-};
-
-mod auth;
-mod config;
-mod db;
-mod entities;
 mod handlers;
-mod id;
 mod openapi;
-mod url;
-mod util;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -39,8 +29,6 @@ async fn main() -> std::io::Result<()> {
     let db_pool = postgres::create_pool(&config);
 
     let server_url = config.get(ConfigKey::ServerUrl).unwrap().to_string();
-
-    entities::migrations::migrate(&db_pool).await;
 
     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
     builder
@@ -102,7 +90,7 @@ async fn main() -> std::io::Result<()> {
                     ))
                     .service(web::scope("/{name}").service((
                         handlers::tables::custom::row,
-                        handlers::tables::custom::rows,
+                        // handlers::tables::custom::rows,
                         handlers::tables::custom::create,
                         handlers::tables::custom::delete,
                     ))),
