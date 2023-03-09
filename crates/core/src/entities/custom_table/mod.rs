@@ -212,16 +212,7 @@ impl From<&CustomTableSchema> for TableCreateStatement {
         let mut columns = vec![];
 
         schema.string_fields.iter().for_each(|field| {
-            let mut column = ColumnDef::new(Alias::new(&field.name));
-
-            if field.is_required {
-                column.not_null();
-            }
-            if field.is_unique {
-                column.unique_key();
-            }
-
-            columns.push(column.string().to_owned());
+            columns.push(field.column());
         });
         schema.number_fields.iter().for_each(|field| {
             let mut column = ColumnDef::new(Alias::new(&field.name));

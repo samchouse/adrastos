@@ -75,7 +75,7 @@ pub async fn refresh(
     refresh_token_tree
         .update(
             &db_pool,
-            HashMap::from([(
+            &HashMap::from([(
                 RefreshTokenTreeIden::Tokens.to_string(),
                 Value::from(tokens),
             )]),

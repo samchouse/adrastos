@@ -4,6 +4,7 @@ use core::{
     auth::oauth2::OAuth2,
     config::{Config, ConfigKey},
     db::{postgres, redis},
+    entities,
 };
 use dotenvy::dotenv;
 use openapi::ApiDoc;
@@ -27,6 +28,8 @@ async fn main() -> std::io::Result<()> {
         process::exit(1)
     });
     let db_pool = postgres::create_pool(&config);
+
+    entities::migrations::migrate(&db_pool).await;
 
     let server_url = config.get(ConfigKey::ServerUrl).unwrap().to_string();
 

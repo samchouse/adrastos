@@ -1,16 +1,21 @@
+use std::borrow::Cow;
 use std::{collections::HashMap, fmt};
 
 use actix_web::web;
 use chrono::{DateTime, Utc};
+use regex::Regex;
 use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, SimpleExpr, Table,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tokio_postgres::Row;
 use utoipa::ToSchema;
+use validator::ValidationError;
 
 use crate::entities::{Identity, Migrate, Query};
 use crate::error::Error;
+use crate::util;
 
 pub struct CustomTableSchemaSelectBuilder {
     query_builder: sea_query::SelectStatement,
@@ -109,6 +114,71 @@ pub struct RelationField {
     pub cascade_delete: bool,
     pub is_required: bool,
     pub is_unique: bool,
+}
+
+impl StringField {
+    pub fn column(&self) -> ColumnDef {
+        let mut column = ColumnDef::new(Alias::new(&self.name));
+
+        if self.is_required {
+            column.not_null();
+        }
+        if self.is_unique {
+            column.unique_key();
+        }
+
+        column.string();
+
+        column
+    }
+
+    pub fn validate(&self, value: Option<&Value>) -> Result<SimpleExpr, Vec<ValidationError>> {
+        let mut errors = vec![];
+
+        match value {
+            Some(value) => {
+                let value = value.as_str().unwrap();
+
+                let mut length_error = ValidationError::new("length");
+
+                if let Some(min_length) = self.min_length {
+                    if value.len() < min_length.try_into().unwrap() {
+                        length_error.add_param(Cow::from("min"), &min_length);
+                    }
+                }
+                if let Some(max_length) = self.max_length {
+                    if value.len() > max_length.try_into().unwrap() {
+                        length_error.add_param(Cow::from("max"), &max_length);
+                    }
+                }
+                if let Some(pattern) = &self.pattern {
+                    if let Ok(regex) = Regex::new(pattern) {
+                        if !regex.is_match(value) {
+                            errors.push(util::create_validation_error(
+                                "pattern",
+                                Some(format!("Doesn't match '{pattern}'")),
+                            ));
+                        }
+                    }
+                }
+
+                if !length_error.params.is_empty() {
+                    errors.push(length_error)
+                }
+
+                if errors.is_empty() {
+                    return Ok(value.into());
+                }
+            }
+            None => {
+                if self.is_required {
+                    errors.push(ValidationError::new("required"));
+                }
+            }
+        };
+
+        Err(errors)
+    }
 }
 
 impl CustomTableSchemaSelectBuilder {
@@ -371,7 +441,7 @@ impl Query for CustomTableSchema {
             .to_string(PostgresQueryBuilder))
     }
 
-    fn query_update(&self, updated: HashMap<String, serde_json::Value>) -> Result<String, Error> {
+    fn query_update(&self, updated: &HashMap<String, serde_json::Value>) -> Result<String, Error> {
         let mut query = sea_query::Query::update();
 
         if let Some(name) = updated.get(<Self as Identity>::Iden::Name.to_string().as_str()) {
@@ -379,9 +449,24 @@ impl Query for CustomTableSchema {
                 query.values([(<Self as Identity>::Iden::Name, name.into())]);
             }
         }
+        if let Some(string_fields) =
+            updated.get(<Self as Identity>::Iden::StringFields.to_string().as_str())
+        {
+            let string_fields = string_fields
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|f| serde_json::from_str::<StringField>(f.as_str().unwrap()).unwrap())
+                .collect::<Vec<_>>();
 
-        if query.get_values().is_empty() {
-            return Err(Error::BadRequest("No fields to update".to_string()));
+            query.values([(
+                <Self as Identity>::Iden::StringFields,
+                string_fields
+                    .iter()
+                    .filter_map(|f| serde_json::to_string(f).ok())
+                    .collect::<Vec<String>>()
+                    .into(),
+            )]);
         }
 
         Ok(query

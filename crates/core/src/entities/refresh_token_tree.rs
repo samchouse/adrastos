@@ -133,7 +133,7 @@ impl Query for RefreshTokenTree {
             .to_string(PostgresQueryBuilder))
     }
 
-    fn query_update(&self, updated: HashMap<String, Value>) -> Result<String, Error> {
+    fn query_update(&self, updated: &HashMap<String, Value>) -> Result<String, Error> {
         let mut errors = ValidationErrors::new();
         let Some(tokens) = updated.get(<Self as Identity>::Iden::Tokens.to_string().as_str()) else {
             errors.add(util::string_to_static_str(<Self as Identity>::Iden::Tokens.to_string()), ValidationError::new("required"));

@@ -34,7 +34,7 @@ pub trait Identity {
 pub trait Query {
     fn query_select(expressions: Vec<SimpleExpr>) -> SelectStatement;
     fn query_insert(&self) -> Result<String, Error>;
-    fn query_update(&self, updated: HashMap<String, Value>) -> Result<String, Error>;
+    fn query_update(&self, updated: &HashMap<String, Value>) -> Result<String, Error>;
     fn query_delete(&self) -> String;
 }
 
@@ -78,7 +78,7 @@ pub trait Mutate: Sized {
     async fn update(
         &self,
         db_pool: &web::Data<deadpool_postgres::Pool>,
-        updated: HashMap<String, Value>,
+        updated: &HashMap<String, Value>,
     ) -> Result<(), Error>;
     async fn delete(&self, db_pool: &web::Data<deadpool_postgres::Pool>) -> Result<(), Error>;
 }
@@ -139,7 +139,7 @@ impl<T: Identity + Query + Migrate + From<Row> + Sync> Mutate for T {
     async fn update(
         &self,
         db_pool: &web::Data<deadpool_postgres::Pool>,
-        updated: HashMap<String, Value>,
+        updated: &HashMap<String, Value>,
     ) -> Result<(), Error> {
         db_pool
             .get()

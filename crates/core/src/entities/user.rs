@@ -280,7 +280,7 @@ impl Query for User {
             .to_string(PostgresQueryBuilder))
     }
 
-    fn query_update(&self, updated: HashMap<String, Value>) -> Result<String, Error> {
+    fn query_update(&self, updated: &HashMap<String, Value>) -> Result<String, Error> {
         let mut updated_for_validation = self.clone();
         let mut query = sea_query::Query::update();
 

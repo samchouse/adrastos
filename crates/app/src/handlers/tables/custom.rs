@@ -99,60 +99,22 @@ pub async fn create(
     ];
 
     custom_table.string_fields.iter().for_each(|field| {
-        let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
+        let validation_results =
+            field.validate(body.get(&AsLowerCamelCase(field.name.clone()).to_string()));
 
-        match value {
-            Some(value) => {
-                let value = value.as_str().unwrap();
-
-                let mut length_error = ValidationError::new("length");
-
-                if let Some(min_length) = field.min_length {
-                    if value.len() < min_length.try_into().unwrap() {
-                        length_error.add_param(Cow::from("min"), &min_length);
-                    }
-                }
-                if let Some(max_length) = field.max_length {
-                    if value.len() > max_length.try_into().unwrap() {
-                        length_error.add_param(Cow::from("max"), &max_length);
-                    }
-                }
-                if let Some(pattern) = &field.pattern {
-                    if let Ok(regex) = Regex::new(pattern) {
-                        if !regex.is_match(value) {
-                            errors.add(
-                                util::string_to_static_str(
-                                    AsLowerCamelCase(field.name.clone()).to_string(),
-                                ),
-                                util::create_validation_error(
-                                    "pattern",
-                                    Some(format!("Doesn't match '{pattern}'")),
-                                ),
-                            );
-                        }
-                    }
-                }
-
-                if !length_error.params.is_empty() {
-                    errors.add(
-                        util::string_to_static_str(
-                            AsLowerCamelCase(field.name.clone()).to_string(),
-                        ),
-                        length_error,
-                    )
-                }
-
-                table_values.push((&field.name, value.into()));
+        match validation_results {
+            Ok(value) => {
+                table_values.push((&field.name, value));
             }
-            None => {
-                if field.is_required {
+            Err(validation_errors) => {
+                validation_errors.iter().for_each(|error| {
                     errors.add(
                         util::string_to_static_str(
                             AsLowerCamelCase(field.name.clone()).to_string(),
                         ),
-                        ValidationError::new("required"),
+                        error.clone(),
                     );
-                }
+                });
             }
         }
     });

@@ -2,11 +2,6 @@ use std::collections::HashMap;
 
 use actix_web::{delete, patch, post, web, HttpResponse, Responder};
 use chrono::Utc;
-use heck::AsSnakeCase;
-use sea_query::{Alias, PostgresQueryBuilder, Table, TableCreateStatement};
-use serde::Deserialize;
-use serde_json::{json, Value};
-use utoipa::ToSchema;
 use core::{
     entities::{
         custom_table::schema::{
@@ -18,6 +13,11 @@ use core::{
     error::Error,
     id::Id,
 };
+use heck::AsSnakeCase;
+use sea_query::{Alias, PostgresQueryBuilder, Table, TableCreateStatement};
+use serde::Deserialize;
+use serde_json::{json, Value};
+use utoipa::ToSchema;
 
 pub mod custom;
 
@@ -35,18 +35,33 @@ pub struct CreateBody {
     relation_fields: Option<Vec<RelationField>>,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
+enum Action {
+    Create,
+    Update,
+    Delete,
+}
+
+#[derive(Deserialize, ToSchema, Debug)]
+struct UpdateComponent<T> {
+    name: String,
+    action: Action,
+    field: T,
+}
+
+#[derive(Deserialize, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateBody {
     name: Option<String>,
-    // string_fields: Option<Vec<StringField>>,
-    // number_fields: Option<Vec<NumberField>>,
-    // boolean_fields: Option<Vec<BooleanField>>,
-    // date_fields: Option<Vec<DateField>>,
-    // email_fields: Option<Vec<EmailField>>,
-    // url_fields: Option<Vec<UrlField>>,
-    // select_fields: Option<Vec<SelectField>>,
-    // relation_fields: Option<Vec<RelationField>>,
+    string_fields: Option<Vec<UpdateComponent<StringField>>>,
+    number_fields: Option<Vec<UpdateComponent<NumberField>>>,
+    boolean_fields: Option<Vec<UpdateComponent<BooleanField>>>,
+    date_fields: Option<Vec<UpdateComponent<DateField>>>,
+    email_fields: Option<Vec<UpdateComponent<EmailField>>>,
+    url_fields: Option<Vec<UpdateComponent<UrlField>>>,
+    select_fields: Option<Vec<UpdateComponent<SelectField>>>,
+    relation_fields: Option<Vec<UpdateComponent<RelationField>>>,
 }
 
 #[utoipa::path(
@@ -189,6 +204,7 @@ pub async fn update(
         .await?;
 
     let mut updated_table = HashMap::new();
+    let mut alter_query = Table::alter();
 
     if let Some(name) = body.name {
         if name != custom_table.name {
@@ -205,8 +221,89 @@ pub async fn update(
             updated_table.insert(CustomTableSchemaIden::Name.to_string(), Value::from(name));
         }
     }
+    if let Some(string_fields) = body.string_fields {
+        let mut updated_string_fields = custom_table.string_fields.clone();
 
-    custom_table.update(&db_pool, updated_table).await?;
+        string_fields.iter().for_each(|comp| match comp.action {
+            Action::Create => {
+                updated_string_fields.push(comp.field.clone());
+            }
+            Action::Update => {
+                updated_string_fields = updated_string_fields
+                    .clone()
+                    .into_iter()
+                    .map(|f| {
+                        if f.name == comp.name {
+                            comp.field.clone()
+                        } else {
+                            f
+                        }
+                    })
+                    .collect();
+
+                if comp.name != comp.field.name {
+                    alter_query.rename_column(Alias::new(&comp.name), Alias::new(&comp.field.name));
+                }
+
+                alter_query.modify_column(&mut comp.field.column());
+            }
+            Action::Delete => {
+                updated_string_fields = updated_string_fields
+                    .clone()
+                    .into_iter()
+                    .filter(|f| f.name != comp.field.name)
+                    .collect();
+            }
+        });
+
+        updated_table.insert(
+            CustomTableSchemaIden::StringFields.to_string(),
+            Value::from(
+                updated_string_fields
+                    .iter()
+                    .filter_map(|f| serde_json::to_string(f).ok())
+                    .collect::<Vec<String>>(),
+            ),
+        );
+    }
+
+    custom_table.update(&db_pool, &updated_table).await?;
+
+    let mut table_name = custom_table.name.clone();
+
+    if let Some(new_name) = updated_table.get(&CustomTableSchemaIden::Name.to_string()) {
+        let new_name = new_name.as_str().unwrap();
+
+        db_pool
+            .get()
+            .await
+            .unwrap()
+            .execute(
+                Table::rename()
+                    .table(Alias::new(&table_name), Alias::new(new_name))
+                    .to_string(PostgresQueryBuilder)
+                    .as_str(),
+                &[],
+            )
+            .await
+            .unwrap();
+
+        table_name = new_name.to_string();
+    }
+
+    db_pool
+        .get()
+        .await
+        .unwrap()
+        .execute(
+            alter_query
+                .table(Alias::new(table_name))
+                .to_string(PostgresQueryBuilder)
+                .as_str(),
+            &[],
+        )
+        .await
+        .unwrap();
 
     Ok(HttpResponse::Ok().json(json!({
         "success": true,

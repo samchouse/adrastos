@@ -125,7 +125,7 @@ impl Query for Connection {
             .to_string(PostgresQueryBuilder))
     }
 
-    fn query_update(&self, _: HashMap<String, Value>) -> Result<String, Error> {
+    fn query_update(&self, _: &HashMap<String, Value>) -> Result<String, Error> {
         todo!()
     }
 
