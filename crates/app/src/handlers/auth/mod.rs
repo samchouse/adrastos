@@ -3,9 +3,6 @@ use actix_web::{
     get, post, web, HttpRequest, HttpResponse, Responder,
 };
 use chrono::Utc;
-use serde::Deserialize;
-use serde_json::json;
-use utoipa::ToSchema;
 use core::{
     auth::{self, TokenType},
     config,
@@ -13,6 +10,9 @@ use core::{
     error::Error,
     id::Id,
 };
+use serde::Deserialize;
+use serde_json::json;
+use utoipa::ToSchema;
 
 use crate::openapi;
 

@@ -176,5 +176,3 @@ impl<T: Identity + Query + Migrate + From<Row> + Sync> Mutate for T {
         Ok(())
     }
 }
-
-

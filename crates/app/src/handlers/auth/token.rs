@@ -12,6 +12,7 @@ use core::{
     error::Error,
     util,
 };
+use sea_query::Alias;
 use serde_json::{json, Value};
 
 #[utoipa::path(
@@ -34,7 +35,7 @@ pub async fn refresh(
 
     let user = User::select()
         .by_id(&refresh_token.claims.sub)
-        .join::<RefreshTokenTree>()
+        .join::<RefreshTokenTree>(Alias::new(RefreshTokenTreeIden::UserId.to_string()))
         .finish(&db_pool)
         .await?;
 

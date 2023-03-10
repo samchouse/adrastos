@@ -3,10 +3,15 @@ use std::collections::HashMap;
 use actix_web::{delete, patch, post, web, HttpResponse, Responder};
 use chrono::Utc;
 use core::{
+    db::postgres,
     entities::{
-        custom_table::schema::{
-            BooleanField, CustomTableSchema, CustomTableSchemaIden, DateField, EmailField,
-            NumberField, RelationField, SelectField, StringField, UrlField,
+        custom_table::{
+            fields::{
+                BooleanField, DateField, EmailField, NumberField, RelationField, SelectField,
+                StringField, UrlField,
+            },
+            mm_relation::ManyToManyRelationTable,
+            schema::{CustomTableSchema, CustomTableSchemaIden},
         },
         Mutate,
     },
@@ -14,6 +19,7 @@ use core::{
     id::Id,
 };
 use heck::AsSnakeCase;
+use regex::Regex;
 use sea_query::{Alias, PostgresQueryBuilder, Table, TableCreateStatement};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -55,13 +61,13 @@ struct UpdateComponent<T> {
 pub struct UpdateBody {
     name: Option<String>,
     string_fields: Option<Vec<UpdateComponent<StringField>>>,
-    number_fields: Option<Vec<UpdateComponent<NumberField>>>,
-    boolean_fields: Option<Vec<UpdateComponent<BooleanField>>>,
-    date_fields: Option<Vec<UpdateComponent<DateField>>>,
-    email_fields: Option<Vec<UpdateComponent<EmailField>>>,
-    url_fields: Option<Vec<UpdateComponent<UrlField>>>,
-    select_fields: Option<Vec<UpdateComponent<SelectField>>>,
-    relation_fields: Option<Vec<UpdateComponent<RelationField>>>,
+    // number_fields: Option<Vec<UpdateComponent<NumberField>>>,
+    // boolean_fields: Option<Vec<UpdateComponent<BooleanField>>>,
+    // date_fields: Option<Vec<UpdateComponent<DateField>>>,
+    // email_fields: Option<Vec<UpdateComponent<EmailField>>>,
+    // url_fields: Option<Vec<UpdateComponent<UrlField>>>,
+    // select_fields: Option<Vec<UpdateComponent<SelectField>>>,
+    // relation_fields: Option<Vec<UpdateComponent<RelationField>>>,
 }
 
 #[utoipa::path(
@@ -168,8 +174,6 @@ pub async fn create(
         ));
     }
 
-    custom_table.create(&db_pool).await?;
-
     db_pool
         .get()
         .await
@@ -181,7 +185,44 @@ pub async fn create(
             &[],
         )
         .await
-        .unwrap();
+        .map_err(|error| {
+            let Some(db_error) = error.as_db_error() else {
+                return Error::InternalServerError("Unable to convert error".to_string())
+            };
+            let Some(routine) = db_error.routine() else {
+                return Error::InternalServerError("Unable to get error info".to_string())
+            };
+            let Some(error) = postgres::Error::try_from(routine).ok() else {
+                return Error::InternalServerError("Unsupported database error code".to_string())
+            };
+
+            match error {
+                postgres::Error::NonExistentTable => {
+                    let pre = Regex::new(r#"".+""#).unwrap();
+
+                    let Some(matched) = pre.find(db_error.message()) else {
+                        return Error::InternalServerError("Invalid error details".to_string())
+                    };
+
+                    let table_name = matched.as_str().replace('\"', "");
+
+                    Error::BadRequest(format!("Table '{}' doesn't exist", table_name))
+                }
+                _ => todo!(),
+            }
+        })?;
+
+    custom_table.create(&db_pool).await?;
+
+    for query in ManyToManyRelationTable::create_queries(&custom_table) {
+        db_pool
+            .get()
+            .await
+            .unwrap()
+            .execute(query.to_string(PostgresQueryBuilder).as_str(), &[])
+            .await
+            .unwrap();
+    }
 
     Ok(HttpResponse::Ok().json(json!({
         "success": true,
@@ -203,6 +244,7 @@ pub async fn update(
         .finish(&db_pool)
         .await?;
 
+    let mut table_name = custom_table.name.clone();
     let mut updated_table = HashMap::new();
     let mut alter_query = Table::alter();
 
@@ -234,10 +276,10 @@ pub async fn update(
                     .into_iter()
                     .map(|f| {
                         if f.name == comp.name {
-                            comp.field.clone()
-                        } else {
-                            f
+                            return comp.field.clone();
                         }
+
+                        f
                     })
                     .collect();
 
@@ -269,10 +311,8 @@ pub async fn update(
 
     custom_table.update(&db_pool, &updated_table).await?;
 
-    let mut table_name = custom_table.name.clone();
-
-    if let Some(new_name) = updated_table.get(&CustomTableSchemaIden::Name.to_string()) {
-        let new_name = new_name.as_str().unwrap();
+    if let Some(updated_name) = updated_table.get(&CustomTableSchemaIden::Name.to_string()) {
+        let updated_name = updated_name.as_str().unwrap();
 
         db_pool
             .get()
@@ -280,7 +320,7 @@ pub async fn update(
             .unwrap()
             .execute(
                 Table::rename()
-                    .table(Alias::new(&table_name), Alias::new(new_name))
+                    .table(Alias::new(&table_name), Alias::new(updated_name))
                     .to_string(PostgresQueryBuilder)
                     .as_str(),
                 &[],
@@ -288,7 +328,7 @@ pub async fn update(
             .await
             .unwrap();
 
-        table_name = new_name.to_string();
+        table_name = updated_name.to_string();
     }
 
     db_pool

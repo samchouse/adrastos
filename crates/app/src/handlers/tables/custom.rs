@@ -4,7 +4,10 @@ use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use chrono::{DateTime, Utc};
 use core::{
     db::postgres,
-    entities::custom_table::{schema::CustomTableSchema, CustomTableSelectBuilder},
+    entities::custom_table::{
+        fields::RelationType, mm_relation::ManyToManyRelationTable, schema::CustomTableSchema,
+        CustomTableSelectBuilder,
+    },
     error::Error,
     id::Id,
     url::Url,
@@ -16,35 +19,34 @@ use sea_query::{Alias, Expr, PostgresQueryBuilder, SimpleExpr, Value};
 use serde_json::json;
 use validator::{ValidationError, ValidationErrors};
 
-// #[get("/rows")]
-// pub async fn rows(
-//     path: web::Path<String>,
-//     web::Query(query): web::Query<HashMap<String, String>>,
-//     db_pool: web::Data<deadpool_postgres::Pool>,
-// ) -> actix_web::Result<impl Responder, Error> {
-//     todo!();
+#[get("/rows")]
+pub async fn rows(
+    path: web::Path<String>,
+    web::Query(query): web::Query<HashMap<String, String>>,
+    db_pool: web::Data<deadpool_postgres::Pool>,
+) -> actix_web::Result<impl Responder, Error> {
+    let custom_table = CustomTableSchema::select()
+        .by_name(&path.into_inner())
+        .finish(&db_pool)
+        .await?;
 
-//     let custom_table = CustomTableSchema::select()
-//         .by_name(&path.into_inner())
-//         .finish(&db_pool)
-//         .await?;
+    let rows = CustomTableSelectBuilder::from(&custom_table)
+        .and_where(
+            query
+                .iter()
+                .map(|(field, equals)| Expr::col(Alias::new(field)).eq(equals))
+                .collect(),
+        )
+        .join()
+        .limit(None) // TODO(@Xenfo): support pagination
+        .finish(&db_pool)
+        .await?;
 
-//     let rows = CustomTableSelectBuilder::from(&custom_table)
-//         .and_where(
-//             query
-//                 .iter()
-//                 .map(|(field, equals)| Expr::col(Alias::new(field)).eq(equals))
-//                 .collect(),
-//         )
-//         .limit(None) // TODO(@Xenfo): properly convert rows to JSON array
-//         .finish(&db_pool)
-//         .await?;
-
-//     Ok(HttpResponse::Ok().json(json!({
-//         "success": true,
-//         "data": rows
-//     })))
-// }
+    Ok(HttpResponse::Ok().json(json!({
+        "success": true,
+        "data": rows
+    })))
+}
 
 #[get("/row")]
 pub async fn row(
@@ -66,12 +68,13 @@ pub async fn row(
                 })
                 .collect(),
         )
+        .join()
         .finish(&db_pool)
         .await?;
 
     Ok(HttpResponse::Ok().json(json!({
         "success": true,
-        "data": row
+        "data": row.as_array().unwrap().first()
     })))
 }
 
@@ -91,9 +94,10 @@ pub async fn create(
         .finish(&db_pool)
         .await?;
 
+    let id = Id::new().to_string();
     let mut errors = ValidationErrors::new();
     let mut table_values: Vec<(_, SimpleExpr)> = vec![
-        ("id", Id::new().to_string().into()),
+        ("id", id.clone().into()),
         ("created_at", Utc::now().into()),
         ("updated_at", None::<DateTime<Utc>>.into()),
     ];
@@ -368,10 +372,42 @@ pub async fn create(
             }
         }
     });
-    // custom_table.relation_fields.iter().for_each(|field| {
-    //     let value = body.get(&field.name).unwrap().as_str().unwrap();
-    //     table_values.insert(field.name.clone(), serde_json::to_value(value).unwrap());
-    // });
+
+    let insert_queries = custom_table
+        .relation_fields
+        .iter()
+        .filter_map(|field| match field.relation_type {
+            RelationType::Single => {
+                let value = body
+                    .get(&AsLowerCamelCase(field.name.clone()).to_string())
+                    .unwrap()
+                    .as_str()
+                    .unwrap();
+
+                table_values.push((&field.name, value.into()));
+
+                None
+            }
+            RelationType::Many => {
+                let values = body
+                    .get(&AsLowerCamelCase(field.name.clone()).to_string())
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|v| v.as_str().unwrap().to_string())
+                    .collect::<Vec<_>>();
+
+                Some(ManyToManyRelationTable::insert_query(
+                    &custom_table,
+                    field,
+                    id.clone(),
+                    values,
+                ))
+            }
+        })
+        .flatten()
+        .collect::<Vec<_>>();
 
     if !errors.is_empty() {
         return Err(Error::ValidationErrors {
@@ -431,8 +467,19 @@ pub async fn create(
                         value.replace("('", "").replace("')", "")
                     ))
                 }
+                _ => todo!(),
             }
         })?;
+
+    for query in insert_queries {
+        db_pool
+            .get()
+            .await
+            .unwrap()
+            .execute(query.to_string(PostgresQueryBuilder).as_str(), &[])
+            .await
+            .unwrap();
+    }
 
     let mut data = json!({});
 

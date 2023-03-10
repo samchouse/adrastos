@@ -77,12 +77,17 @@ impl UserSelectBuilder {
         self
     }
 
-    pub fn join<T: Query + Identity>(&mut self) -> &mut Self {
+    pub fn join<T: Query + Identity>(&mut self, alias: Alias) -> &mut Self {
         self.query_builder.expr(Expr::cust(
             format!(
                 "(SELECT json_agg({}) FROM ({}) {}) as {}",
                 JoinKeys::from_identity::<T>(),
-                T::query_select(vec![]).to_string(PostgresQueryBuilder),
+                T::query_select(vec![Expr::col(alias).eq(format!(
+                    "{}.{}",
+                    UserIden::Table,
+                    UserIden::Id
+                ))])
+                .to_string(PostgresQueryBuilder),
                 JoinKeys::from_identity::<T>(),
                 JoinKeys::from_identity::<T>().plural()
             )

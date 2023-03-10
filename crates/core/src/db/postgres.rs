@@ -9,6 +9,7 @@ use crate::config::{self, ConfigKey};
 
 pub enum Error {
     UniqueKeyViolation,
+    NonExistentTable,
 }
 
 impl TryFrom<&str> for Error {
@@ -17,6 +18,7 @@ impl TryFrom<&str> for Error {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             _ if value == Error::UniqueKeyViolation.to_string() => Ok(Error::UniqueKeyViolation),
+            _ if value == Error::NonExistentTable.to_string() => Ok(Error::NonExistentTable),
             _ => Err(()),
         }
     }
@@ -26,6 +28,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             Error::UniqueKeyViolation => "NewUniquenessConstraintViolationError",
+            Error::NonExistentTable => "NewUndefinedRelationError",
         };
 
         write!(f, "{name}")
