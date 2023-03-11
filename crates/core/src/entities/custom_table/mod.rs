@@ -206,20 +206,22 @@ impl CustomTableSelectBuilder {
             ))
         });
 
-        let data =
-            serde_json::from_value::<Vec<Map<String, serde_json::Value>>>(row.get("columns"))
-                .unwrap()
-                .iter()
-                .map(|col| {
-                    let mut data = json!({});
+        let data = serde_json::from_value::<Vec<Map<String, serde_json::Value>>>(
+            row.try_get("columns")
+                .unwrap_or(serde_json::Value::Array(vec![])),
+        )
+        .unwrap()
+        .iter()
+        .map(|col| {
+            let mut data = json!({});
 
-                    columns.clone().into_iter().for_each(|(name, col_type)| {
-                        json_patch::merge(&mut data, &col_type.to_json(col, name));
-                    });
+            columns.clone().into_iter().for_each(|(name, col_type)| {
+                json_patch::merge(&mut data, &col_type.to_json(col, name));
+            });
 
-                    data
-                })
-                .collect();
+            data
+        })
+        .collect();
 
         Ok(data)
     }
