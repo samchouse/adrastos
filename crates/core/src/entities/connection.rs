@@ -4,17 +4,18 @@ use chrono::{DateTime, Utc};
 use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{
     enum_def, Alias, ColumnDef, Expr, ForeignKey, ForeignKeyAction, Keyword, PostgresQueryBuilder,
-    Query as SeaQLQuery, SimpleExpr, Table,
+    SelectStatement, SimpleExpr, Table,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use utoipa::ToSchema;
 
-use crate::handlers::Error;
+use crate::error::Error;
 
 use super::{Identity, Migrate, Query, User};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct Connection {
     pub id: String,
     pub provider: String,
@@ -28,7 +29,7 @@ impl Identity for Connection {
     type Iden = ConnectionIden;
 
     fn table() -> Alias {
-        Alias::new(<Self as Identity>::Iden::Table.to_string().as_str())
+        Alias::new(<Self as Identity>::Iden::Table.to_string())
     }
 
     fn error_identifier() -> String {
@@ -68,10 +69,7 @@ impl Migrate for Connection {
                     .not_null()
                     .default(Keyword::CurrentTimestamp),
             )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::UpdatedAt)
-                    .timestamp_with_time_zone(),
-            )
+            .col(ColumnDef::new(<Self as Identity>::Iden::UpdatedAt).timestamp_with_time_zone())
             .foreign_key(
                 ForeignKey::create()
                     .name("FK_connection_user_id")
@@ -85,8 +83,8 @@ impl Migrate for Connection {
 }
 
 impl Query for Connection {
-    fn query_select(expressions: Vec<SimpleExpr>) -> String {
-        let mut query = SeaQLQuery::select();
+    fn query_select(expressions: Vec<SimpleExpr>) -> SelectStatement {
+        let mut query = sea_query::Query::select();
 
         for expression in expressions {
             query.and_where(expression);
@@ -102,14 +100,13 @@ impl Query for Connection {
                 <Self as Identity>::Iden::CreatedAt,
                 <Self as Identity>::Iden::UpdatedAt,
             ])
-            .limit(1)
-            .to_string(PostgresQueryBuilder)
+            .to_owned()
     }
 
     fn query_insert(&self) -> Result<String, Error> {
-        Ok(SeaQLQuery::insert()
+        Ok(sea_query::Query::insert()
             .into_table(Self::table())
-            .columns(vec![
+            .columns([
                 <Self as Identity>::Iden::Id,
                 <Self as Identity>::Iden::Provider,
                 <Self as Identity>::Iden::UserId,
@@ -117,7 +114,7 @@ impl Query for Connection {
                 <Self as Identity>::Iden::CreatedAt,
                 <Self as Identity>::Iden::UpdatedAt,
             ])
-            .values_panic(vec![
+            .values_panic([
                 self.id.clone().into(),
                 self.provider.clone().into(),
                 self.user_id.clone().into(),
@@ -128,12 +125,12 @@ impl Query for Connection {
             .to_string(PostgresQueryBuilder))
     }
 
-    fn query_update(&self, _: HashMap<String, Value>) -> Result<String, Error> {
+    fn query_update(&self, _: &HashMap<String, Value>) -> Result<String, Error> {
         todo!()
     }
 
     fn query_delete(&self) -> String {
-        SeaQLQuery::delete()
+        sea_query::Query::delete()
             .from_table(Self::table())
             .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
@@ -144,27 +141,11 @@ impl From<Row> for Connection {
     fn from(row: Row) -> Self {
         Self {
             id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),
-            provider: row.get(
-                <Self as Identity>::Iden::Provider
-                    .to_string()
-                    .as_str(),
-            ),
+            provider: row.get(<Self as Identity>::Iden::Provider.to_string().as_str()),
             user_id: row.get(<Self as Identity>::Iden::UserId.to_string().as_str()),
-            provider_id: row.get(
-                <Self as Identity>::Iden::ProviderId
-                    .to_string()
-                    .as_str(),
-            ),
-            created_at: row.get(
-                <Self as Identity>::Iden::CreatedAt
-                    .to_string()
-                    .as_str(),
-            ),
-            updated_at: row.get(
-                <Self as Identity>::Iden::UpdatedAt
-                    .to_string()
-                    .as_str(),
-            ),
+            provider_id: row.get(<Self as Identity>::Iden::ProviderId.to_string().as_str()),
+            created_at: row.get(<Self as Identity>::Iden::CreatedAt.to_string().as_str()),
+            updated_at: row.get(<Self as Identity>::Iden::UpdatedAt.to_string().as_str()),
         }
     }
 }

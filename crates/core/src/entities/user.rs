@@ -1,19 +1,26 @@
+#![allow(dead_code)]
+
 use std::{collections::HashMap, fmt};
 
+use actix_web::web;
 use chrono::{DateTime, Utc};
 use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{
-    enum_def, Alias, ColumnDef, Expr, Keyword, PostgresQueryBuilder, Query as SeaQLQuery,
-    SimpleExpr, Table,
+    enum_def, Alias, ColumnDef, Expr, Keyword, PostgresQueryBuilder, SelectStatement, SimpleExpr,
+    Table,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::ToSchema;
 use validator::Validate;
 
-use crate::{auth, handlers::Error};
+use crate::{auth, error::Error};
 
-use super::{Identity, Migrate, Query};
+use super::{Connection, Identity, JoinKeys, Migrate, Query, RefreshTokenTree};
+
+pub struct UserSelectBuilder {
+    query_builder: sea_query::SelectStatement,
+}
 
 #[enum_def]
 #[derive(Debug, Validate, Serialize, Deserialize, Clone, ToSchema)]
@@ -35,13 +42,97 @@ pub struct User {
     pub banned: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
+
+    pub connections: Option<Vec<Connection>>,
+    pub refresh_token_trees: Option<Vec<RefreshTokenTree>>,
+}
+
+impl UserSelectBuilder {
+    pub fn by_id(&mut self, id: &str) -> &mut Self {
+        self.query_builder
+            .and_where(Expr::col(<User as Identity>::Iden::Id).eq(id));
+
+        self
+    }
+
+    pub fn by_email(&mut self, email: &str) -> &mut Self {
+        self.query_builder
+            .and_where(Expr::col(<User as Identity>::Iden::Email).eq(email));
+
+        self
+    }
+
+    pub fn by_username(&mut self, username: &str) -> &mut Self {
+        self.query_builder
+            .and_where(Expr::col(<User as Identity>::Iden::Username).eq(username));
+
+        self
+    }
+
+    pub fn and_where(&mut self, expressions: Vec<SimpleExpr>) -> &mut Self {
+        for expression in expressions {
+            self.query_builder.and_where(expression);
+        }
+
+        self
+    }
+
+    pub fn join<T: Query + Identity>(&mut self, alias: Alias) -> &mut Self {
+        self.query_builder.expr(Expr::cust(
+            format!(
+                "(SELECT json_agg({}) FROM ({}) {}) as {}",
+                JoinKeys::from_identity::<T>(),
+                T::query_select(vec![Expr::col(alias).eq(format!(
+                    "{}.{}",
+                    UserIden::Table,
+                    UserIden::Id
+                ))])
+                .to_string(PostgresQueryBuilder),
+                JoinKeys::from_identity::<T>(),
+                JoinKeys::from_identity::<T>().plural()
+            )
+            .as_str(),
+        ));
+
+        self
+    }
+
+    pub async fn finish(
+        &mut self,
+        db_pool: &web::Data<deadpool_postgres::Pool>,
+    ) -> Result<User, Error> {
+        let row = db_pool
+            .get()
+            .await
+            .unwrap()
+            .query(
+                self.query_builder.to_string(PostgresQueryBuilder).as_str(),
+                &[],
+            )
+            .await
+            .map_err(|e| {
+                let error = format!(
+                    "An error occurred while fetching the {}: {e}",
+                    User::error_identifier(),
+                );
+                Error::InternalServerError(error)
+            })?
+            .into_iter()
+            .next()
+            .ok_or_else(|| {
+                let message = format!("No {} was found", User::error_identifier());
+                Error::BadRequest(message)
+            })?;
+
+        Ok(row.into())
+    }
 }
 
 impl Identity for User {
     type Iden = UserIden;
 
     fn table() -> Alias {
-        Alias::new(<Self as Identity>::Iden::Table.to_string().as_str())
+        Alias::new(<Self as Identity>::Iden::Table.to_string())
     }
 
     fn error_identifier() -> String {
@@ -110,9 +201,32 @@ impl Migrate for User {
     }
 }
 
+impl User {
+    pub fn select() -> UserSelectBuilder {
+        UserSelectBuilder {
+            query_builder: sea_query::Query::select()
+                .from(Self::table())
+                .columns([
+                    <Self as Identity>::Iden::Id,
+                    <Self as Identity>::Iden::FirstName,
+                    <Self as Identity>::Iden::LastName,
+                    <Self as Identity>::Iden::Email,
+                    <Self as Identity>::Iden::Username,
+                    <Self as Identity>::Iden::Password,
+                    <Self as Identity>::Iden::Verified,
+                    <Self as Identity>::Iden::Banned,
+                    <Self as Identity>::Iden::CreatedAt,
+                    <Self as Identity>::Iden::UpdatedAt,
+                ])
+                .limit(1)
+                .to_owned(),
+        }
+    }
+}
+
 impl Query for User {
-    fn query_select(expressions: Vec<SimpleExpr>) -> String {
-        let mut query = SeaQLQuery::select();
+    fn query_select(expressions: Vec<SimpleExpr>) -> SelectStatement {
+        let mut query = sea_query::Query::select();
 
         for expression in expressions {
             query.and_where(expression);
@@ -132,8 +246,7 @@ impl Query for User {
                 <Self as Identity>::Iden::CreatedAt,
                 <Self as Identity>::Iden::UpdatedAt,
             ])
-            .limit(1)
-            .to_string(PostgresQueryBuilder)
+            .to_owned()
     }
 
     fn query_insert(&self) -> Result<String, Error> {
@@ -146,12 +259,12 @@ impl Query for User {
         })?;
 
         let hashed_password = auth::hash_password(self.password.as_str()).map_err(|err| {
-            Error::InternalServerError {
-                error: format!("An error occurred while hashing the password for the {err}"),
-            }
+            Error::InternalServerError(format!(
+                "An error occurred while hashing the password for the {err}"
+            ))
         })?;
 
-        Ok(SeaQLQuery::insert()
+        Ok(sea_query::Query::insert()
             .into_table(Self::table())
             .columns([
                 <Self as Identity>::Iden::Id,
@@ -172,9 +285,9 @@ impl Query for User {
             .to_string(PostgresQueryBuilder))
     }
 
-    fn query_update(&self, updated: HashMap<String, Value>) -> Result<String, Error> {
+    fn query_update(&self, updated: &HashMap<String, Value>) -> Result<String, Error> {
         let mut updated_for_validation = self.clone();
-        let mut query = SeaQLQuery::update();
+        let mut query = sea_query::Query::update();
 
         if let Some(first_name) =
             updated.get(<Self as Identity>::Iden::FirstName.to_string().as_str())
@@ -230,7 +343,7 @@ impl Query for User {
     }
 
     fn query_delete(&self) -> String {
-        SeaQLQuery::delete()
+        sea_query::Query::delete()
             .from_table(Self::table())
             .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
@@ -239,6 +352,13 @@ impl Query for User {
 
 impl From<Row> for User {
     fn from(row: Row) -> Self {
+        let connections = row
+            .try_get::<_, serde_json::Value>(JoinKeys::Connection.plural().as_str())
+            .ok();
+        let refresh_token_trees = row
+            .try_get::<_, serde_json::Value>(JoinKeys::RefreshTokenTree.plural().as_str())
+            .ok();
+
         Self {
             id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),
             first_name: row.get(<Self as Identity>::Iden::FirstName.to_string().as_str()),
@@ -250,6 +370,15 @@ impl From<Row> for User {
             banned: row.get(<Self as Identity>::Iden::Banned.to_string().as_str()),
             created_at: row.get(<Self as Identity>::Iden::CreatedAt.to_string().as_str()),
             updated_at: row.get(<Self as Identity>::Iden::UpdatedAt.to_string().as_str()),
+
+            connections: match connections {
+                Some(connections) => serde_json::from_value(connections).ok(),
+                None => None,
+            },
+            refresh_token_trees: match refresh_token_trees {
+                Some(refresh_token_trees) => serde_json::from_value(refresh_token_trees).ok(),
+                None => None,
+            },
         }
     }
 }
@@ -268,6 +397,9 @@ impl fmt::Display for UserIden {
             Self::Banned => "banned",
             Self::CreatedAt => "created_at",
             Self::UpdatedAt => "updated_at",
+
+            Self::Connections => "connections",
+            Self::RefreshTokenTrees => "refresh_token_trees",
         };
 
         write!(f, "{name}")

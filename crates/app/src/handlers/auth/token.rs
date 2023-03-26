@@ -5,18 +5,24 @@ use actix_web::{
     get, web, HttpRequest, HttpResponse, Responder,
 };
 use chrono::Utc;
-use sea_query::{extension::postgres::PgExpr, Expr};
-use serde_json::{json, Value};
-
-use crate::{
+use core::{
     auth::{self, TokenType},
     config,
-    entities::{Mutate, RefreshTokenTree, RefreshTokenTreeIden, User, UserIden},
-    handlers::Error,
+    entities::{Mutate, RefreshTokenTree, RefreshTokenTreeIden, User},
+    error::Error,
     util,
 };
+use sea_query::Alias;
+use serde_json::{json, Value};
 
-#[get("/auth/token/refresh")]
+#[utoipa::path(
+    get,
+    path = "/auth/token/refresh",
+    responses(
+        (status = 200, description = ""),
+    )
+)]
+#[get("/token/refresh")]
 pub async fn refresh(
     req: HttpRequest,
     config: web::Data<config::Config>,
@@ -24,44 +30,35 @@ pub async fn refresh(
 ) -> actix_web::Result<impl Responder, Error> {
     let refresh_token = auth::TokenType::verify(&config, util::get_refresh_token(&req)?)?;
     if refresh_token.token_type != TokenType::Refresh {
-        return Err(Error::Forbidden {
-            message: "Not a refresh token".into(),
-        });
+        return Err(Error::Forbidden("Not a refresh token".into()));
     }
 
-    let refresh_token_tree: RefreshTokenTree = RefreshTokenTree::find(
-        &db_pool,
-        vec![
-            Expr::col(RefreshTokenTreeIden::UserId).eq(refresh_token.claims.sub.clone()),
-            Expr::col(RefreshTokenTreeIden::Tokens)
-                .contains(vec![refresh_token.claims.jti.clone()]),
-        ],
-    )
-    .await?;
+    let user = User::select()
+        .by_id(&refresh_token.claims.sub)
+        .join::<RefreshTokenTree>(Alias::new(RefreshTokenTreeIden::UserId.to_string()))
+        .finish(&db_pool)
+        .await?;
+
+    let refresh_token_tree = &user
+        .refresh_token_trees
+        .clone()
+        .ok_or_else(|| Error::Forbidden("Refresh token tree is invalid".into()))?
+        .into_iter()
+        .find(|tree| tree.tokens.contains(&refresh_token.claims.jti))
+        .ok_or_else(|| Error::Forbidden("Refresh token tree is invalid".into()))?;
+
     let last_token = refresh_token_tree
         .tokens
         .last()
-        .ok_or_else(|| Error::Forbidden {
-            message: "Refresh token tree is invalid".into(),
-        })?;
+        .ok_or_else(|| Error::Forbidden("Refresh token tree is invalid".into()))?;
 
     if refresh_token_tree.inactive_at < Utc::now() || refresh_token_tree.expires_at < Utc::now() {
-        return Err(Error::Forbidden {
-            message: "Refresh token tree has expired".into(),
-        });
+        return Err(Error::Forbidden("Refresh token tree has expired".into()));
     } else if refresh_token.claims.jti.clone().as_str() != last_token.as_str() {
         refresh_token_tree.delete(&db_pool).await?;
 
-        return Err(Error::Forbidden {
-            message: "Refresh token is invalid".into(),
-        });
+        return Err(Error::Forbidden("Refresh token is invalid".into()));
     }
-
-    let user = User::find(
-        &db_pool,
-        vec![Expr::col(UserIden::Id).eq(refresh_token.claims.sub)],
-    )
-    .await?;
 
     let access_token = TokenType::Access.sign(&config, &user)?;
     let refresh_token = TokenType::Access.sign(&config, &user)?;
@@ -69,8 +66,8 @@ pub async fn refresh(
     let cookie_expiration = OffsetDateTime::from_unix_timestamp(
         refresh_token.expires_at.timestamp(),
     )
-    .map_err(|_| Error::InternalServerError {
-        error: "An error occurred while parsing the cookie expiration".into(),
+    .map_err(|_| {
+        Error::InternalServerError("An error occurred while parsing the cookie expiration".into())
     })?;
 
     let mut tokens = refresh_token_tree.tokens.clone();
@@ -79,7 +76,7 @@ pub async fn refresh(
     refresh_token_tree
         .update(
             &db_pool,
-            HashMap::from([(
+            &HashMap::from([(
                 RefreshTokenTreeIden::Tokens.to_string(),
                 Value::from(tokens),
             )]),

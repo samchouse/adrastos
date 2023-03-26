@@ -3,19 +3,18 @@ use actix_web::{
     get, post, web, HttpRequest, HttpResponse, Responder,
 };
 use chrono::Utc;
-use sea_query::Expr;
+use core::{
+    auth::{self, TokenType},
+    config,
+    entities::{Mutate, RefreshTokenTree, User},
+    error::Error,
+    id::Id,
+};
 use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
 
-use crate::{
-    auth::{self, TokenType},
-    config,
-    entities::{Mutate, RefreshTokenTree, User, UserIden},
-    handlers::Error,
-    id::Id,
-    openapi,
-};
+use crate::openapi;
 
 pub mod oauth2;
 pub mod token;
@@ -47,10 +46,10 @@ pub struct LoginBody {
     request_body = SignupBody,
     responses(
         (status = 200, description = "User created successfully", body = User),
-        (status = 400, description = "Validation failed"),
+        (status = 400, description = "Validation failed", body = Error),
     )
 )]
-#[post("/auth/signup")]
+#[post("/signup")]
 pub async fn signup(
     body: web::Json<SignupBody>,
     db_pool: web::Data<deadpool_postgres::Pool>,
@@ -66,6 +65,9 @@ pub async fn signup(
         banned: false,
         created_at: Utc::now(),
         updated_at: None,
+
+        connections: None,
+        refresh_token_trees: None,
     };
 
     user.create(&db_pool).await?;
@@ -85,41 +87,31 @@ pub async fn signup(
         (status = 400, description = "Validation failed"),
     )
 )]
-#[post("/auth/login")]
+#[post("/login")]
 pub async fn login(
     body: web::Json<LoginBody>,
     config: web::Data<config::Config>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let user = User::find(
-        &db_pool,
-        vec![Expr::col(UserIden::Email).eq(body.email.clone())],
-    )
-    .await?;
+    let user = User::select()
+        .by_email(&body.email)
+        .finish(&db_pool)
+        .await?;
 
-    let is_valid = auth::verify_password(body.password.as_str(), &user.password).map_err(|_| {
-        Error::BadRequest {
-            message: "Unable to parse password hash".into(),
-        }
-    })?;
+    let is_valid = auth::verify_password(body.password.as_str(), &user.password)
+        .map_err(|_| Error::BadRequest("Unable to parse password hash".into()))?;
     if !is_valid {
-        return Err(Error::BadRequest {
-            message: "No user was found with this email/password combo".into(),
-        });
+        return Err(Error::BadRequest(
+            "No user was found with this email/password combo".into(),
+        ));
     }
 
-    let access_token =
-        TokenType::Access
-            .sign(&config, &user)
-            .map_err(|_| Error::InternalServerError {
-                error: "An error occurred while signing the access token".into(),
-            })?;
-    let refresh_token =
-        TokenType::Refresh
-            .sign(&config, &user)
-            .map_err(|_| Error::InternalServerError {
-                error: "An error occurred while signing the refresh token".into(),
-            })?;
+    let access_token = TokenType::Access.sign(&config, &user).map_err(|_| {
+        Error::InternalServerError("An error occurred while signing the access token".into())
+    })?;
+    let refresh_token = TokenType::Refresh.sign(&config, &user).map_err(|_| {
+        Error::InternalServerError("An error occurred while signing the refresh token".into())
+    })?;
 
     let refresh_token_tree = RefreshTokenTree {
         id: Id::new().to_string(),
@@ -136,8 +128,8 @@ pub async fn login(
     let cookie_expiration = OffsetDateTime::from_unix_timestamp(
         refresh_token.expires_at.timestamp(),
     )
-    .map_err(|_| Error::InternalServerError {
-        error: "An error occurred while parsing the cookie expiration".into(),
+    .map_err(|_| {
+        Error::InternalServerError("An error occurred while parsing the cookie expiration".into())
     })?;
 
     Ok(HttpResponse::Ok()
@@ -155,18 +147,16 @@ pub async fn login(
         })))
 }
 
-#[get("/auth/logout")]
+#[get("/logout")]
 pub async fn logout(req: HttpRequest) -> actix_web::Result<impl Responder, Error> {
-    let cookies = req.cookies().map_err(|_| Error::InternalServerError {
-        error: "An error occurred while fetching the cookies".into(),
+    let cookies = req.cookies().map_err(|_| {
+        Error::InternalServerError("An error occurred while fetching the cookies".into())
     })?;
 
     let cookie = cookies
         .iter()
         .find(|cookie| cookie.name() == "refreshToken")
-        .ok_or_else(|| Error::BadRequest {
-            message: "No refresh token was found".into(),
-        })?;
+        .ok_or_else(|| Error::BadRequest("No refresh token was found".into()))?;
 
     let mut cookie = cookie.clone();
     cookie.make_removal();

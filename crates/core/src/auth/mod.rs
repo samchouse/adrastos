@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     config::{self, ConfigKey},
     entities::User,
-    handlers::Error,
+    error::Error,
     id::Id,
 };
 
@@ -75,12 +75,12 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, password_hash
 }
 
 impl TokenType {
-    pub fn sign(&self, config: &web::Data<config::Config>, user: &User) -> Result<TokenInfo, Error> {
-        let secret_key = config
-            .get(ConfigKey::SecretKey)?
-            .ok_or(Error::InternalServerError {
-                error: "Couldn't find config value".into(),
-            })?;
+    pub fn sign(
+        &self,
+        config: &web::Data<config::Config>,
+        user: &User,
+    ) -> Result<TokenInfo, Error> {
+        let secret_key = config.get(ConfigKey::SecretKey)?;
 
         let expires_at = match self {
             TokenType::Access => Utc::now() + Duration::minutes(15),
@@ -99,8 +99,8 @@ impl TokenType {
             &claims,
             &EncodingKey::from_secret(secret_key.as_bytes()),
         )
-        .map_err(|err| Error::InternalServerError {
-            error: format!("Unable to encode {self} token: {err}"),
+        .map_err(|err| {
+            Error::InternalServerError(format!("Unable to encode {self} token: {err}"))
         })?;
 
         Ok(TokenInfo {
@@ -112,32 +112,26 @@ impl TokenType {
     }
 
     pub fn verify(config: &web::Data<config::Config>, token: String) -> Result<TokenInfo, Error> {
-        let secret_key = config
-            .get(ConfigKey::SecretKey)?
-            .ok_or(Error::InternalServerError {
-                error: "Unable to find config value".into(),
-            })?;
+        let secret_key = config.get(ConfigKey::SecretKey)?;
 
         let claims = decode::<Claims>(
-            token.as_str(),
+            &token,
             &DecodingKey::from_secret(secret_key.as_bytes()),
             &Validation::default(),
         )
         .map(|data| data.claims)
         .map_err(|err| match err.into_kind() {
             ErrorKind::ExpiredSignature => Error::Unauthorized,
-            _ => Error::InternalServerError {
-                error: "Unable to decode token".into(),
-            },
+            _ => Error::InternalServerError("Unable to decode token".into()),
         })?;
 
         let token_type = match claims.token_type.as_str() {
             "access" => TokenType::Access,
             "refresh" => TokenType::Refresh,
             _ => {
-                return Err(Error::InternalServerError {
-                    error: "Token has an invalid token type".into(),
-                })
+                return Err(Error::InternalServerError(
+                    "Token has an invalid token type".into(),
+                ))
             }
         };
 

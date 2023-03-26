@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env, fmt};
 
-use crate::handlers::Error;
+use crate::error::Error;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum ConfigKey {
@@ -69,7 +69,7 @@ impl Config {
             },
             Entry {
                 keys: vec![ConfigKey::SecretKey],
-                required: true,
+                required: false,
                 default: Some("l19OOJaOvpal21ofSlsxYyNVQN2EeTY6gEuq6p_hobH_QmJb3dPELmoGKFstBpCI"),
             },
             Entry {
@@ -131,13 +131,13 @@ impl Config {
         Ok(config)
     }
 
-    pub fn get(&self, key: ConfigKey) -> Result<Option<String>, Error> {
-        Ok(self
-            .0
+    pub fn get(&self, key: ConfigKey) -> Result<String, Error> {
+        self.0
             .get(&key)
-            .ok_or(Error::InternalServerError {
-                error: "Unable to get config value".into(),
-            })?
-            .to_owned())
+            .ok_or(Error::InternalServerError(
+                "Unable to get config value".into(),
+            ))?
+            .to_owned()
+            .ok_or(Error::InternalServerError("No value for config key".into()))
     }
 }
