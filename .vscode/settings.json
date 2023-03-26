@@ -2,6 +2,7 @@
   "rust-analyzer.check.command": "clippy",
   "typescript.tsdk": "dashboard/node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
+  "eslint.workingDirectories": ["dashboard"],
   "cSpell.words": [
     "actix",
     "Adrastos",

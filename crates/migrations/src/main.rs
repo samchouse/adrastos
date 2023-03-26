@@ -1,5 +1,4 @@
 use clap::Parser;
-use core::entities::{custom_table::schema::CustomTableSchema, Connection, RefreshTokenTree, User};
 
 use crate::commands::Commands;
 

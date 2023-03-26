@@ -2210,9 +2210,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.53"
+version = "1.0.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba466839c78239c09faf015484e5cc04860f88242cff4d03eb038f04b4699b73"
+checksum = "e472a104799c74b514a57226160104aa483546de37e839ec50e3c2e41dd87534"
 dependencies = [
  "unicode-ident",
 ]
@@ -3292,7 +3292,7 @@ dependencies = [
 [[package]]
 name = "utoipa"
 version = "3.1.2"
-source = "git+https://github.com/juhaku/utoipa#ee88c75784b4fc9ffbef31d7a1819f0731604881"
+source = "git+https://github.com/juhaku/utoipa#282c1b3399f0f91850622cfec0b7e64269967958"
 dependencies = [
  "indexmap",
  "serde",
@@ -3303,7 +3303,7 @@ dependencies = [
 [[package]]
 name = "utoipa-gen"
 version = "3.1.2"
-source = "git+https://github.com/juhaku/utoipa#ee88c75784b4fc9ffbef31d7a1819f0731604881"
+source = "git+https://github.com/juhaku/utoipa#282c1b3399f0f91850622cfec0b7e64269967958"
 dependencies = [
  "lazy_static",
  "proc-macro-error",
@@ -3316,7 +3316,7 @@ dependencies = [
 [[package]]
 name = "utoipa-swagger-ui"
 version = "3.1.1"
-source = "git+https://github.com/juhaku/utoipa#ee88c75784b4fc9ffbef31d7a1819f0731604881"
+source = "git+https://github.com/juhaku/utoipa#282c1b3399f0f91850622cfec0b7e64269967958"
 dependencies = [
  "actix-web",
  "mime_guess",
