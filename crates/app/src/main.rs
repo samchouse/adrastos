@@ -1,5 +1,5 @@
 use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
-use actix_web::{cookie::Key, error::InternalError, web, App, HttpResponse, HttpServer};
+use actix_web::{cookie::Key, error::InternalError, web, App, HttpResponse, HttpServer, middleware::Logger};
 use core::{
     auth::oauth2::OAuth2,
     config::{Config, ConfigKey},
@@ -20,8 +20,8 @@ mod openapi;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().ok();
     tracing_subscriber::fmt::init();
+    dotenv().ok();
 
     let config = Config::new().unwrap_or_else(|err| {
         error!("missing required environment variables: {:#?}", err);
@@ -58,6 +58,7 @@ async fn main() -> std::io::Result<()> {
                 )
                 .into()
             }))
+            .wrap(Logger::default())
             .wrap(SessionMiddleware::new(
                 RedisActorSessionStore::new(
                     config
