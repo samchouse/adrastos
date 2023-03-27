@@ -3292,7 +3292,7 @@ dependencies = [
 [[package]]
 name = "utoipa"
 version = "3.1.2"
-source = "git+https://github.com/juhaku/utoipa#282c1b3399f0f91850622cfec0b7e64269967958"
+source = "git+https://github.com/juhaku/utoipa#7b505fb052db652fd502526f88613005637c4d22"
 dependencies = [
  "indexmap",
  "serde",
@@ -3303,7 +3303,7 @@ dependencies = [
 [[package]]
 name = "utoipa-gen"
 version = "3.1.2"
-source = "git+https://github.com/juhaku/utoipa#282c1b3399f0f91850622cfec0b7e64269967958"
+source = "git+https://github.com/juhaku/utoipa#7b505fb052db652fd502526f88613005637c4d22"
 dependencies = [
  "lazy_static",
  "proc-macro-error",
@@ -3316,7 +3316,7 @@ dependencies = [
 [[package]]
 name = "utoipa-swagger-ui"
 version = "3.1.1"
-source = "git+https://github.com/juhaku/utoipa#282c1b3399f0f91850622cfec0b7e64269967958"
+source = "git+https://github.com/juhaku/utoipa#7b505fb052db652fd502526f88613005637c4d22"
 dependencies = [
  "actix-web",
  "mime_guess",
