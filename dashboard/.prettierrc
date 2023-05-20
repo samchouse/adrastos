@@ -3,12 +3,9 @@
   "singleQuote": true,
   "bracketSpacing": true,
   "trailingComma": "none",
-  "importOrder": ["^@/.*$", "^[./]"],
   "pluginSearchDirs": false,
-  "importOrderSeparation": true,
-  "importOrderSortSpecifiers": true,
-  "importOrderMergeDuplicateImports": true,
-  "importOrderCombineTypeAndValueImports": true,
+  "importOrderTypeScriptVersion": "5.0.4",
+  "importOrder": ["", "^~/(.*)$", "", "^[./]"],
   "plugins": [
     "@ianvs/prettier-plugin-sort-imports",
     "prettier-plugin-tailwindcss"
