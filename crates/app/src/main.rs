@@ -97,6 +97,7 @@ async fn main() -> std::io::Result<()> {
                         handlers::auth::mfa::disable,
                         handlers::auth::mfa::verify,
                         handlers::auth::mfa::confirm,
+                        handlers::auth::mfa::regenerate,
                     ))),
             )
             .service(

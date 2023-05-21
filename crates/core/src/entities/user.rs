@@ -41,7 +41,7 @@ pub struct User {
     pub banned: bool,
     #[serde(skip_serializing)]
     pub mfa_secret: Option<String>,
-    #[serde(skip_serializing)]
+    // #[serde(skip_serializing)]
     pub mfa_backup_codes: Option<Vec<String>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
