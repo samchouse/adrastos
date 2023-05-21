@@ -148,7 +148,7 @@ impl<T: Identity + Query + Migrate + From<Row> + Sync> Mutate for T {
             .query(self.query_update(updated)?.as_str(), &[])
             .await
             .map_err(|e| {
-                let error: String = format!(
+                let error = format!(
                     "An error occurred while updating the {}: {e}",
                     T::error_identifier(),
                 );
