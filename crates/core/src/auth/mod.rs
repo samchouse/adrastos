@@ -1,5 +1,6 @@
 use std::fmt;
 
+use actix_web::{cookie::{time::OffsetDateTime, Cookie, Expiration}, web};
 use argon2::{
     password_hash::{
         self, rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
@@ -13,8 +14,8 @@ use jsonwebtoken::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::{self, ConfigKey},
-    entities::User,
+    config::{self, Config, ConfigKey},
+    entities::{Mutate, RefreshTokenTree, User},
     error::Error,
     id::Id,
 };
@@ -56,6 +57,11 @@ pub struct TokenInfo {
     pub expires_at: DateTime<Utc>,
 }
 
+pub struct Authentication {
+    pub token: TokenInfo,
+    pub cookie: Cookie<'static>,
+}
+
 pub fn hash_password(password: &str) -> Result<String, password_hash::Error> {
     Ok(Argon2::default()
         .hash_password(password.as_bytes(), &SaltString::generate(&mut OsRng))?
@@ -66,6 +72,49 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, password_hash
     Ok(Argon2::default()
         .verify_password(password.as_bytes(), &PasswordHash::new(hash)?)
         .is_ok())
+}
+
+pub async fn authenticate(
+    db_pool: &web::Data<deadpool_postgres::Pool>,
+    config: &Config,
+    user: &User,
+) -> Result<Authentication, Error> {
+    let access_token = TokenType::Access.sign(config, user).map_err(|_| {
+        Error::InternalServerError("An error occurred while signing the access token".into())
+    })?;
+    let refresh_token = TokenType::Refresh.sign(config, user).map_err(|_| {
+        Error::InternalServerError("An error occurred while signing the refresh token".into())
+    })?;
+
+    let refresh_token_tree = RefreshTokenTree {
+        id: Id::new().to_string(),
+        user_id: user.id.clone(),
+        inactive_at: Utc::now() + chrono::Duration::days(15),
+        expires_at: Utc::now() + chrono::Duration::days(90),
+        tokens: vec![refresh_token.clone().claims.jti],
+        created_at: Utc::now(),
+        updated_at: None,
+    };
+
+    refresh_token_tree.create(db_pool).await?;
+
+    let cookie_expiration = OffsetDateTime::from_unix_timestamp(
+        refresh_token.expires_at.timestamp(),
+    )
+    .map_err(|_| {
+        Error::InternalServerError("An error occurred while parsing the cookie expiration".into())
+    })?;
+
+    let cookie = Cookie::build("refreshToken", refresh_token.token.clone())
+        .secure(true)
+        .http_only(true)
+        .expires(Expiration::from(cookie_expiration))
+        .finish();
+
+    Ok(Authentication {
+        cookie,
+        token: access_token,
+    })
 }
 
 impl TokenType {

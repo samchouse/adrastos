@@ -1,5 +1,6 @@
 use adrastos_core::{
     auth::{
+        self,
         oauth2::{providers::OAuth2Provider, OAuth2, OAuth2LoginInfo},
         TokenType,
     },
@@ -11,7 +12,6 @@ use adrastos_core::{
 
 use actix_session::Session;
 use actix_web::{
-    cookie::{time::OffsetDateTime, Cookie, Expiration},
     get,
     http::header::{self, Header},
     web, HttpRequest, HttpResponse, Responder,
@@ -159,24 +159,9 @@ pub async fn callback(
             .finish());
     }
 
-    let refresh_token = TokenType::Access.sign(&config, &user)?;
-
-    let cookie_expiration = OffsetDateTime::from_unix_timestamp(
-        refresh_token.expires_at.timestamp(),
-    )
-    .map_err(|_| {
-        Error::InternalServerError("An error occurred while parsing the cookie expiration".into())
-    })?;
-
+    let auth = auth::authenticate(&db_pool, &config, &user).await?;
     Ok(HttpResponse::Found()
-        .cookie(
-            Cookie::build("refreshToken", refresh_token.token)
-                .path("/auth")
-                .secure(true)
-                .http_only(true)
-                .expires(Expiration::from(cookie_expiration))
-                .finish(),
-        )
+        .cookie(auth.cookie)
         .append_header(("Location", client_url))
         .finish())
 }
