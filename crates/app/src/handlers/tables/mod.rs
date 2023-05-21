@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use actix_web::{delete, patch, post, web, HttpResponse, Responder};
 use chrono::Utc;
-use core::{
+use adrastos_core::{
     db::postgres,
     entities::{
         custom_table::{

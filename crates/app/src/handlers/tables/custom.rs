@@ -2,7 +2,7 @@ use std::{borrow::Cow, collections::HashMap};
 
 use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use chrono::{DateTime, Utc};
-use core::{
+use adrastos_core::{
     db::postgres,
     entities::custom_table::{
         fields::RelationType, mm_relation::ManyToManyRelationTable, schema::CustomTableSchema,

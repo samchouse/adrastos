@@ -1,4 +1,4 @@
-use core::error::Error;
+use adrastos_core::error::Error;
 
 pub mod auth;
 pub mod tables;

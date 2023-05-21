@@ -1,21 +1,23 @@
-use actix_web::{
-    cookie::{time::OffsetDateTime, Cookie, Expiration},
-    get, post, web, HttpRequest, HttpResponse, Responder,
-};
-use chrono::Utc;
-use core::{
+use adrastos_core::{
     auth::{self, TokenType},
     config,
     entities::{Mutate, RefreshTokenTree, User},
     error::Error,
     id::Id,
 };
+
+use actix_web::{
+    cookie::{time::OffsetDateTime, Cookie, Expiration},
+    get, post, web, HttpRequest, HttpResponse, Responder,
+};
+use chrono::Utc;
 use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
 
 use crate::openapi;
 
+pub mod mfa;
 pub mod oauth2;
 pub mod token;
 
@@ -63,6 +65,8 @@ pub async fn signup(
         password: body.password.clone(),
         verified: false,
         banned: false,
+        mfa_secret: None,
+        mfa_backup_codes: None,
         created_at: Utc::now(),
         updated_at: None,
 

@@ -1,4 +1,13 @@
-use std::fmt;
+use adrastos_core::{
+    auth::{
+        oauth2::{providers::OAuth2Provider, OAuth2, OAuth2LoginInfo},
+        TokenType,
+    },
+    config::{self, ConfigKey},
+    entities::{Connection, ConnectionIden, Mutate, User, UserIden},
+    error::Error,
+    id::Id,
+};
 
 use actix_session::Session;
 use actix_web::{
@@ -9,18 +18,10 @@ use actix_web::{
 };
 use actix_web_httpauth::headers::authorization::{Authorization, Bearer};
 use chrono::Utc;
-use core::{
-    auth::{
-        oauth2::{providers::OAuth2Provider, OAuth2, OAuth2LoginInfo},
-        TokenType,
-    },
-    config::{self, ConfigKey},
-    entities::{Connection, ConnectionIden, Mutate, User, UserIden},
-    error::Error,
-    id::Id,
-};
 use sea_query::Expr;
 use serde::Deserialize;
+
+use crate::session::SessionKey;
 
 #[derive(Deserialize)]
 pub struct LoginParams {
@@ -32,22 +33,6 @@ pub struct CallbackParams {
     provider: String,
     state: String,
     code: String,
-}
-
-enum SessionKey {
-    UserId,
-    CsrfToken,
-}
-
-impl fmt::Display for SessionKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            SessionKey::UserId => "user_id",
-            SessionKey::CsrfToken => "csrf_token",
-        };
-
-        write!(f, "{name}")
-    }
 }
 
 #[get("/login")]

@@ -1,6 +1,5 @@
 use std::fmt;
 
-use actix_web::web;
 use argon2::{
     password_hash::{
         self, rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
@@ -58,28 +57,19 @@ pub struct TokenInfo {
 }
 
 pub fn hash_password(password: &str) -> Result<String, password_hash::Error> {
-    let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
-
-    Ok(argon2
-        .hash_password(password.as_bytes(), &salt)?
+    Ok(Argon2::default()
+        .hash_password(password.as_bytes(), &SaltString::generate(&mut OsRng))?
         .to_string())
 }
 
 pub fn verify_password(password: &str, hash: &str) -> Result<bool, password_hash::Error> {
-    let hash = PasswordHash::new(hash)?;
-
     Ok(Argon2::default()
-        .verify_password(password.as_bytes(), &hash)
+        .verify_password(password.as_bytes(), &PasswordHash::new(hash)?)
         .is_ok())
 }
 
 impl TokenType {
-    pub fn sign(
-        &self,
-        config: &web::Data<config::Config>,
-        user: &User,
-    ) -> Result<TokenInfo, Error> {
+    pub fn sign(&self, config: &config::Config, user: &User) -> Result<TokenInfo, Error> {
         let secret_key = config.get(ConfigKey::SecretKey)?;
 
         let expires_at = match self {
@@ -111,7 +101,7 @@ impl TokenType {
         })
     }
 
-    pub fn verify(config: &web::Data<config::Config>, token: String) -> Result<TokenInfo, Error> {
+    pub fn verify(config: &config::Config, token: String) -> Result<TokenInfo, Error> {
         let secret_key = config.get(ConfigKey::SecretKey)?;
 
         let claims = decode::<Claims>(

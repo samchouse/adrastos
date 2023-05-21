@@ -21,6 +21,7 @@
     "reqwest",
     "SETEX",
     "sqli",
+    "totp",
     "utoipa"
   ]
 }

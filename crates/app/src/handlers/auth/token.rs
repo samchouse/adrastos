@@ -5,7 +5,7 @@ use actix_web::{
     get, web, HttpRequest, HttpResponse, Responder,
 };
 use chrono::Utc;
-use core::{
+use adrastos_core::{
     auth::{self, TokenType},
     config,
     entities::{Mutate, RefreshTokenTree, RefreshTokenTreeIden, User},

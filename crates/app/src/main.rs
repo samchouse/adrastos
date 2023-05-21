@@ -1,6 +1,8 @@
 use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
-use actix_web::{cookie::Key, error::InternalError, web, App, HttpResponse, HttpServer, middleware::Logger};
-use core::{
+use actix_web::{
+    cookie::Key, error::InternalError, middleware::Logger, web, App, HttpResponse, HttpServer,
+};
+use adrastos_core::{
     auth::oauth2::OAuth2,
     config::{Config, ConfigKey},
     db::{postgres, redis},
@@ -16,7 +18,9 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 mod handlers;
+mod middleware;
 mod openapi;
+mod session;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -68,6 +72,10 @@ async fn main() -> std::io::Result<()> {
                 ),
                 Key::from(config.get(ConfigKey::SecretKey).unwrap().as_bytes()),
             ))
+            .wrap(middleware::user::GetUser {
+                config: config.clone(),
+                db_pool: db_pool.clone(),
+            })
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", ApiDoc::openapi()),
@@ -83,6 +91,12 @@ async fn main() -> std::io::Result<()> {
                     .service(web::scope("/oauth2").service((
                         handlers::auth::oauth2::login,
                         handlers::auth::oauth2::callback,
+                    )))
+                    .service(web::scope("/mfa").service((
+                        handlers::auth::mfa::enable,
+                        handlers::auth::mfa::disable,
+                        handlers::auth::mfa::verify,
+                        handlers::auth::mfa::confirm,
                     ))),
             )
             .service(
