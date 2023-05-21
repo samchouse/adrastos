@@ -1,3 +1,4 @@
+use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
     config,
@@ -15,7 +16,7 @@ use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
 
-use crate::openapi;
+use crate::{openapi, session::SessionKey};
 
 pub mod mfa;
 pub mod oauth2;
@@ -93,6 +94,7 @@ pub async fn signup(
 )]
 #[post("/login")]
 pub async fn login(
+    session: Session,
     body: web::Json<LoginBody>,
     config: web::Data<config::Config>,
     db_pool: web::Data<deadpool_postgres::Pool>,
@@ -108,6 +110,24 @@ pub async fn login(
         return Err(Error::BadRequest(
             "No user was found with this email/password combo".into(),
         ));
+    }
+
+    if user.mfa_secret.is_some() {
+        session
+            .insert(SessionKey::LoginUserId.to_string(), user.id)
+            .map_err(|_| {
+                Error::InternalServerError("An error occurred while setting the session".into())
+            })?;
+        session
+            .insert(SessionKey::MfaRetries.to_string(), 3)
+            .map_err(|_| {
+                Error::InternalServerError("An error occurred while setting the session".into())
+            })?;
+
+        return Ok(HttpResponse::Ok().json(json!({
+            "success": true,
+            "message": "MFA is required for this user, continue to MFA verification",
+        })));
     }
 
     let access_token = TokenType::Access.sign(&config, &user).map_err(|_| {

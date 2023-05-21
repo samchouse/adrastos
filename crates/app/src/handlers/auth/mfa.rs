@@ -1,21 +1,29 @@
 use std::{collections::HashMap, vec};
 
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_session::Session;
+use actix_web::{
+    cookie::{time::OffsetDateTime, Cookie, Expiration},
+    get, post, web, HttpResponse, Responder,
+};
 use adrastos_core::{
-    entities::{Mutate, UserIden},
+    auth::TokenType,
+    config::Config,
+    entities::{Mutate, RefreshTokenTree, User, UserIden},
     error::Error,
+    id::Id,
 };
 use argon2::{
     password_hash::{rand_core::OsRng, SaltString},
     Argon2, PasswordHasher,
 };
+use chrono::Utc;
 use deadpool_redis::redis;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use totp_rs::{Algorithm, Secret, TOTP};
 
-use crate::middleware::user;
+use crate::{middleware::user, session::SessionKey};
 
 #[derive(Deserialize)]
 pub struct CVDBody {
@@ -121,8 +129,6 @@ pub async fn confirm(
         ));
     }
 
-    println!("{:#?}", hashed_backup_codes);
-
     redis::cmd("DEL")
         .arg(format!("mfa:secret:{}", user.id))
         .query_async(&mut conn)
@@ -138,7 +144,7 @@ pub async fn confirm(
             ),
             (
                 UserIden::MfaBackupCodes.to_string(),
-                Value::from(hashed_backup_codes),
+                Value::from(Some(hashed_backup_codes)),
             ),
         ]),
     )
@@ -153,8 +159,85 @@ pub async fn confirm(
 }
 
 #[post("/verify")]
-pub async fn verify() -> actix_web::Result<impl Responder, Error> {
-    Ok("Hello")
+pub async fn verify(
+    session: Session,
+    body: web::Json<CVDBody>,
+    config: web::Data<Config>,
+    db_pool: web::Data<deadpool_postgres::Pool>,
+) -> actix_web::Result<impl Responder, Error> {
+    let Ok(Some(retries)) = session.get::<u8>(&SessionKey::MfaRetries.to_string()) else {
+        return Err(Error::BadRequest("You have not started the login process".into()));
+    };
+    if retries == 0 {
+        session
+            .remove(&SessionKey::LoginUserId.to_string())
+            .ok_or(Error::BadRequest(
+                "You have not started the login process".into(),
+            ))?;
+        session
+            .remove(&SessionKey::MfaRetries.to_string())
+            .ok_or(Error::BadRequest(
+                "You have not started the login process".into(),
+            ))?;
+
+        return Err(Error::BadRequest(
+            "You have exceeded the maximum number of retries".into(),
+        ));
+    }
+
+    let Ok(Some(user_id)) = session.get::<String>(&SessionKey::LoginUserId.to_string()) else {
+        return Err(Error::BadRequest("You have not started the login process".into()));
+    };
+
+    let user = User::select().by_id(&user_id).finish(&db_pool).await?;
+    let Some(mfa_secret) = &user.mfa_secret else {
+        return Err(Error::BadRequest("MFA is disabled".into()));
+    };
+
+    let totp = create_totp(Secret::Encoded(mfa_secret.to_string()), user.email.clone());
+    if !totp.check_current(&body.code).unwrap() {
+        return Err(Error::BadRequest("Invalid MFA code".into()));
+    }
+
+    let access_token = TokenType::Access.sign(&config, &user).map_err(|_| {
+        Error::InternalServerError("An error occurred while signing the access token".into())
+    })?;
+    let refresh_token = TokenType::Refresh.sign(&config, &user).map_err(|_| {
+        Error::InternalServerError("An error occurred while signing the refresh token".into())
+    })?;
+
+    let refresh_token_tree = RefreshTokenTree {
+        id: Id::new().to_string(),
+        user_id: user.id.clone(),
+        inactive_at: Utc::now() + chrono::Duration::days(15),
+        expires_at: Utc::now() + chrono::Duration::days(90),
+        tokens: vec![refresh_token.clone().claims.jti],
+        created_at: Utc::now(),
+        updated_at: None,
+    };
+
+    refresh_token_tree.create(&db_pool).await?;
+
+    let cookie_expiration = OffsetDateTime::from_unix_timestamp(
+        refresh_token.expires_at.timestamp(),
+    )
+    .map_err(|_| {
+        Error::InternalServerError("An error occurred while parsing the cookie expiration".into())
+    })?;
+
+    Ok(HttpResponse::Ok()
+        .cookie(
+            Cookie::build("refreshToken", refresh_token.token)
+                .secure(true)
+                .http_only(true)
+                .expires(Expiration::from(cookie_expiration))
+                .finish(),
+        )
+        .json(json!({
+            "success": true,
+            "user": user,
+            "accessToken": access_token.clone().token,
+        })))
 }
 
 #[post("/disable")]
@@ -176,8 +259,11 @@ pub async fn disable(
     user.update(
         &db_pool,
         &HashMap::from([
-            (UserIden::MfaSecret.to_string(), Value::Null),
-            (UserIden::MfaBackupCodes.to_string(), Value::Null),
+            (UserIden::MfaSecret.to_string(), Value::from(None::<String>)),
+            (
+                UserIden::MfaBackupCodes.to_string(),
+                Value::from(None::<Vec<String>>),
+            ),
         ]),
     )
     .await

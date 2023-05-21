@@ -142,6 +142,23 @@ pub async fn callback(
         }
     }?;
 
+    if user.mfa_secret.is_some() {
+        session
+            .insert(SessionKey::LoginUserId.to_string(), user.id)
+            .map_err(|_| {
+                Error::InternalServerError("An error occurred while setting the session".into())
+            })?;
+        session
+            .insert(SessionKey::MfaRetries.to_string(), 3)
+            .map_err(|_| {
+                Error::InternalServerError("An error occurred while setting the session".into())
+            })?;
+
+        return Ok(HttpResponse::Ok()
+            .append_header(("Location", client_url)) // TODO(@Xenfo): Change this to the MFA page
+            .finish());
+    }
+
     let refresh_token = TokenType::Access.sign(&config, &user)?;
 
     let cookie_expiration = OffsetDateTime::from_unix_timestamp(

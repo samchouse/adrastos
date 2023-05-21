@@ -3,6 +3,8 @@ use std::fmt;
 pub enum SessionKey {
     UserId,
     CsrfToken,
+    LoginUserId,
+    MfaRetries,
 }
 
 impl fmt::Display for SessionKey {
@@ -10,6 +12,8 @@ impl fmt::Display for SessionKey {
         let name = match self {
             SessionKey::UserId => "user_id",
             SessionKey::CsrfToken => "csrf_token",
+            SessionKey::LoginUserId => "login_user_id",
+            SessionKey::MfaRetries => "mfa_retries",
         };
 
         write!(f, "{name}")

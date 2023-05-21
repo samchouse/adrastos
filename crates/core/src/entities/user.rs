@@ -39,9 +39,9 @@ pub struct User {
     pub password: String,
     pub verified: bool,
     pub banned: bool,
-    // #[serde(skip_serializing)]
+    #[serde(skip_serializing)]
     pub mfa_secret: Option<String>,
-    // #[serde(skip_serializing)]
+    #[serde(skip_serializing)]
     pub mfa_backup_codes: Option<Vec<String>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
@@ -337,7 +337,7 @@ impl Query for User {
         if let Some(mfa_secret) =
             updated.get(<Self as Identity>::Iden::MfaSecret.to_string().as_str())
         {
-            if let Some(mfa_secret) = mfa_secret.as_str() {
+            if let Ok(mfa_secret) = serde_json::from_value::<Option<String>>(mfa_secret.clone()) {
                 query.values([(<Self as Identity>::Iden::MfaSecret, mfa_secret.into())]);
             }
         }
@@ -346,7 +346,9 @@ impl Query for User {
                 .to_string()
                 .as_str(),
         ) {
-            if let Some(mfa_backup_codes) = mfa_backup_codes.as_str() {
+            if let Ok(mfa_backup_codes) =
+                serde_json::from_value::<Option<Vec<String>>>(mfa_backup_codes.clone())
+            {
                 query.values([(
                     <Self as Identity>::Iden::MfaBackupCodes,
                     mfa_backup_codes.into(),
