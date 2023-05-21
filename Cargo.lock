@@ -320,7 +320,6 @@ dependencies = [
  "libinjection",
  "oauth2",
  "openssl",
- "rand",
  "regex",
  "reqwest",
  "sea-query",
@@ -331,7 +330,6 @@ dependencies = [
  "serde_json",
  "tokio",
  "tokio-postgres",
- "totp-rs",
  "tracing",
  "tracing-subscriber",
  "utoipa",
@@ -357,6 +355,7 @@ dependencies = [
  "nanoid",
  "oauth2",
  "openssl",
+ "rand",
  "regex",
  "reqwest",
  "sea-query",
@@ -364,6 +363,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tokio-postgres",
+ "totp-rs",
  "tracing",
  "utoipa",
  "validator",
@@ -3232,7 +3232,6 @@ dependencies = [
  "sha2",
  "url",
  "urlencoding",
- "zeroize",
 ]
 
 [[package]]
@@ -3857,26 +3856,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "80d0f4e272c85def139476380b12f9ac60926689dd2e01d4923222f40580869d"
 dependencies = [
  "winapi",
-]
-
-[[package]]
-name = "zeroize"
-version = "1.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a0956f1ba7c7909bfb66c2e9e4124ab6f6482560f6628b5aaeba39207c9aad9"
-dependencies = [
- "zeroize_derive",
-]
-
-[[package]]
-name = "zeroize_derive"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.16",
 ]
 
 [[package]]

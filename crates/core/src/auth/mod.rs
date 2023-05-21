@@ -1,6 +1,9 @@
 use std::fmt;
 
-use actix_web::{cookie::{time::OffsetDateTime, Cookie, Expiration}, web};
+use actix_web::{
+    cookie::{time::OffsetDateTime, Cookie, Expiration},
+    web,
+};
 use argon2::{
     password_hash::{
         self, rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
@@ -20,6 +23,7 @@ use crate::{
     id::Id,
 };
 
+pub mod mfa;
 pub mod oauth2;
 
 #[derive(Clone, PartialEq)]

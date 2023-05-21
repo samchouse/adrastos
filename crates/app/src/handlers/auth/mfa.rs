@@ -1,146 +1,25 @@
-use std::{collections::HashMap, vec};
+use std::collections::HashMap;
 
 use actix_session::Session;
 use actix_web::{get, post, web, HttpResponse, Responder};
 use adrastos_core::{
-    auth,
+    auth::{
+        self,
+        mfa::{Mfa, VerificationMethod},
+    },
     config::Config,
     entities::{Mutate, User, UserIden},
     error::Error,
 };
-use argon2::{
-    password_hash::{rand_core::OsRng, SaltString},
-    Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
-};
 use deadpool_redis::redis;
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::Deserialize;
 use serde_json::{json, Value};
-use totp_rs::{Algorithm, Secret, TOTP};
 
 use crate::{middleware::user, session::SessionKey};
 
 #[derive(Deserialize)]
 pub struct CVDBody {
     code: String,
-}
-
-struct BackupCodes {
-    codes: Vec<String>,
-    hashed_codes: Vec<String>,
-}
-
-async fn generate_codes() -> Result<BackupCodes, Error> {
-    let backup_codes = vec!["".to_string(); 10]
-        .iter()
-        .map(|_| {
-            thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(10)
-                .map(char::from)
-                .collect::<String>()
-        })
-        .collect::<Vec<_>>();
-
-    let block_backup_codes = backup_codes.clone();
-    let hashed_backup_codes = web::block(move || {
-        block_backup_codes
-            .iter()
-            .filter_map(|s| {
-                Argon2::default()
-                    .hash_password(s.as_bytes(), &SaltString::generate(&mut OsRng))
-                    .ok()
-                    .map(|hash| hash.to_string())
-            })
-            .collect::<Vec<_>>()
-    })
-    .await
-    .map_err(|_| Error::InternalServerError("Error hashing backup codes".into()))?;
-    if hashed_backup_codes.len() != 10 {
-        return Err(Error::InternalServerError(
-            "Error hashing backup codes".into(),
-        ));
-    }
-
-    Ok(BackupCodes {
-        codes: backup_codes,
-        hashed_codes: hashed_backup_codes,
-    })
-}
-
-fn create_totp(secret: Secret, account_name: String) -> TOTP {
-    TOTP::new(
-        Algorithm::SHA1,
-        6,
-        1,
-        30,
-        secret.to_bytes().unwrap(),
-        Some("Adrastos".to_string()), // TODO(@Xenfo): Change to project name depending on config,
-        account_name,
-    )
-    .unwrap()
-}
-
-async fn verify_mfa(
-    db_pool: &web::Data<deadpool_postgres::Pool>,
-    user: &User,
-    code: &str,
-) -> Result<bool, Error> {
-    let totp = create_totp(
-        Secret::Encoded(user.mfa_secret.as_ref().unwrap().clone()),
-        user.email.clone(),
-    );
-
-    if code.len() == 10 && code.chars().all(char::is_alphanumeric) {
-        let block_user = user.clone();
-        let block_code = code.to_string();
-        let backup_code_index = web::block(move || {
-            return block_user
-                .mfa_backup_codes
-                .clone()
-                .unwrap()
-                .iter()
-                .position(|b_code| {
-                    Argon2::default()
-                        .verify_password(
-                            block_code.as_bytes(),
-                            &PasswordHash::new(b_code.as_str()).unwrap(),
-                        )
-                        .is_ok()
-                });
-        })
-        .await
-        .map_err(|_| {
-            Error::InternalServerError(
-                "An error occurred while verifying the backup MFA code".into(),
-            )
-        })?;
-
-        if let Some(backup_code_index) = backup_code_index {
-            let mut backup_codes = user.mfa_backup_codes.clone().unwrap();
-            backup_codes.remove(backup_code_index);
-
-            user.update(
-                db_pool,
-                &HashMap::from([(
-                    UserIden::MfaBackupCodes.to_string(),
-                    Value::from(Some(backup_codes)),
-                )]),
-            )
-            .await
-            .map_err(|_| {
-                Error::InternalServerError("An error occurred while updating the user".into())
-            })?;
-
-            return Ok(true);
-        }
-    }
-
-    if code.len() != 6 || !code.chars().all(char::is_numeric) {
-        return Err(Error::BadRequest("Invalid MFA code format".into()));
-    }
-
-    Ok(totp.check_current(code).unwrap())
 }
 
 #[get("/enable")]
@@ -153,13 +32,13 @@ pub async fn enable(
         return Err(Error::BadRequest("MFA is already enabled".into()));
     }
 
-    let totp = create_totp(Secret::generate_secret(), user.email);
+    let mfa = Mfa::new(Mfa::generate_secret(), user.email.clone());
 
     let mut conn = redis_pool.get().await.unwrap();
     let _: String = redis::cmd("SETEX")
         .arg(format!("mfa:secret:{}", user.id))
         .arg(60 * 10)
-        .arg(totp.get_secret_base32())
+        .arg(mfa.get_secret())
         .query_async(&mut conn)
         .await
         .map_err(|_| {
@@ -169,8 +48,8 @@ pub async fn enable(
     Ok(HttpResponse::Ok().json(json!({
         "success": true,
         "message": "MFA process successfully started",
-        "secret": totp.get_secret_base32(),
-        "qr_code": totp.get_qr().unwrap(),
+        "secret": mfa.get_secret(),
+        "qr_code": mfa.get_qr().unwrap(),
     })))
 }
 
@@ -193,12 +72,12 @@ pub async fn confirm(
         .await
         .map_err(|_| Error::InternalServerError("Error getting MFA details from Redis".into()))?;
 
-    let totp = create_totp(Secret::Encoded(mfa_secret), user.email.clone());
-    if !totp.check_current(&body.code).unwrap() {
+    let mfa = Mfa::new(Mfa::secret_from_string(mfa_secret), user.email.clone());
+    if !mfa.verify(&body.code, VerificationMethod::Code).await? {
         return Err(Error::BadRequest("Invalid MFA code".into()));
     }
 
-    let backup_codes = generate_codes()
+    let backup_codes = Mfa::generate_codes()
         .await
         .map_err(|_| Error::InternalServerError("Error generating backup codes".into()))?;
 
@@ -213,7 +92,7 @@ pub async fn confirm(
         &HashMap::from([
             (
                 UserIden::MfaSecret.to_string(),
-                Value::from(totp.get_secret_base32()),
+                Value::from(mfa.get_secret()),
             ),
             (
                 UserIden::MfaBackupCodes.to_string(),
@@ -263,11 +142,19 @@ pub async fn verify(
     };
 
     let user = User::select().by_id(&user_id).finish(&db_pool).await?;
-    if user.mfa_secret.is_none() {
+    let Some(mfa_secret) = user.mfa_secret.clone() else {
         return Err(Error::BadRequest("MFA is disabled".into()));
     };
 
-    verify_mfa(&db_pool, &user, &body.code).await?;
+    let mfa = Mfa::new(Mfa::secret_from_string(mfa_secret), user.email.clone());
+    mfa.verify(
+        &body.code,
+        VerificationMethod::All {
+            db_pool: db_pool.clone(),
+            user: Box::new(user.clone()),
+        },
+    )
+    .await?;
 
     let auth = auth::authenticate(&db_pool, &config, &user).await?;
     Ok(HttpResponse::Ok().cookie(auth.cookie).json(json!({
@@ -284,11 +171,19 @@ pub async fn disable(
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let user = user.clone();
-    if user.mfa_secret.is_none() {
+    let Some(mfa_secret) = user.mfa_secret.clone() else {
         return Err(Error::BadRequest("MFA is already disabled".into()));
     };
 
-    verify_mfa(&db_pool, &user, &body.code).await?;
+    let mfa = Mfa::new(Mfa::secret_from_string(mfa_secret), user.email.clone());
+    mfa.verify(
+        &body.code,
+        VerificationMethod::All {
+            db_pool: db_pool.clone(),
+            user: Box::new(user.clone()),
+        },
+    )
+    .await?;
 
     user.update(
         &db_pool,
@@ -319,7 +214,7 @@ pub async fn regenerate(
         return Err(Error::BadRequest("MFA is disabled".into()));
     };
 
-    let backup_codes = generate_codes()
+    let backup_codes = Mfa::generate_codes()
         .await
         .map_err(|_| Error::InternalServerError("Error generating backup codes".into()))?;
 
