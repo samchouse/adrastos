@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use actix_web::{delete, patch, post, web, HttpResponse, Responder};
-use chrono::Utc;
-use core::{
+use adrastos_core::{
     db::postgres,
     entities::{
         custom_table::{
@@ -18,6 +17,7 @@ use core::{
     error::Error,
     id::Id,
 };
+use chrono::Utc;
 use heck::AsSnakeCase;
 use regex::Regex;
 use sea_query::{Alias, PostgresQueryBuilder, Table, TableCreateStatement};
