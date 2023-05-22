@@ -48,3 +48,5 @@ validator = { version = "0.16.0", features = ["derive"] }
 sentry = "0.31.1"
 sentry-actix = "0.31.1"
 sentry-tracing = "0.31.1"
+mailchecker = "5.0.9"
+lettre = { version = "0.10.4", features = ["tokio1-native-tls"] }

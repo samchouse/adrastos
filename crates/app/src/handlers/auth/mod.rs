@@ -1,7 +1,7 @@
 use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
-    config,
+    config::{self, ConfigKey},
     entities::{Mutate, User},
     error::Error,
     id::Id,
@@ -10,6 +10,10 @@ use adrastos_core::{
 
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use chrono::Utc;
+use lettre::{
+    message::header::ContentType, transport::smtp::authentication::Credentials, AsyncSmtpTransport,
+    AsyncTransport, Message, Tokio1Executor,
+};
 use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
@@ -53,8 +57,36 @@ pub struct LoginBody {
 #[post("/signup")]
 pub async fn signup(
     body: web::Json<SignupBody>,
+    config: web::Data<config::Config>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
+    if !mailchecker::is_valid(body.email.as_str()) {
+        return Err(Error::BadRequest("Invalid email".into()));
+    }
+
+    let email = Message::builder()
+        .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
+        .to(format!("<{}>", body.email).parse().unwrap())
+        .subject("Verify your email")
+        .header(ContentType::TEXT_HTML)
+        .body(String::from("Verify your email at Adrastos by clicking this link: https://localhost:8000/auth/verify"))
+        .unwrap();
+
+    let mailer: AsyncSmtpTransport<Tokio1Executor> =
+        AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&config.get(ConfigKey::SmtpHost)?)
+            .unwrap()
+            .port(config.get(ConfigKey::SmtpPort)?.parse().unwrap())
+            .credentials(Credentials::new(
+                config.get(ConfigKey::SmtpUsername)?,
+                config.get(ConfigKey::SmtpPassword)?,
+            ))
+            .build();
+
+    match mailer.send(email).await {
+        Ok(_) => println!("Email sent successfully!"),
+        Err(e) => panic!("Could not send email: {e:?}"),
+    }
+
     let user = User {
         id: Id::new().to_string(),
         first_name: body.first_name.clone(),
