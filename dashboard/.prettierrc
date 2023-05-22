@@ -1,0 +1,13 @@
+{
+  "semi": true,
+  "singleQuote": true,
+  "bracketSpacing": true,
+  "trailingComma": "none",
+  "pluginSearchDirs": false,
+  "importOrderTypeScriptVersion": "5.0.4",
+  "importOrder": ["", "^~/(.*)$", "", "^[./]"],
+  "plugins": [
+    "@ianvs/prettier-plugin-sort-imports",
+    "prettier-plugin-tailwindcss"
+  ]
+}

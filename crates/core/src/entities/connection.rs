@@ -137,7 +137,7 @@ impl Query for Connection {
     }
 }
 
-impl From<Row> for Connection {
+impl From<Row> for Connection { // TODO(@Xenfo): automate this trait
     fn from(row: Row) -> Self {
         Self {
             id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),
