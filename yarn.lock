@@ -34,7 +34,6 @@ __metadata:
   resolution: "@adrastos/emails@workspace:packages/emails"
   dependencies:
     "@react-email/components": 0.0.6
-    "@react-email/tailwind": ^0.0.8
     react-email: 1.9.3
   languageName: unknown
   linkType: soft
@@ -1337,7 +1336,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@react-email/tailwind@npm:0.0.8, @react-email/tailwind@npm:^0.0.8":
+"@react-email/tailwind@npm:0.0.8":
   version: 0.0.8
   resolution: "@react-email/tailwind@npm:0.0.8"
   dependencies:
