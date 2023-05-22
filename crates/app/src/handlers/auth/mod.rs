@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
-    config::{self, ConfigKey},
+    config,
     entities::{Mutate, User, UserIden},
     error::Error,
     id::Id,
@@ -14,8 +14,7 @@ use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
 use deadpool_redis::redis;
 use lettre::{
-    message::header::ContentType, transport::smtp::authentication::Credentials, AsyncSmtpTransport,
-    AsyncTransport, Message, Tokio1Executor,
+    message::header::ContentType, AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -65,9 +64,9 @@ pub struct LoginBody {
 #[post("/signup")]
 pub async fn signup(
     body: web::Json<SignupBody>,
-    config: web::Data<config::Config>,
     db_pool: web::Data<deadpool_postgres::Pool>,
     redis_pool: web::Data<deadpool_redis::Pool>,
+    mailer: web::Data<AsyncSmtpTransport<Tokio1Executor>>,
 ) -> actix_web::Result<impl Responder, Error> {
     let verification_token = Id::new().to_string();
 
@@ -115,16 +114,6 @@ pub async fn signup(
         .header(ContentType::TEXT_HTML)
         .body(format!("Verify your email at Adrastos by clicking this link: https://localhost:8000/auth/verify?token={verification_token}"))
         .unwrap();
-
-    let mailer: AsyncSmtpTransport<Tokio1Executor> =
-        AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&config.get(ConfigKey::SmtpHost)?)
-            .unwrap()
-            .port(config.get(ConfigKey::SmtpPort)?.parse().unwrap())
-            .credentials(Credentials::new(
-                config.get(ConfigKey::SmtpUsername)?,
-                config.get(ConfigKey::SmtpPassword)?,
-            ))
-            .build();
 
     mailer.send(message).await.map_err(|_| {
         Error::InternalServerError("An error occurred while sending the verification email".into())
