@@ -25,6 +25,8 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use utoipa::ToSchema;
 
+use crate::middleware::user::RequiredUser;
+
 pub mod custom;
 
 #[derive(Deserialize, ToSchema)]
@@ -80,6 +82,7 @@ pub struct UpdateBody {
 )]
 #[post("/create")]
 pub async fn create(
+    _: RequiredUser,
     body: web::Json<CreateBody>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
@@ -233,6 +236,7 @@ pub async fn create(
 
 #[patch("/update/{name}")]
 pub async fn update(
+    _: RequiredUser,
     path: web::Path<String>,
     body: web::Json<UpdateBody>,
     db_pool: web::Data<deadpool_postgres::Pool>,
@@ -364,6 +368,7 @@ pub async fn update(
 )]
 #[delete("/delete/{name}")]
 pub async fn delete(
+    _: RequiredUser,
     path: web::Path<String>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {

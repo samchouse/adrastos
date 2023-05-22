@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use actix_web::HttpRequest;
+use actix_web::{HttpRequest, cookie::Cookie};
 use validator::ValidationError;
 
 use crate::error::Error;
@@ -17,7 +17,7 @@ pub fn create_validation_error(code: &str, message: Option<String>) -> Validatio
     }
 }
 
-pub fn get_refresh_token(req: &HttpRequest) -> Result<String, Error> {
+pub fn get_refresh_token_cookie(req: &HttpRequest) -> Result<Cookie<'static>, Error> {
     let Ok(cookies) = req.cookies() else {
         return Err(Error::InternalServerError("An error occurred reading cookies".into()));
     };
@@ -26,5 +26,5 @@ pub fn get_refresh_token(req: &HttpRequest) -> Result<String, Error> {
         return Err(Error::Unauthorized);
     };
 
-    Ok(cookie.value().into())
+    Ok(cookie.clone())
 }

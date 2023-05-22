@@ -19,8 +19,11 @@ use sea_query::{Alias, Expr, PostgresQueryBuilder, SimpleExpr, Value};
 use serde_json::json;
 use validator::{ValidationError, ValidationErrors};
 
+use crate::middleware::user::RequiredUser;
+
 #[get("/rows")]
 pub async fn rows(
+    _: RequiredUser,
     path: web::Path<String>,
     web::Query(query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
@@ -50,6 +53,7 @@ pub async fn rows(
 
 #[get("/row")]
 pub async fn row(
+    _: RequiredUser,
     path: web::Path<String>,
     web::Query(query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
@@ -80,8 +84,9 @@ pub async fn row(
 
 #[post("/create")]
 pub async fn create(
-    path: web::Path<String>,
+    _: RequiredUser,
     bytes: web::Bytes,
+    path: web::Path<String>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let body = serde_json::from_str::<HashMap<String, serde_json::Value>>(
@@ -521,6 +526,7 @@ pub async fn create(
 
 #[patch("/update")]
 pub async fn update(
+    _: RequiredUser,
     path: web::Path<String>,
     web::Query(query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
@@ -558,6 +564,7 @@ pub async fn update(
 
 #[delete("/delete")]
 pub async fn delete(
+    _: RequiredUser,
     path: web::Path<String>,
     web::Query(query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,

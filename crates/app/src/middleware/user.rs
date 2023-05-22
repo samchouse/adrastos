@@ -1,3 +1,5 @@
+// TODO(@Xenfo): add admin only middleware
+
 use std::{
     future::{ready, Ready},
     rc::Rc,
@@ -9,8 +11,9 @@ use actix_web::{
     Error, FromRequest, HttpMessage,
 };
 use actix_web_httpauth::headers::authorization::{Authorization, Bearer};
-use adrastos_core::{auth::TokenType, config, entities};
+use adrastos_core::{auth::TokenType, config, entities::{self, RefreshTokenTreeIden, RefreshTokenTree, Connection, ConnectionIden}};
 use futures_util::future::LocalBoxFuture;
+use sea_query::Alias;
 
 pub struct GetUser {
     pub config: config::Config,
@@ -69,6 +72,8 @@ where
                 {
                     let user = entities::User::select()
                         .by_id(&access_token.claims.sub)
+                        .join::<Connection>(Alias::new(ConnectionIden::UserId.to_string()))
+                        .join::<RefreshTokenTree>(Alias::new(RefreshTokenTreeIden::UserId.to_string()))
                         .finish(&db_pool)
                         .await;
                     if let Ok(user) = user {
@@ -84,12 +89,6 @@ where
 }
 
 pub struct User(Option<entities::User>);
-
-impl User {
-    pub fn into_inner(self) -> Option<entities::User> {
-        self.0
-    }
-}
 
 impl FromRequest for User {
     type Error = Error;
