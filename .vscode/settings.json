@@ -1,8 +1,8 @@
 {
   "rust-analyzer.check.command": "clippy",
-  "typescript.tsdk": "dashboard/node_modules/typescript/lib",
+  "eslint.workingDirectories": ["packages/*"],
   "typescript.enablePromptUseWorkspaceTsdk": true,
-  "eslint.workingDirectories": ["dashboard"],
+  "typescript.tsdk": "dashboard/node_modules/typescript/lib",
   "tailwindCSS.experimental.classRegex": [
     ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
   ],
