@@ -27,7 +27,6 @@ pub async fn enable(
     user: user::RequiredUser,
     redis_pool: web::Data<deadpool_redis::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let user = user.clone();
     if user.mfa_secret.is_some() {
         return Err(Error::BadRequest("MFA is already enabled".into()));
     }
@@ -60,7 +59,6 @@ pub async fn confirm(
     db_pool: web::Data<deadpool_postgres::Pool>,
     redis_pool: web::Data<deadpool_redis::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let user = user.clone();
     if user.mfa_secret.is_some() {
         return Err(Error::BadRequest("MFA is already enabled".into()));
     }
@@ -170,7 +168,6 @@ pub async fn disable(
     user: user::RequiredUser,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let user = user.clone();
     let Some(mfa_secret) = user.mfa_secret.clone() else {
         return Err(Error::BadRequest("MFA is already disabled".into()));
     };
@@ -209,7 +206,6 @@ pub async fn regenerate(
     user: user::RequiredUser,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let user = user.clone();
     if user.mfa_secret.is_none() {
         return Err(Error::BadRequest("MFA is disabled".into()));
     };

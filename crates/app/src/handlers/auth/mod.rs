@@ -1,9 +1,11 @@
 use actix_session::Session;
 use adrastos_core::{
-    auth, config,
+    auth::{self, TokenType},
+    config,
     entities::{Mutate, User},
     error::Error,
     id::Id,
+    util,
 };
 
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
@@ -12,7 +14,7 @@ use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
 
-use crate::{openapi, session::SessionKey};
+use crate::{middleware::user::RequiredUser, openapi, session::SessionKey};
 
 pub mod mfa;
 pub mod oauth2;
@@ -135,19 +137,28 @@ pub async fn login(
 }
 
 #[get("/logout")]
-pub async fn logout(req: HttpRequest) -> actix_web::Result<impl Responder, Error> {
-    let cookies = req.cookies().map_err(|_| {
-        Error::InternalServerError("An error occurred while fetching the cookies".into())
-    })?;
+pub async fn logout(
+    req: HttpRequest,
+    user: RequiredUser,
+    config: web::Data<config::Config>,
+    db_pool: web::Data<deadpool_postgres::Pool>,
+) -> actix_web::Result<impl Responder, Error> {
+    let mut cookie = util::get_refresh_token_cookie(&req)?;
+    let refresh_token = auth::TokenType::verify(&config, cookie.value().into())?;
+    if refresh_token.token_type != TokenType::Refresh {
+        return Err(Error::Unauthorized);
+    }
 
-    let cookie = cookies
-        .iter()
-        .find(|cookie| cookie.name() == "refreshToken")
-        .ok_or_else(|| Error::BadRequest("No refresh token was found".into()))?;
+    user.refresh_token_trees
+        .clone()
+        .ok_or_else(|| Error::Unauthorized)?
+        .into_iter()
+        .find(|tree| tree.tokens.contains(&refresh_token.claims.jti))
+        .ok_or_else(|| Error::Unauthorized)?
+        .delete(&db_pool)
+        .await?;
 
-    let mut cookie = cookie.clone();
     cookie.make_removal();
-
     Ok(HttpResponse::Ok().cookie(cookie).json(json!({
         "success": true
     })))

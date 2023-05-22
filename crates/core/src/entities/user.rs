@@ -85,11 +85,9 @@ impl UserSelectBuilder {
             format!(
                 "(SELECT json_agg({}) FROM ({}) {}) as {}",
                 JoinKeys::from_identity::<T>(),
-                T::query_select(vec![Expr::col(alias).eq(format!(
-                    "{}.{}",
-                    UserIden::Table,
-                    UserIden::Id
-                ))])
+                T::query_select(vec![
+                    Expr::col(alias).equals((User::table(), UserIden::Id))
+                ])
                 .to_string(PostgresQueryBuilder),
                 JoinKeys::from_identity::<T>(),
                 JoinKeys::from_identity::<T>().plural()
