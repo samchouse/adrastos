@@ -3,6 +3,7 @@
 **/next-env.d.ts
 
 # directories
+.yarn
 **/out
 /certs
 /target
@@ -10,12 +11,3 @@
 **/node_modules
 **/.react-email
 packages/**/.vscode
-
-# yarn
-/.pnp.*
-/.yarn/*
-!/.yarn/patches
-!/.yarn/plugins
-!/.yarn/releases
-!/.yarn/sdks
-!/.yarn/versions

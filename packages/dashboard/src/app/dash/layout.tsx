@@ -2,7 +2,7 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-  DashboardNavbar,
+  // DashboardNavbar,
   DashboardNavbar2
 } from '~/components';
 import { cn } from '~/lib/utils';

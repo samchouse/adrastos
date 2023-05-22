@@ -1,17 +1,23 @@
+use std::collections::HashMap;
+
 use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{Mutate, User},
+    entities::{Mutate, User, UserIden},
     error::Error,
     id::Id,
     util,
 };
 
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
-use chrono::Utc;
+use chrono::{Duration, Utc};
+use deadpool_redis::redis;
+use lettre::{
+    message::header::ContentType, AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
+};
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value};
 use utoipa::ToSchema;
 
 use crate::{middleware::user::RequiredUser, openapi, session::SessionKey};
@@ -19,6 +25,11 @@ use crate::{middleware::user::RequiredUser, openapi, session::SessionKey};
 pub mod mfa;
 pub mod oauth2;
 pub mod token;
+
+#[derive(Deserialize)]
+pub struct VerifyParams {
+    token: String,
+}
 
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -54,7 +65,15 @@ pub struct LoginBody {
 pub async fn signup(
     body: web::Json<SignupBody>,
     db_pool: web::Data<deadpool_postgres::Pool>,
+    redis_pool: web::Data<deadpool_redis::Pool>,
+    mailer: web::Data<AsyncSmtpTransport<Tokio1Executor>>,
 ) -> actix_web::Result<impl Responder, Error> {
+    let verification_token = Id::new().to_string();
+
+    if !mailchecker::is_valid(body.email.as_str()) {
+        return Err(Error::BadRequest("Invalid email".into()));
+    }
+
     let user = User {
         id: Id::new().to_string(),
         first_name: body.first_name.clone(),
@@ -74,6 +93,31 @@ pub async fn signup(
     };
 
     user.create(&db_pool).await?;
+
+    let mut conn = redis_pool.get().await.unwrap();
+    redis::cmd("SETEX")
+        .arg(format!("verification:{}", verification_token))
+        .arg(Duration::hours(1).num_seconds())
+        .arg(user.id.clone())
+        .query_async(&mut conn)
+        .await
+        .map_err(|_| {
+            Error::InternalServerError(
+                "An error ocurred while saving verification token to Redis".into(),
+            )
+        })?;
+
+    let message = Message::builder()
+        .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
+        .to(format!("<{}>", body.email).parse().unwrap())
+        .subject("Verify your email")
+        .header(ContentType::TEXT_HTML)
+        .body(format!("Verify your email at Adrastos by clicking this link: https://localhost:8000/auth/verify?token={verification_token}"))
+        .unwrap();
+
+    mailer.send(message).await.map_err(|_| {
+        Error::InternalServerError("An error occurred while sending the verification email".into())
+    })?;
 
     Ok(HttpResponse::Ok().json(json!({
         "success": true,
@@ -161,5 +205,44 @@ pub async fn logout(
     cookie.make_removal();
     Ok(HttpResponse::Ok().cookie(cookie).json(json!({
         "success": true
+    })))
+}
+
+#[get("/verify")]
+pub async fn verify(
+    user: RequiredUser,
+    params: web::Query<VerifyParams>,
+    db_pool: web::Data<deadpool_postgres::Pool>,
+    redis_pool: web::Data<deadpool_redis::Pool>,
+) -> actix_web::Result<impl Responder, Error> {
+    if user.verified {
+        return Err(Error::BadRequest("User is already verified".into()));
+    }
+
+    let mut conn = redis_pool.get().await.unwrap();
+    let user_id: String = redis::cmd("GET")
+        .arg(format!("verification:{}", params.token))
+        .query_async(&mut conn)
+        .await
+        .map_err(|_| {
+            Error::InternalServerError(
+                "An error ocurred while getting verification token from Redis".into(),
+            )
+        })?;
+
+    if user_id != user.id {
+        return Err(Error::BadRequest("Invalid verification token".into()));
+    }
+
+    user.update(
+        &db_pool,
+        &HashMap::from([(UserIden::Verified.to_string(), Value::from(true))]),
+    )
+    .await
+    .map_err(|_| Error::InternalServerError("Unable to update user".to_string()))?;
+
+    Ok(HttpResponse::Ok().json(json!({
+        "success": true,
+        "message": "Email was successfully verified"
     })))
 }

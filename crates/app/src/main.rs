@@ -9,6 +9,7 @@ use adrastos_core::{
     entities,
 };
 use dotenvy::dotenv;
+use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
 use openapi::ApiDoc;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use serde_json::json;
@@ -35,7 +36,7 @@ async fn main() -> std::io::Result<()> {
 
     entities::migrations::migrate(&db_pool).await;
 
-    let server_url = config.get(ConfigKey::ServerUrl).unwrap().to_string();
+    let server_url = config.get(ConfigKey::ServerUrl).unwrap();
 
     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
     builder
@@ -47,10 +48,24 @@ async fn main() -> std::io::Result<()> {
 
     let server = HttpServer::new(move || {
         App::new()
+            .wrap(Logger::default())
+            .wrap(middleware::user::GetUser {
+                config: config.clone(),
+                db_pool: db_pool.clone(),
+            })
+            .wrap(SessionMiddleware::new(
+                RedisActorSessionStore::new(
+                    config
+                        .get(ConfigKey::DragonflyUrl)
+                        .unwrap()
+                        .replace("redis://", ""),
+                ),
+                Key::from(config.get(ConfigKey::SecretKey).unwrap().as_bytes()),
+            ))
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
-            .app_data(web::Data::new(redis::create_pool(&config)))
             .app_data(web::Data::new(OAuth2::new(&config)))
+            .app_data(web::Data::new(redis::create_pool(&config)))
             .app_data(web::JsonConfig::default().error_handler(|err, _| {
                 let err_string = err.to_string();
                 InternalError::from_response(
@@ -62,20 +77,18 @@ async fn main() -> std::io::Result<()> {
                 )
                 .into()
             }))
-            .wrap(Logger::default())
-            .wrap(SessionMiddleware::new(
-                RedisActorSessionStore::new(
-                    config
-                        .get(ConfigKey::DragonflyUrl)
-                        .unwrap()
-                        .replace("redis://", ""),
-                ),
-                Key::from(config.get(ConfigKey::SecretKey).unwrap().as_bytes()),
+            .app_data(web::Data::new(
+                AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(
+                    &config.get(ConfigKey::SmtpHost).unwrap(),
+                )
+                .unwrap()
+                .port(config.get(ConfigKey::SmtpPort).unwrap().parse().unwrap())
+                .credentials(Credentials::new(
+                    config.get(ConfigKey::SmtpUsername).unwrap(),
+                    config.get(ConfigKey::SmtpPassword).unwrap(),
+                ))
+                .build::<Tokio1Executor>(),
             ))
-            .wrap(middleware::user::GetUser {
-                config: config.clone(),
-                db_pool: db_pool.clone(),
-            })
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", ApiDoc::openapi()),
@@ -86,6 +99,7 @@ async fn main() -> std::io::Result<()> {
                         handlers::auth::signup,
                         handlers::auth::login,
                         handlers::auth::logout,
+                        handlers::auth::verify,
                         handlers::auth::token::refresh,
                     ))
                     .service(web::scope("/oauth2").service((
