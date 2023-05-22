@@ -2,12 +2,11 @@
 
 use std::{collections::HashMap, fmt};
 
-use actix_web::web;
 use chrono::{DateTime, Utc};
 use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{
-    enum_def, Alias, ColumnDef, Expr, Keyword, PostgresQueryBuilder, SelectStatement, SimpleExpr,
-    Table,
+    enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, SelectStatement,
+    SimpleExpr, Table,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -40,6 +39,10 @@ pub struct User {
     pub password: String,
     pub verified: bool,
     pub banned: bool,
+    #[serde(skip_serializing)]
+    pub mfa_secret: Option<String>,
+    // #[serde(skip_serializing)]
+    pub mfa_backup_codes: Option<Vec<String>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 
@@ -82,11 +85,9 @@ impl UserSelectBuilder {
             format!(
                 "(SELECT json_agg({}) FROM ({}) {}) as {}",
                 JoinKeys::from_identity::<T>(),
-                T::query_select(vec![Expr::col(alias).eq(format!(
-                    "{}.{}",
-                    UserIden::Table,
-                    UserIden::Id
-                ))])
+                T::query_select(vec![
+                    Expr::col(alias).equals((User::table(), UserIden::Id))
+                ])
                 .to_string(PostgresQueryBuilder),
                 JoinKeys::from_identity::<T>(),
                 JoinKeys::from_identity::<T>().plural()
@@ -97,10 +98,7 @@ impl UserSelectBuilder {
         self
     }
 
-    pub async fn finish(
-        &mut self,
-        db_pool: &web::Data<deadpool_postgres::Pool>,
-    ) -> Result<User, Error> {
+    pub async fn finish(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<User, Error> {
         let row = db_pool
             .get()
             .await
@@ -190,6 +188,11 @@ impl Migrate for User {
                     .not_null()
                     .default(false),
             )
+            .col(ColumnDef::new(<Self as Identity>::Iden::MfaSecret).string())
+            .col(
+                ColumnDef::new(<Self as Identity>::Iden::MfaBackupCodes)
+                    .array(ColumnType::String(None)),
+            )
             .col(
                 ColumnDef::new(<Self as Identity>::Iden::CreatedAt)
                     .timestamp_with_time_zone()
@@ -215,6 +218,8 @@ impl User {
                     <Self as Identity>::Iden::Password,
                     <Self as Identity>::Iden::Verified,
                     <Self as Identity>::Iden::Banned,
+                    <Self as Identity>::Iden::MfaSecret,
+                    <Self as Identity>::Iden::MfaBackupCodes,
                     <Self as Identity>::Iden::CreatedAt,
                     <Self as Identity>::Iden::UpdatedAt,
                 ])
@@ -243,6 +248,8 @@ impl Query for User {
                 <Self as Identity>::Iden::Password,
                 <Self as Identity>::Iden::Verified,
                 <Self as Identity>::Iden::Banned,
+                <Self as Identity>::Iden::MfaSecret,
+                <Self as Identity>::Iden::MfaBackupCodes,
                 <Self as Identity>::Iden::CreatedAt,
                 <Self as Identity>::Iden::UpdatedAt,
             ])
@@ -325,16 +332,40 @@ impl Query for User {
                 query.values([(<Self as Identity>::Iden::Password, password.into())]);
             }
         }
+        if let Some(mfa_secret) =
+            updated.get(<Self as Identity>::Iden::MfaSecret.to_string().as_str())
+        {
+            if let Ok(mfa_secret) = serde_json::from_value::<Option<String>>(mfa_secret.clone()) {
+                query.values([(<Self as Identity>::Iden::MfaSecret, mfa_secret.into())]);
+            }
+        }
+        if let Some(mfa_backup_codes) = updated.get(
+            <Self as Identity>::Iden::MfaBackupCodes
+                .to_string()
+                .as_str(),
+        ) {
+            if let Ok(mfa_backup_codes) =
+                serde_json::from_value::<Option<Vec<String>>>(mfa_backup_codes.clone())
+            {
+                query.values([(
+                    <Self as Identity>::Iden::MfaBackupCodes,
+                    mfa_backup_codes.into(),
+                )]);
+            }
+        }
 
-        updated_for_validation
-            .validate()
-            .map_err(|err| Error::ValidationErrors {
-                message: format!(
-                    "An error occurred while validating the {}",
-                    Self::error_identifier(),
-                ),
-                errors: err,
-            })?;
+        Self {
+            password: "password".into(),
+            ..updated_for_validation
+        }
+        .validate()
+        .map_err(|err| Error::ValidationErrors {
+            message: format!(
+                "An error occurred while validating the {}",
+                Self::error_identifier(),
+            ),
+            errors: err,
+        })?;
 
         Ok(query
             .table(Self::table())
@@ -368,6 +399,12 @@ impl From<Row> for User {
             password: row.get(<Self as Identity>::Iden::Password.to_string().as_str()),
             verified: row.get(<Self as Identity>::Iden::Verified.to_string().as_str()),
             banned: row.get(<Self as Identity>::Iden::Banned.to_string().as_str()),
+            mfa_secret: row.get(<Self as Identity>::Iden::MfaSecret.to_string().as_str()),
+            mfa_backup_codes: row.get(
+                <Self as Identity>::Iden::MfaBackupCodes
+                    .to_string()
+                    .as_str(),
+            ),
             created_at: row.get(<Self as Identity>::Iden::CreatedAt.to_string().as_str()),
             updated_at: row.get(<Self as Identity>::Iden::UpdatedAt.to_string().as_str()),
 
@@ -395,6 +432,8 @@ impl fmt::Display for UserIden {
             Self::Password => "password",
             Self::Verified => "verified",
             Self::Banned => "banned",
+            Self::MfaSecret => "mfa_secret",
+            Self::MfaBackupCodes => "mfa_backup_codes",
             Self::CreatedAt => "created_at",
             Self::UpdatedAt => "updated_at",
 

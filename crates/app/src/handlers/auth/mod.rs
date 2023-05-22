@@ -1,21 +1,22 @@
-use actix_web::{
-    cookie::{time::OffsetDateTime, Cookie, Expiration},
-    get, post, web, HttpRequest, HttpResponse, Responder,
-};
-use chrono::Utc;
-use core::{
+use actix_session::Session;
+use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{Mutate, RefreshTokenTree, User},
+    entities::{Mutate, User},
     error::Error,
     id::Id,
+    util,
 };
+
+use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
+use chrono::Utc;
 use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
 
-use crate::openapi;
+use crate::{middleware::user::RequiredUser, openapi, session::SessionKey};
 
+pub mod mfa;
 pub mod oauth2;
 pub mod token;
 
@@ -63,6 +64,8 @@ pub async fn signup(
         password: body.password.clone(),
         verified: false,
         banned: false,
+        mfa_secret: None,
+        mfa_backup_codes: None,
         created_at: Utc::now(),
         updated_at: None,
 
@@ -89,6 +92,7 @@ pub async fn signup(
 )]
 #[post("/login")]
 pub async fn login(
+    session: Session,
     body: web::Json<LoginBody>,
     config: web::Data<config::Config>,
     db_pool: web::Data<deadpool_postgres::Pool>,
@@ -106,61 +110,55 @@ pub async fn login(
         ));
     }
 
-    let access_token = TokenType::Access.sign(&config, &user).map_err(|_| {
-        Error::InternalServerError("An error occurred while signing the access token".into())
-    })?;
-    let refresh_token = TokenType::Refresh.sign(&config, &user).map_err(|_| {
-        Error::InternalServerError("An error occurred while signing the refresh token".into())
-    })?;
+    if user.mfa_secret.is_some() {
+        session
+            .insert(SessionKey::LoginUserId.to_string(), user.id)
+            .map_err(|_| {
+                Error::InternalServerError("An error occurred while setting the session".into())
+            })?;
+        session
+            .insert(SessionKey::MfaRetries.to_string(), 3)
+            .map_err(|_| {
+                Error::InternalServerError("An error occurred while setting the session".into())
+            })?;
 
-    let refresh_token_tree = RefreshTokenTree {
-        id: Id::new().to_string(),
-        user_id: user.id.clone(),
-        inactive_at: Utc::now() + chrono::Duration::days(15),
-        expires_at: Utc::now() + chrono::Duration::days(90),
-        tokens: vec![refresh_token.clone().claims.jti],
-        created_at: Utc::now(),
-        updated_at: None,
-    };
-
-    refresh_token_tree.create(&db_pool).await?;
-
-    let cookie_expiration = OffsetDateTime::from_unix_timestamp(
-        refresh_token.expires_at.timestamp(),
-    )
-    .map_err(|_| {
-        Error::InternalServerError("An error occurred while parsing the cookie expiration".into())
-    })?;
-
-    Ok(HttpResponse::Ok()
-        .cookie(
-            Cookie::build("refreshToken", refresh_token.token)
-                .secure(true)
-                .http_only(true)
-                .expires(Expiration::from(cookie_expiration))
-                .finish(),
-        )
-        .json(json!({
+        return Ok(HttpResponse::Ok().json(json!({
             "success": true,
-            "user": user,
-            "accessToken": access_token.clone().token,
-        })))
+            "message": "MFA is required for this user, continue to MFA verification",
+        })));
+    }
+
+    let auth = auth::authenticate(&db_pool, &config, &user).await?;
+    Ok(HttpResponse::Ok().cookie(auth.cookie).json(json!({
+        "success": true,
+        "user": user,
+        "accessToken": auth.token.clone().token,
+    })))
 }
 
 #[get("/logout")]
-pub async fn logout(req: HttpRequest) -> actix_web::Result<impl Responder, Error> {
-    let cookies = req.cookies().map_err(|_| {
-        Error::InternalServerError("An error occurred while fetching the cookies".into())
-    })?;
+pub async fn logout(
+    req: HttpRequest,
+    user: RequiredUser,
+    config: web::Data<config::Config>,
+    db_pool: web::Data<deadpool_postgres::Pool>,
+) -> actix_web::Result<impl Responder, Error> {
+    let mut cookie = util::get_refresh_token_cookie(&req)?;
+    let refresh_token = auth::TokenType::verify(&config, cookie.value().into())?;
+    if refresh_token.token_type != TokenType::Refresh {
+        return Err(Error::Unauthorized);
+    }
 
-    let cookie = cookies
-        .iter()
-        .find(|cookie| cookie.name() == "refreshToken")
-        .ok_or_else(|| Error::BadRequest("No refresh token was found".into()))?;
+    user.refresh_token_trees
+        .clone()
+        .ok_or_else(|| Error::Unauthorized)?
+        .into_iter()
+        .find(|tree| tree.tokens.contains(&refresh_token.claims.jti))
+        .ok_or_else(|| Error::Unauthorized)?
+        .delete(&db_pool)
+        .await?;
 
-    let mut cookie = cookie.clone();
     cookie.make_removal();
-
     Ok(HttpResponse::Ok().cookie(cookie).json(json!({
         "success": true
     })))

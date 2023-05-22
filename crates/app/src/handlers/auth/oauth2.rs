@@ -1,26 +1,21 @@
-use std::fmt;
-
-use actix_session::Session;
-use actix_web::{
-    cookie::{time::OffsetDateTime, Cookie, Expiration},
-    get,
-    http::header::{self, Header},
-    web, HttpRequest, HttpResponse, Responder,
-};
-use actix_web_httpauth::headers::authorization::{Authorization, Bearer};
-use chrono::Utc;
-use core::{
+use adrastos_core::{
     auth::{
+        self,
         oauth2::{providers::OAuth2Provider, OAuth2, OAuth2LoginInfo},
-        TokenType,
     },
     config::{self, ConfigKey},
-    entities::{Connection, ConnectionIden, Mutate, User, UserIden},
+    entities::{Connection, ConnectionIden, Mutate, User},
     error::Error,
     id::Id,
 };
+
+use actix_session::Session;
+use actix_web::{get, http::header, web, HttpResponse, Responder};
+use chrono::Utc;
 use sea_query::Expr;
 use serde::Deserialize;
+
+use crate::{middleware::user, session::SessionKey};
 
 #[derive(Deserialize)]
 pub struct LoginParams {
@@ -34,30 +29,13 @@ pub struct CallbackParams {
     code: String,
 }
 
-enum SessionKey {
-    UserId,
-    CsrfToken,
-}
-
-impl fmt::Display for SessionKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            SessionKey::UserId => "user_id",
-            SessionKey::CsrfToken => "csrf_token",
-        };
-
-        write!(f, "{name}")
-    }
-}
-
 #[get("/login")]
 pub async fn login(
-    req: HttpRequest,
+    user: user::User,
+    session: Session,
     oauth2: web::Data<OAuth2>,
     params: web::Query<LoginParams>,
-    config: web::Data<config::Config>,
     redis_pool: web::Data<deadpool_redis::Pool>,
-    session: Session,
 ) -> actix_web::Result<impl Responder, Error> {
     let provider = OAuth2Provider::try_from(params.provider.as_str())
         .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;
@@ -76,15 +54,13 @@ pub async fn login(
             Error::InternalServerError("Unable to insert CSRF token into session".to_string())
         })?;
 
-    if let Ok(auth) = Authorization::<Bearer>::parse(&req) {
-        if let Ok(access_token) = TokenType::verify(&config, auth.into_scheme().token().into()) {
-            session
-                .insert(SessionKey::UserId.to_string(), access_token.claims.sub)
-                .map_err(|_| {
-                    Error::InternalServerError("Unable to insert user ID into session".to_string())
-                })?;
-        }
-    };
+    if let Some(user) = user.clone() {
+        session
+            .insert(SessionKey::UserId.to_string(), user.id)
+            .map_err(|_| {
+                Error::InternalServerError("Unable to insert user ID into session".to_string())
+            })?;
+    }
 
     Ok(HttpResponse::Found()
         .append_header((header::LOCATION, auth_url.to_string()))
@@ -136,7 +112,7 @@ pub async fn callback(
     .await;
 
     let user = match connection {
-        Ok(conn) => Ok(User::find(&db_pool, vec![Expr::col(UserIden::Id).eq(conn.user_id)]).await?),
+        Ok(conn) => Ok(User::select().by_id(&conn.user_id).finish(&db_pool).await?),
         Err(..) => {
             if let Ok(Some(user_id)) = session.get::<String>(&SessionKey::UserId.to_string()) {
                 let conn = Connection {
@@ -157,24 +133,26 @@ pub async fn callback(
         }
     }?;
 
-    let refresh_token = TokenType::Access.sign(&config, &user)?;
+    if user.mfa_secret.is_some() {
+        session
+            .insert(SessionKey::LoginUserId.to_string(), user.id)
+            .map_err(|_| {
+                Error::InternalServerError("An error occurred while setting the session".into())
+            })?;
+        session
+            .insert(SessionKey::MfaRetries.to_string(), 3)
+            .map_err(|_| {
+                Error::InternalServerError("An error occurred while setting the session".into())
+            })?;
 
-    let cookie_expiration = OffsetDateTime::from_unix_timestamp(
-        refresh_token.expires_at.timestamp(),
-    )
-    .map_err(|_| {
-        Error::InternalServerError("An error occurred while parsing the cookie expiration".into())
-    })?;
+        return Ok(HttpResponse::Ok()
+            .append_header(("Location", client_url)) // TODO(@Xenfo): Change this to the MFA page
+            .finish());
+    }
 
+    let auth = auth::authenticate(&db_pool, &config, &user).await?;
     Ok(HttpResponse::Found()
-        .cookie(
-            Cookie::build("refreshToken", refresh_token.token)
-                .path("/auth")
-                .secure(true)
-                .http_only(true)
-                .expires(Expiration::from(cookie_expiration))
-                .finish(),
-        )
+        .cookie(auth.cookie)
         .append_header(("Location", client_url))
         .finish())
 }

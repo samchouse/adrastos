@@ -108,7 +108,7 @@ impl OAuth2 {
             .url();
 
         let mut conn = redis_pool.get().await.unwrap();
-        let _: String = redis::cmd("SETEX")
+        redis::cmd("SETEX")
             .arg(format!("oauth:code_verifier:{}", csrf_token.secret()))
             .arg(60 * 10)
             .arg(code_verifier.secret())

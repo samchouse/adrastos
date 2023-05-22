@@ -1,4 +1,4 @@
-use core::entities;
+use adrastos_core::entities;
 use utoipa::{
     openapi::{Object, ObjectBuilder, SchemaFormat, SchemaType},
     OpenApi,

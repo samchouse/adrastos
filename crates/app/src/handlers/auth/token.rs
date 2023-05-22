@@ -4,14 +4,14 @@ use actix_web::{
     cookie::{time::OffsetDateTime, Cookie, Expiration},
     get, web, HttpRequest, HttpResponse, Responder,
 };
-use chrono::Utc;
-use core::{
+use adrastos_core::{
     auth::{self, TokenType},
     config,
     entities::{Mutate, RefreshTokenTree, RefreshTokenTreeIden, User},
     error::Error,
     util,
 };
+use chrono::Utc;
 use sea_query::Alias;
 use serde_json::{json, Value};
 
@@ -28,7 +28,7 @@ pub async fn refresh(
     config: web::Data<config::Config>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let refresh_token = auth::TokenType::verify(&config, util::get_refresh_token(&req)?)?;
+    let refresh_token = auth::TokenType::verify(&config, util::get_refresh_token_cookie(&req)?.value().into())?;
     if refresh_token.token_type != TokenType::Refresh {
         return Err(Error::Forbidden("Not a refresh token".into()));
     }
