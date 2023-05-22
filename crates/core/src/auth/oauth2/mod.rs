@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use actix_web::web;
+use chrono::Duration;
 use deadpool_redis::redis;
 use oauth2::{
     basic::{BasicClient, BasicTokenType},
@@ -110,7 +111,7 @@ impl OAuth2 {
         let mut conn = redis_pool.get().await.unwrap();
         redis::cmd("SETEX")
             .arg(format!("oauth:code_verifier:{}", csrf_token.secret()))
-            .arg(60 * 10)
+            .arg(Duration::minutes(10).num_seconds())
             .arg(code_verifier.secret())
             .query_async(&mut conn)
             .await

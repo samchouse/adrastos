@@ -41,12 +41,14 @@ pub struct User {
     pub banned: bool,
     #[serde(skip_serializing)]
     pub mfa_secret: Option<String>,
-    // #[serde(skip_serializing)]
+    #[serde(skip_serializing)]
     pub mfa_backup_codes: Option<Vec<String>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 
+    #[serde(skip_serializing)]
     pub connections: Option<Vec<Connection>>,
+    #[serde(skip_serializing)]
     pub refresh_token_trees: Option<Vec<RefreshTokenTree>>,
 }
 
@@ -85,10 +87,8 @@ impl UserSelectBuilder {
             format!(
                 "(SELECT json_agg({}) FROM ({}) {}) as {}",
                 JoinKeys::from_identity::<T>(),
-                T::query_select(vec![
-                    Expr::col(alias).equals((User::table(), UserIden::Id))
-                ])
-                .to_string(PostgresQueryBuilder),
+                T::query_select(vec![Expr::col(alias).equals((User::table(), UserIden::Id))])
+                    .to_string(PostgresQueryBuilder),
                 JoinKeys::from_identity::<T>(),
                 JoinKeys::from_identity::<T>().plural()
             )
@@ -332,6 +332,19 @@ impl Query for User {
                 query.values([(<Self as Identity>::Iden::Password, password.into())]);
             }
         }
+        if let Some(verified) = updated.get(<Self as Identity>::Iden::Verified.to_string().as_str())
+        {
+            if let Some(verified) = verified.as_bool() {
+                updated_for_validation.verified = verified;
+                query.values([(<Self as Identity>::Iden::Verified, verified.into())]);
+            }
+        }
+        if let Some(banned) = updated.get(<Self as Identity>::Iden::Banned.to_string().as_str()) {
+            if let Some(banned) = banned.as_bool() {
+                updated_for_validation.banned = banned;
+                query.values([(<Self as Identity>::Iden::Banned, banned.into())]);
+            }
+        }
         if let Some(mfa_secret) =
             updated.get(<Self as Identity>::Iden::MfaSecret.to_string().as_str())
         {
@@ -369,6 +382,7 @@ impl Query for User {
 
         Ok(query
             .table(Self::table())
+            .values([(<Self as Identity>::Iden::UpdatedAt, Utc::now().into())])
             .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder))
     }

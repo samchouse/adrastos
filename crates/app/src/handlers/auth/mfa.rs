@@ -11,6 +11,7 @@ use adrastos_core::{
     entities::{Mutate, User, UserIden},
     error::Error,
 };
+use chrono::Duration;
 use deadpool_redis::redis;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -34,9 +35,9 @@ pub async fn enable(
     let mfa = Mfa::new(Mfa::generate_secret(), user.email.clone());
 
     let mut conn = redis_pool.get().await.unwrap();
-    let _: String = redis::cmd("SETEX")
+    redis::cmd("SETEX")
         .arg(format!("mfa:secret:{}", user.id))
-        .arg(60 * 10)
+        .arg(Duration::minutes(10).num_seconds())
         .arg(mfa.get_secret())
         .query_async(&mut conn)
         .await

@@ -86,6 +86,7 @@ async fn main() -> std::io::Result<()> {
                         handlers::auth::signup,
                         handlers::auth::login,
                         handlers::auth::logout,
+                        handlers::auth::verify,
                         handlers::auth::token::refresh,
                     ))
                     .service(web::scope("/oauth2").service((
