@@ -35,6 +35,11 @@ export const VerificationEmail: React.FC<VerificationProps> = ({ token }) => (
               family: 'Roboto',
               weight: 400,
               url: 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2'
+            },
+            {
+              family: 'Roboto-Bold',
+              weight: 700,
+              url: 'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc4.woff2'
             }
           ]}
         />
@@ -44,7 +49,13 @@ export const VerificationEmail: React.FC<VerificationProps> = ({ token }) => (
 
       <Body>
         <Container className="rounded-xl border-2 border-solid border-gray-200 bg-gray-50 px-5 pb-2 text-center">
-          <Heading as="h2" className="text-2xl font-bold">
+          <Heading
+            as="h2"
+            className="text-2xl font-bold"
+            style={{
+              fontFamily: 'Roboto-Bold, Roboto'
+            }}
+          >
             Verify Your Email
           </Heading>
           <Hr className="border-gray-200" />
@@ -56,7 +67,7 @@ export const VerificationEmail: React.FC<VerificationProps> = ({ token }) => (
 
           <Button
             href={verificationUrl(token)}
-            className="rounded-lg bg-gray-900 px-4 py-3 text-gray-50"
+            className="rounded-lg bg-gray-900 px-4 py-3 text-base text-gray-50"
           >
             Click To Verify
           </Button>
