@@ -6,83 +6,74 @@ import {
   Heading,
   Hr,
   Html,
+  Link,
   Preview,
   Tailwind,
   Text
 } from '@react-email/components';
 import * as React from 'react';
 
+import { Font } from '../components';
+
+const supportEmail = 'support@adrastos.xenfo.dev';
+const verificationUrl = (token: string) =>
+  `https://localhost:8000/auth/verify?token=${token}`;
+
 interface VerificationProps {
   token: string;
 }
 
-const Font = ({
-  webFont,
-  fontStyle = 'normal',
-  fontFamily,
-  fontWeight = 400,
-  fallbackFontFamily
-}) => {
-  const src = webFont
-    ? `src: url(${webFont.url}) format(${webFont.format});`
-    : '';
-
-  return (
-    <style>
-      {`
-          @font-face {
-              font-style: ${fontStyle};
-              font-family: 'Work Sans';
-              font-weight: ${fontWeight};
-              mso-font-alt: ${
-                Array.isArray(fallbackFontFamily)
-                  ? fallbackFontFamily[0]
-                  : fallbackFontFamily
-              };
-              ${src}
-          }
-
-          * {
-              font-family: ${fontFamily}, ${
-        Array.isArray(fallbackFontFamily)
-          ? fallbackFontFamily.join(', ')
-          : fallbackFontFamily
-      };
-          }
-          `}
-    </style>
-  );
-};
-
-export const VerificationEmail: React.FC<VerificationProps> = ({
-  token = 'test'
-}) => (
+export const VerificationEmail: React.FC<VerificationProps> = ({ token }) => (
   <Tailwind>
-    <Html lang="en" className="bg-white">
+    <Html className="bg-white">
       <Head>
         <Font
-          fontFamily="Roboto"
-          fallbackFontFamily="Helvetica"
-          webFont={{
-            url: 'https://fonts.gstatic.com/s/roboto/v27/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2',
-            format: 'woff2'
-          }}
+          format="woff2"
+          fallbackFontFamily={['Helvetica', 'Verdana', 'Georgia']}
+          fonts={[
+            {
+              family: 'Roboto',
+              weight: 400,
+              url: 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2'
+            }
+          ]}
         />
       </Head>
 
       <Preview>Verify your email for Adrastos</Preview>
 
       <Body>
-        <Container>
-          <Heading as="h2">Verify your email</Heading>
-          <Hr />
+        <Container className="rounded-xl border-2 border-solid border-gray-200 bg-gray-50 px-5 pb-2 text-center">
+          <Heading as="h2" className="text-2xl font-bold">
+            Verify Your Email
+          </Heading>
+          <Hr className="border-gray-200" />
 
-          <Text>
-            Click the button bellow to verify your account for Adrastos.
+          <Text className="text-base">
+            Your email was used to sign up for Adrastos. Click the button bellow
+            to verify your account.
           </Text>
-          <Button href={`https://localhost:8000/auth/verify?token=${token}`}>
-            Click to verify
+
+          <Button
+            href={verificationUrl(token)}
+            className="rounded-lg bg-gray-900 px-4 py-3 text-gray-50"
+          >
+            Click To Verify
           </Button>
+
+          <Text className="text-sm">
+            Or if the button doesn&apos;t work, copy and paste the link bellow
+            into your browser.
+            <br />
+            <Link href={verificationUrl(token)}>{verificationUrl(token)}</Link>
+          </Text>
+          <Hr className="border-gray-200" />
+
+          <Text className="text-sm">
+            If you did not perform this action yourself, please contact{' '}
+            <Link href={`mailto:${supportEmail}`}>{supportEmail}</Link> to
+            report it.
+          </Text>
         </Container>
       </Body>
     </Html>

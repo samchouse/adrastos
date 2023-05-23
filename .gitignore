@@ -5,6 +5,7 @@
 # directories
 **/out
 /certs
+**/.swc
 /target
 **/.next
 **/node_modules

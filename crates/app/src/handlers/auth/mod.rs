@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
-    config,
+    config::{self, ConfigKey},
     entities::{Mutate, User, UserIden},
     error::Error,
     id::Id,
@@ -12,7 +12,7 @@ use adrastos_core::{
 
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
-use deadpool_redis::redis;
+use deadpool_redis::redis::{self, PubSub};
 use lettre::{
     message::header::ContentType, AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
@@ -106,6 +106,9 @@ pub async fn signup(
                 "An error ocurred while saving verification token to Redis".into(),
             )
         })?;
+
+    let mut conn = redis_pool.clone().get().await.unwrap();
+    conn.into_pubsub().subscribe("verification").await.unwrap();
 
     let message = Message::builder()
         .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
