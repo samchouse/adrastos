@@ -114,7 +114,7 @@ pub async fn signup(
         .get_async_connection()
         .await
         .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?;
-    let _: () = conn.publish("emails", verification_token).await.unwrap();
+    conn.publish::<_, _, ()>("emails", verification_token).await.unwrap();
 
     let mut pubsub = conn.into_pubsub();
     pubsub.subscribe("html").await.map_err(|_| {
