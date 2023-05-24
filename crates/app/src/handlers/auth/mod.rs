@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
-    config,
+    config::{self, ConfigKey},
     entities::{Mutate, User, UserIden},
     error::Error,
     id::Id,
@@ -12,7 +12,8 @@ use adrastos_core::{
 
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
-use deadpool_redis::redis;
+use deadpool_redis::redis::{self, AsyncCommands};
+use futures_util::StreamExt;
 use lettre::{
     message::header::ContentType, AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
@@ -64,6 +65,7 @@ pub struct LoginBody {
 #[post("/signup")]
 pub async fn signup(
     body: web::Json<SignupBody>,
+    config: web::Data<config::Config>,
     db_pool: web::Data<deadpool_postgres::Pool>,
     redis_pool: web::Data<deadpool_redis::Pool>,
     mailer: web::Data<AsyncSmtpTransport<Tokio1Executor>>,
@@ -107,12 +109,37 @@ pub async fn signup(
             )
         })?;
 
+    let mut conn = redis::Client::open(config.get(ConfigKey::DragonflyUrl).unwrap())
+        .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
+        .get_async_connection()
+        .await
+        .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?;
+    conn.publish::<_, _, ()>("emails", verification_token).await.unwrap();
+
+    let mut pubsub = conn.into_pubsub();
+    pubsub.subscribe("html").await.map_err(|_| {
+        Error::InternalServerError("An error occurred while subscribing to Redis".into())
+    })?;
+
+    let mut stream = pubsub.on_message();
+    let Some(msg) = stream.next().await else {
+        return Err(Error::InternalServerError(
+            "An error occurred while receiving Redis message".into(),
+        ));
+    };
+
+    drop(stream);
+    pubsub.unsubscribe("html").await.map_err(|_| {
+        Error::InternalServerError("An error occurred while unsubscribing from Redis".into())
+    })?;
+
+    let html = msg.get_payload::<String>().unwrap();
     let message = Message::builder()
         .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
         .to(format!("<{}>", body.email).parse().unwrap())
-        .subject("Verify your email")
+        .subject("Verify Your Email")
         .header(ContentType::TEXT_HTML)
-        .body(format!("Verify your email at Adrastos by clicking this link: https://localhost:8000/auth/verify?token={verification_token}"))
+        .body(html)
         .unwrap();
 
     mailer.send(message).await.map_err(|_| {

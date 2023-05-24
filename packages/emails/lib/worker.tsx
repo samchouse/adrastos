@@ -1,0 +1,27 @@
+import { render } from '@react-email/components';
+import pino from 'pino';
+import * as React from 'react';
+import * as redis from 'redis';
+
+import VerificationEmail from '../emails/verification';
+import { env } from './env';
+
+const logger = pino();
+const client = redis.createClient({ url: env.DRAGONFLY_URL });
+
+logger.info('Worker started');
+
+const worker = async () => {
+  await client.connect();
+
+  await client.subscribe('emails', async (token) => {
+    logger.info('Received request with token: ', token);
+    await client.publish(
+      'html',
+      render(<VerificationEmail token={token} baseUrl={env.BACKEND_URL} />)
+    );
+    logger.info('Finished request with token: ', token);
+  });
+};
+
+void worker();

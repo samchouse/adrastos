@@ -84,10 +84,10 @@ const NavigationMenuViewport = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Viewport>,
   React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Viewport>
 >(({ className, ...props }, ref) => (
-  <div className="absolute left-0 top-full flex w-full justify-center">
+  <div className={cn('absolute left-0 top-full flex justify-center')}>
     <NavigationMenuPrimitive.Viewport
       className={cn(
-        'bg-popover text-popover-foreground data-[state=closed]:animate-scaleOut data-[state=open]:animate-scaleIn relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] origin-[top_center] overflow-hidden rounded-md border shadow-lg transition-[width,_height] duration-300 md:w-[var(--radix-navigation-menu-viewport-width)]',
+        'origin-top-center bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-md border shadow-lg md:w-[var(--radix-navigation-menu-viewport-width)]',
         className
       )}
       ref={ref}
@@ -105,7 +105,7 @@ const NavigationMenuIndicator = React.forwardRef<
   <NavigationMenuPrimitive.Indicator
     ref={ref}
     className={cn(
-      'data-[state=hidden]:animate-fadeOut data-[state=visible]:animate-fadeIn top-full z-[1] flex h-1.5 items-end justify-center overflow-hidden transition-[width,transform_250ms_ease]',
+      'data-[state=visible]:animate-in data-[state=hidden]:animate-out data-[state=hidden]:fade-out data-[state=visible]:fade-in top-full z-[1] flex h-1.5 items-end justify-center overflow-hidden',
       className
     )}
     {...props}
