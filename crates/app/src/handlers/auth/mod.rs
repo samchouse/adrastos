@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
-    config,
+    config::{self, ConfigKey},
     entities::{Mutate, User, UserIden},
     error::Error,
     id::Id,
@@ -12,10 +12,7 @@ use adrastos_core::{
 
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
-use deadpool_redis::{
-    redis::{self, AsyncCommands},
-    Connection,
-};
+use deadpool_redis::redis::{self, AsyncCommands};
 use futures_util::StreamExt;
 use lettre::{
     message::header::ContentType, AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
@@ -68,6 +65,7 @@ pub struct LoginBody {
 #[post("/signup")]
 pub async fn signup(
     body: web::Json<SignupBody>,
+    config: web::Data<config::Config>,
     db_pool: web::Data<deadpool_postgres::Pool>,
     redis_pool: web::Data<deadpool_redis::Pool>,
     mailer: web::Data<AsyncSmtpTransport<Tokio1Executor>>,
@@ -111,7 +109,11 @@ pub async fn signup(
             )
         })?;
 
-    let mut conn = Connection::take(conn);
+    let mut conn = redis::Client::open(config.get(ConfigKey::DragonflyUrl).unwrap())
+        .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
+        .get_async_connection()
+        .await
+        .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?;
     let _: () = conn.publish("emails", verification_token).await.unwrap();
 
     let mut pubsub = conn.into_pubsub();
