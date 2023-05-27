@@ -7,35 +7,18 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  Checkbox,
-  Input,
-  Label
+  SignupForm
 } from '~/components';
 
 const Page = () => (
   <main>
     <div className="flex h-screen w-screen items-center justify-center">
-      <Card className="max-w-[400px]">
+      <Card className="max-w-[500px] lg:min-w-[500px]">
         <CardHeader>
           <CardTitle>Sign Up</CardTitle>
         </CardHeader>
         <CardContent>
-          <form>
-            <div className="flex flex-col gap-1">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="Email" />
-              </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" placeholder="Password" />
-              </div>
-              <div className="mt-3 flex items-center space-x-2">
-                <Checkbox id="tac" />
-                <Label htmlFor="tac">I accept the Terms and Conditions</Label>
-              </div>
-            </div>
-          </form>
+          <SignupForm />
         </CardContent>
         <CardFooter>
           <div className="w-full">
