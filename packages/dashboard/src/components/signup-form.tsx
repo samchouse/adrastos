@@ -92,7 +92,7 @@ export const SignupForm: React.FC = () => {
           control={form.control}
           name="tac"
           render={({ field }) => (
-            <FormItem className="flex w-full items-center space-x-2">
+            <FormItem className="flex w-full items-center space-x-2 space-y-0">
               <FormControl>
                 <Checkbox {...field} />
               </FormControl>

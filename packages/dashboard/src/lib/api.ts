@@ -6,4 +6,4 @@ interface SignupData {
   password: string;
 }
 
-export const postSignup = (data: SignupData) => {};
+export const postSignup = (_data: SignupData) => undefined;
