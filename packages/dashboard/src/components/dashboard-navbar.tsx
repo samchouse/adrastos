@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -16,24 +17,18 @@ export const DashboardNavbar = () => (
   <NavigationMenu className="flex-none">
     <NavigationMenuList>
       {dashboardNavigation.map((nav) => (
-        <>
-          <NavigationMenuItem>
-            <NavigationMenuTrigger>{nav.header}</NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                {nav.items.map((item) => {
-                  const href = `/dash${item.href}`;
-
-                  return (
-                    <ListItem key={item.title} title={item.title} href={href}>
-                      {item.description}
-                    </ListItem>
-                  );
-                })}
-              </ul>
-            </NavigationMenuContent>
-          </NavigationMenuItem>
-        </>
+        <NavigationMenuItem key={nav.header}>
+          <NavigationMenuTrigger>{nav.header}</NavigationMenuTrigger>
+          <NavigationMenuContent>
+            <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+              {nav.items.map((item) => (
+                <ListItem key={item.title} title={item.title} href={item.href}>
+                  {item.description}
+                </ListItem>
+              ))}
+            </ul>
+          </NavigationMenuContent>
+        </NavigationMenuItem>
       ))}
     </NavigationMenuList>
   </NavigationMenu>

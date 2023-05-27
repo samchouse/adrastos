@@ -3,14 +3,14 @@ export const dashboardNavigation = [
     header: 'Home',
     items: [
       {
-        title: 'Stats',
-        description: 'View your stats',
-        href: ''
+        title: 'Home',
+        description: 'Go home',
+        href: '/'
       },
       {
-        title: 'Bad',
+        title: 'Stats',
         description: 'View your stats',
-        href: '/sdf'
+        href: '/dashboard/404'
       }
     ]
   }
