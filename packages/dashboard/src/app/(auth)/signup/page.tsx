@@ -15,7 +15,7 @@ import {
 const Page = () => (
   <main>
     <div className="flex h-screen w-screen items-center justify-center">
-      <Card className="w-[400px]">
+      <Card className="max-w-[400px]">
         <CardHeader>
           <CardTitle>Sign Up</CardTitle>
         </CardHeader>
