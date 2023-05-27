@@ -21,3 +21,4 @@ export {
   NavigationMenuViewport,
   navigationMenuTriggerStyle
 } from './navigation-menu';
+export { Checkbox } from './checkbox';
