@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "NODE_EXTRA_CA_CERTS=../../certs/rootCA.pem next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -18,12 +18,12 @@
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-switch": "^1.0.3",
     "@t3-oss/env-nextjs": "^0.3.1",
-    "@tanstack/react-query": "^4.29.7",
+    "@tanstack/react-query": "^4.29.11",
     "@tanstack/react-query-devtools": "^4.29.11",
     "axios": "^1.4.0",
     "class-variance-authority": "^0.6.0",
     "clsx": "^1.2.1",
-    "lucide-react": "^0.221.0",
+    "lucide-react": "^0.223.0",
     "next": "^13.4.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.14",
-    "postcss": "^8.4.23",
+    "postcss": "^8.4.24",
     "tailwindcss": "^3.3.2"
   }
 }

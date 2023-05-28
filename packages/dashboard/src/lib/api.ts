@@ -3,7 +3,7 @@ import axios, { AxiosError, AxiosResponse } from 'axios';
 import { env } from '~/env';
 
 const client = axios.create({
-  baseURL: env.NEXT_PUBLIC_BACKEND_URL
+  baseURL: '/api'
 });
 
 client.interceptors.response.use(

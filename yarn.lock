@@ -18,15 +18,15 @@ __metadata:
     "@radix-ui/react-slot": ^1.0.2
     "@radix-ui/react-switch": ^1.0.3
     "@t3-oss/env-nextjs": ^0.3.1
-    "@tanstack/react-query": ^4.29.7
+    "@tanstack/react-query": ^4.29.11
     "@tanstack/react-query-devtools": ^4.29.11
     autoprefixer: ^10.4.14
     axios: ^1.4.0
     class-variance-authority: ^0.6.0
     clsx: ^1.2.1
-    lucide-react: ^0.221.0
+    lucide-react: ^0.223.0
     next: ^13.4.4
-    postcss: ^8.4.23
+    postcss: ^8.4.24
     react: ^18.2.0
     react-dom: ^18.2.0
     react-hook-form: ^7.44.1
@@ -1677,10 +1677,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tanstack/query-core@npm:4.29.7":
-  version: 4.29.7
-  resolution: "@tanstack/query-core@npm:4.29.7"
-  checksum: f28441a1fc17881d770ebacbe3a2fcf58bd065ac0cf58f8dc544d367f00d7f65213e09a1a1280e021eef25a50b307cac6884173b5acf32570e755baf29b741aa
+"@tanstack/query-core@npm:4.29.11":
+  version: 4.29.11
+  resolution: "@tanstack/query-core@npm:4.29.11"
+  checksum: 2a17223f34e99e17d564a15206668eb79324da72e630a47cf41690f92fb091a8669bdc89e9ab1b0d8f0e3e8f579529cfb0aa6f10b4fc58ea81cc7e5caede9229
   languageName: node
   linkType: hard
 
@@ -1699,11 +1699,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tanstack/react-query@npm:^4.29.7":
-  version: 4.29.7
-  resolution: "@tanstack/react-query@npm:4.29.7"
+"@tanstack/react-query@npm:^4.29.11":
+  version: 4.29.11
+  resolution: "@tanstack/react-query@npm:4.29.11"
   dependencies:
-    "@tanstack/query-core": 4.29.7
+    "@tanstack/query-core": 4.29.11
     use-sync-external-store: ^1.2.0
   peerDependencies:
     react: ^16.8.0 || ^17.0.0 || ^18.0.0
@@ -1714,7 +1714,7 @@ __metadata:
       optional: true
     react-native:
       optional: true
-  checksum: 9db2fb78e18f299c0e58f3c177261f6010fdea63a5f950e4c93a7cf7a46da019aa3171c77759fa7b327e35763e3379f0a885c71dafd9aa99bf2ddda9f264de90
+  checksum: 94730795d1dfb2a8f76a33de4b65200bd983aa1f5ab0b3e645b6316479c69a5650efb0b7142056f31d657bae12c01eb43c79fae807bf9be86a00d650f86f6d34
   languageName: node
   linkType: hard
 
@@ -5130,12 +5130,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lucide-react@npm:^0.221.0":
-  version: 0.221.0
-  resolution: "lucide-react@npm:0.221.0"
+"lucide-react@npm:^0.223.0":
+  version: 0.223.0
+  resolution: "lucide-react@npm:0.223.0"
   peerDependencies:
     react: ^16.5.1 || ^17.0.0 || ^18.0.0
-  checksum: b631e58bb9807705f65fb4775a912c28dd6cba3692fe0ec8c2e6ce5dfd07b1bbb0b443c9c712aaf3b9fa021943e4ac61143629effc796a5ea80e2c3717aa4cf5
+  checksum: ab58c4c99e3e369ebde60f0d3dbd4c86721ac9d2c1ef64450b4cdc988db30a963567833617b104c99bcd9e75c239906a99bb79e6db6d018103e016af6daa8b6d
   languageName: node
   linkType: hard
 
@@ -6090,6 +6090,17 @@ __metadata:
     picocolors: ^1.0.0
     source-map-js: ^1.0.2
   checksum: 8bb9d1b2ea6e694f8987d4f18c94617971b2b8d141602725fedcc2222fdc413b776a6e1b969a25d627d7b2681ca5aabb56f59e727ef94072e1b6ac8412105a2f
+  languageName: node
+  linkType: hard
+
+"postcss@npm:^8.4.24":
+  version: 8.4.24
+  resolution: "postcss@npm:8.4.24"
+  dependencies:
+    nanoid: ^3.3.6
+    picocolors: ^1.0.0
+    source-map-js: ^1.0.2
+  checksum: 814e2126dacfea313588eda09cc99a9b4c26ec55c059188aa7a916d20d26d483483106dc5ff9e560731b59f45c5bb91b945dfadc670aed875cc90ddbbf4e787d
   languageName: node
   linkType: hard
 

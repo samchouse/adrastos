@@ -1,0 +1,11 @@
+# files
+.env
+**/next-env.d.ts
+
+# directories
+**/out
+/certs
+/target
+**/.next
+**/node_modules
+**/.react-email
