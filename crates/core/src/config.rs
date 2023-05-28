@@ -80,7 +80,7 @@ impl Config {
             Entry {
                 keys: vec![ConfigKey::ServerUrl],
                 required: false,
-                default: Some("127.0.0.1:8000"),
+                default: Some("https://127.0.0.1:8000"),
             },
             Entry {
                 keys: vec![ConfigKey::SecretKey],
