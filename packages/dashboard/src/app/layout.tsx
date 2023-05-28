@@ -8,7 +8,8 @@ import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuLink,
-  NavigationMenuList
+  NavigationMenuList,
+  Providers
 } from '~/components';
 import { cn } from '~/lib/utils';
 
@@ -56,7 +57,7 @@ const RootLayout = ({ children }: { children: React.ReactNode }) => (
         </div>
       </div>
 
-      {children}
+      <Providers>{children}</Providers>
     </body>
   </html>
 );

@@ -1,14 +1,4 @@
-import Link from 'next/link';
-
-import {
-  Button,
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  SignupForm
-} from '~/components';
+import { Card, CardHeader, CardTitle, SignupForm } from '~/components';
 
 const Page = () => (
   <main>
@@ -17,21 +7,8 @@ const Page = () => (
         <CardHeader>
           <CardTitle>Sign Up</CardTitle>
         </CardHeader>
-        <CardContent>
-          <SignupForm />
-        </CardContent>
-        <CardFooter>
-          <div className="w-full">
-            <Button className="w-full">Sign Up</Button>
 
-            <Link
-              href="/login"
-              className="text-muted-foreground mt-5 block text-center text-sm underline underline-offset-4"
-            >
-              Already have an account? Login
-            </Link>
-          </div>
-        </CardFooter>
+        <SignupForm />
       </Card>
     </div>
   </main>

@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
 use actix_web::{
     cookie::Key, error::InternalError, middleware::Logger, web, App, HttpResponse, HttpServer,
@@ -62,6 +63,12 @@ async fn main() -> std::io::Result<()> {
                 ),
                 Key::from(config.get(ConfigKey::SecretKey).unwrap().as_bytes()),
             ))
+            .wrap(
+                Cors::default()
+                    .allow_any_header()
+                    .allow_any_method()
+                    .allow_any_origin(),
+            )
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(OAuth2::new(&config)))
