@@ -5,9 +5,9 @@ use crate::error::Error;
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum ConfigKey {
     CertsPath,
+    SecretKey,
     ClientUrl,
     ServerUrl,
-    SecretKey,
     SmtpHost,
     SmtpPort,
     SmtpUsername,
@@ -30,9 +30,9 @@ impl fmt::Display for ConfigKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             ConfigKey::CertsPath => "CERTS_PATH",
+            ConfigKey::SecretKey => "SECRET_KEY",
             ConfigKey::ClientUrl => "CLIENT_URL",
             ConfigKey::ServerUrl => "SERVER_URL",
-            ConfigKey::SecretKey => "SECRET_KEY",
             ConfigKey::SmtpHost => "SMTP_HOST",
             ConfigKey::SmtpPort => "SMTP_PORT",
             ConfigKey::SmtpUsername => "SMTP_USERNAME",
@@ -75,12 +75,12 @@ impl Config {
             Entry {
                 keys: vec![ConfigKey::ClientUrl],
                 required: false,
-                default: Some("https://127.0.0.1:3000"),
+                default: Some("https://localhost:3000"),
             },
             Entry {
                 keys: vec![ConfigKey::ServerUrl],
                 required: false,
-                default: Some("https://127.0.0.1:8000"),
+                default: Some("localhost:8000"),
             },
             Entry {
                 keys: vec![ConfigKey::SecretKey],
