@@ -52,7 +52,12 @@ pub fn create_pool(config: &config::Config) -> Pool {
         SslMode::Disable => Manager::from_config(pg_config, NoTls, manager_config),
         _ => {
             let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
-            builder.set_ca_file("~/.postgresql/root.crt").unwrap();
+            builder
+                .set_ca_file(format!(
+                    "{}/cockroach.crt",
+                    config.get(ConfigKey::CertsPath).unwrap()
+                ))
+                .unwrap();
             let connector = MakeTlsConnector::new(builder.build());
 
             Manager::from_config(pg_config, connector, manager_config)

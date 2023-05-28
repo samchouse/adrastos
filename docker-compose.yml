@@ -35,7 +35,7 @@ services:
       - 8000:8000
     volumes:
       - ./certs:/work/certs
-      - ~/.postgresql/root.crt:~/.postgresql/root.crt
+      - ~/.postgresql/root.crt:/work/certs/cockroach.crt
     env_file:
       - .env
 
