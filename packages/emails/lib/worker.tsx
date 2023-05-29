@@ -15,12 +15,12 @@ const worker = async () => {
   await client.connect();
 
   await client.subscribe('emails', async (token) => {
-    logger.info('Received request with token: ', token);
+    logger.info(`Received request with token: ${token}`);
     await client.publish(
       'html',
       render(<VerificationEmail token={token} baseUrl={env.BACKEND_URL} />)
     );
-    logger.info('Finished request with token: ', token);
+    logger.info(`Finished request with token: ${token}`);
   });
 };
 

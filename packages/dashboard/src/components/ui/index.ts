@@ -22,3 +22,13 @@ export {
   navigationMenuTriggerStyle
 } from './navigation-menu';
 export { Checkbox } from './checkbox';
+export {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  useFormField
+} from './form';

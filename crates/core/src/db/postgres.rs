@@ -4,6 +4,9 @@ use deadpool_postgres::{
     tokio_postgres::{Config, NoTls},
     Manager, ManagerConfig, Pool, RecyclingMethod,
 };
+use openssl::ssl::{SslConnector, SslMethod};
+use postgres_openssl::MakeTlsConnector;
+use tokio_postgres::config::SslMode;
 
 use crate::config::{self, ConfigKey};
 
@@ -41,13 +44,25 @@ pub fn create_pool(config: &config::Config) -> Pool {
         .unwrap()
         .parse::<Config>()
         .unwrap();
-    let mgr = Manager::from_config(
-        pg_config,
-        NoTls,
-        ManagerConfig {
-            recycling_method: RecyclingMethod::Fast,
-        },
-    );
+    let manager_config = ManagerConfig {
+        recycling_method: RecyclingMethod::Fast,
+    };
+
+    let mgr = match pg_config.get_ssl_mode() {
+        SslMode::Disable => Manager::from_config(pg_config, NoTls, manager_config),
+        _ => {
+            let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
+            builder
+                .set_ca_file(format!(
+                    "{}/cockroach.crt",
+                    config.get(ConfigKey::CertsPath).unwrap()
+                ))
+                .unwrap();
+            let connector = MakeTlsConnector::new(builder.build());
+
+            Manager::from_config(pg_config, connector, manager_config)
+        }
+    };
 
     Pool::builder(mgr).max_size(16).build().unwrap()
 }

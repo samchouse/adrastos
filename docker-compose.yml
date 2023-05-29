@@ -4,6 +4,8 @@ version: '3.9'
 services:
   crdb:
     image: cockroachdb/cockroach:latest
+    profiles:
+      - db
     ports:
       - 26257:26257
       - 8080:8080
@@ -15,12 +17,35 @@ services:
 
   dragonfly:
     image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    profiles:
+      - db
     ulimits:
       memlock: -1
     ports:
       - 6379:6379
     volumes:
       - dragonfly:/data
+
+  app:
+    image: ghcr.io/xenfo/adrastos-app:latest
+    restart: always
+    profiles:
+      - deploy
+    ports:
+      - 8000:8000
+    volumes:
+      - ./certs:/work/certs
+      - ~/.postgresql/root.crt:/work/certs/cockroach.crt
+    env_file:
+      - .env
+
+  emails:
+    image: ghcr.io/xenfo/adrastos-emails:latest
+    restart: always
+    profiles:
+      - deploy
+    env_file:
+      - .env
 
 volumes:
   crdb:

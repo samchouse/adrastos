@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
 use actix_web::{
     cookie::Key, error::InternalError, middleware::Logger, web, App, HttpResponse, HttpServer,
@@ -40,10 +41,16 @@ async fn main() -> std::io::Result<()> {
 
     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
     builder
-        .set_private_key_file("../../certs/key.pem", SslFiletype::PEM)
+        .set_private_key_file(
+            format!("{}/key.pem", config.get(ConfigKey::CertsPath).unwrap()),
+            SslFiletype::PEM,
+        )
         .unwrap();
     builder
-        .set_certificate_chain_file("../../certs/cert.pem")
+        .set_certificate_chain_file(format!(
+            "{}/cert.pem",
+            config.get(ConfigKey::CertsPath).unwrap()
+        ))
         .unwrap();
 
     let server = HttpServer::new(move || {
@@ -62,6 +69,12 @@ async fn main() -> std::io::Result<()> {
                 ),
                 Key::from(config.get(ConfigKey::SecretKey).unwrap().as_bytes()),
             ))
+            .wrap(
+                Cors::default()
+                    .allow_any_header()
+                    .allow_any_method()
+                    .allow_any_origin(),
+            )
             .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(OAuth2::new(&config)))

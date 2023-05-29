@@ -6,6 +6,7 @@
     "dev": "email dev",
     "export": "email export",
     "build": "cd lib && run -T tsc",
+    "watch": "cd lib && run -T tsc -w",
     "start": "node out/lib/worker.js"
   },
   "dependencies": {
