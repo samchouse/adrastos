@@ -1,5 +1,5 @@
 # files
-.env
+*.env
 **/next-env.d.ts
 
 # directories
@@ -10,4 +10,3 @@
 **/.next
 **/node_modules
 **/.react-email
-packages/**/.vscode

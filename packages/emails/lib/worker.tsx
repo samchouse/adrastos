@@ -18,7 +18,12 @@ const worker = async () => {
     logger.info(`Received request with token: ${token}`);
     await client.publish(
       'html',
-      render(<VerificationEmail token={token} baseUrl={env.BACKEND_URL} />)
+      render(
+        <VerificationEmail
+          token={token}
+          baseUrl={`https://${env.SERVER_URL ?? 'localhost:8000'}`}
+        />
+      )
     );
     logger.info(`Finished request with token: ${token}`);
   });

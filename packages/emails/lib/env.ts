@@ -8,7 +8,7 @@ export const env = createEnv({
   clientPrefix: '',
   client: {},
   server: {
-    BACKEND_URL: z.string(),
+    SERVER_URL: z.string().optional(),
     DRAGONFLY_URL: z.string()
   },
   runtimeEnv: process.env

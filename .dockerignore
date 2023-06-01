@@ -1,8 +1,9 @@
 # files
-.env
+*.env
 **/next-env.d.ts
 
 # directories
+.yarn
 **/out
 /certs
 /target
