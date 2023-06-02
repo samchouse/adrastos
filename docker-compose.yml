@@ -38,7 +38,9 @@ services:
       - 443:443
     volumes:
       - letsencrypt:/etc/letsencrypt
-      - ./data/nginx:/etc/nginx
+      - ./data/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./data/nginx/sites-available:/etc/nginx/sites-available
+      - ./data/nginx/nginxconfig.io:/etc/nginx/nginxconfig.io
       - ./data/letsencrypt/cloudflare.ini:/etc/letsencrypt/cloudflare.ini
 
   app:
