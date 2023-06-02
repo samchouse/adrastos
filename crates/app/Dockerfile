@@ -1,4 +1,4 @@
-FROM rustlang/rust:nightly-alpine
+FROM rustlang/rust:nightly-alpine as builder
 
 RUN apk add musl-dev pkgconfig libressl-dev
 
@@ -9,5 +9,9 @@ COPY ./crates ./crates
 WORKDIR /work/crates/app
 RUN cargo build --release
 
+FROM alpine:latest
+
 WORKDIR /work
-CMD [ "./target/release/adrastos" ]
+COPY --from=builder /work/target/release/adrastos .
+
+CMD [ "./adrastos" ]
