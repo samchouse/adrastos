@@ -4,7 +4,9 @@ use crate::error::Error;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum ConfigKey {
-    CertsPath,
+    CertPath,
+    KeyPath,
+    CockroachCertPath,
     SecretKey,
     ClientUrl,
     ServerUrl,
@@ -29,7 +31,9 @@ pub enum ConfigKey {
 impl fmt::Display for ConfigKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
-            ConfigKey::CertsPath => "CERTS_PATH",
+            ConfigKey::CertPath => "CERT_PATH",
+            ConfigKey::KeyPath => "KEY_PATH",
+            ConfigKey::CockroachCertPath => "COCKROACH_CERT_PATH",
             ConfigKey::SecretKey => "SECRET_KEY",
             ConfigKey::ClientUrl => "CLIENT_URL",
             ConfigKey::ServerUrl => "SERVER_URL",
@@ -68,9 +72,14 @@ impl Config {
     fn options() -> Vec<Entry<'static>> {
         vec![
             Entry {
-                keys: vec![ConfigKey::CertsPath],
+                keys: vec![ConfigKey::CertPath],
                 required: false,
-                default: Some("../../certs"),
+                default: Some("../../certs/cert.pem"),
+            },
+            Entry {
+                keys: vec![ConfigKey::KeyPath],
+                required: false,
+                default: Some("../../certs/key.pem"),
             },
             Entry {
                 keys: vec![ConfigKey::ClientUrl],
@@ -101,6 +110,7 @@ impl Config {
             },
             Entry {
                 keys: vec![
+                    ConfigKey::CockroachCertPath,
                     ConfigKey::GoogleClientId,
                     ConfigKey::GoogleClientSecret,
                     ConfigKey::FacebookClientId,

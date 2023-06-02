@@ -26,15 +26,32 @@ services:
     volumes:
       - dragonfly:/data
 
+  nginx:
+    image: jonasal/nginx-certbot:latest
+    restart: unless-stopped
+    profiles:
+      - deploy
+    env_file:
+      - ./deploy.env
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - ./data/nginx:/etc/nginx
+      - ./data/letsencrypt/cloudflare.ini:/etc/letsencrypt/cloudflare.ini
+
   app:
     image: ghcr.io/xenfo/adrastos-app:latest
     restart: unless-stopped
     profiles:
       - deploy
+    depends_on:
+      - nginx
     ports:
       - 8000:8000
     volumes:
-      - ./certs:/work/certs
+      - letsencrypt:/work/certs
       - ~/.postgresql/root.crt:/work/certs/cockroach.crt
 
   emails:
@@ -42,21 +59,10 @@ services:
     restart: unless-stopped
     profiles:
       - deploy
-
-  nginx:
-    image: jonasal/nginx-certbot:latest
-    restart: unless-stopped
-    env_file:
-      - ./nginx-certbot.env
-    ports:
-      - 80:80
-      - 443:443
-    volumes:
-      - nginx_secrets:/etc/letsencrypt
-      - ./user_conf.d:/etc/nginx/user_conf.d
-      - ./data/cloudflare.ini:/etc/letsencrypt/cloudflare.ini
+    depends_on:
+      - nginx
 
 volumes:
   crdb:
   dragonfly:
-  nginx_secrets:
+  letsencrypt:

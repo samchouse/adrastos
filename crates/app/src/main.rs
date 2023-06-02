@@ -41,16 +41,10 @@ async fn main() -> std::io::Result<()> {
 
     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
     builder
-        .set_private_key_file(
-            format!("{}/key.pem", config.get(ConfigKey::CertsPath).unwrap()),
-            SslFiletype::PEM,
-        )
+        .set_private_key_file(config.get(ConfigKey::KeyPath).unwrap(), SslFiletype::PEM)
         .unwrap();
     builder
-        .set_certificate_chain_file(format!(
-            "{}/cert.pem",
-            config.get(ConfigKey::CertsPath).unwrap()
-        ))
+        .set_certificate_chain_file(config.get(ConfigKey::CertPath).unwrap())
         .unwrap();
 
     let server = HttpServer::new(move || {

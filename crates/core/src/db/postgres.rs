@@ -53,10 +53,7 @@ pub fn create_pool(config: &config::Config) -> Pool {
         _ => {
             let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
             builder
-                .set_ca_file(format!(
-                    "{}/cockroach.crt",
-                    config.get(ConfigKey::CertsPath).unwrap()
-                ))
+                .set_ca_file(config.get(ConfigKey::CockroachCertPath).unwrap())
                 .unwrap();
             let connector = MakeTlsConnector::new(builder.build());
 

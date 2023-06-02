@@ -1,7 +1,6 @@
 # files
 *.env
 **/next-env.d.ts
-data/cloudflare.ini
 
 # directories
 **/out
@@ -10,6 +9,7 @@ data/cloudflare.ini
 **/.next
 **/node_modules
 **/.react-email
+data/letsencrypt
 
 # yarn
 /.pnp.*

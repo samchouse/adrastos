@@ -3,10 +3,10 @@
 **/next-env.d.ts
 
 # directories
-.yarn
 **/out
 /certs
 /target
 **/.next
 **/node_modules
 **/.react-email
+data/letsencrypt
