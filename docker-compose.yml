@@ -32,7 +32,7 @@ services:
     profiles:
       - deploy
     env_file:
-      - ./deploy.env
+      - deploy.env
     ports:
       - 80:80
       - 443:443
@@ -50,6 +50,8 @@ services:
       - deploy
     depends_on:
       - nginx
+    env_file:
+      - .env
     ports:
       - 8000:8000
     volumes:
@@ -63,6 +65,8 @@ services:
       - deploy
     depends_on:
       - nginx
+    env_file:
+      - .env
 
 volumes:
   crdb:
