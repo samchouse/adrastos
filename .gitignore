@@ -1,6 +1,7 @@
 # files
 *.env
 **/next-env.d.ts
+data/cloudflare.ini
 
 # directories
 **/out
