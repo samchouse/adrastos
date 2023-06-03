@@ -1,5 +1,7 @@
+#![feature(let_chains)]
+
 use actix_cors::Cors;
-use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
+use actix_session::{storage::RedisSessionStore, SessionMiddleware};
 use actix_web::{
     cookie::Key, error::InternalError, middleware::Logger, web, App, HttpResponse, HttpServer,
 };
@@ -12,9 +14,10 @@ use adrastos_core::{
 use dotenvy::dotenv;
 use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
 use openapi::ApiDoc;
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
+use rustls::{Certificate, PrivateKey, ServerConfig};
+use rustls_pemfile::{certs, pkcs8_private_keys};
 use serde_json::json;
-use std::process;
+use std::{fs::File, io::BufReader, process};
 use tracing::{error, info};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -33,24 +36,16 @@ async fn main() -> std::io::Result<()> {
         error!("missing required environment variables: {:#?}", err);
         process::exit(1)
     });
-    let db_pool = postgres::create_pool(&config);
 
+    let db_pool = postgres::create_pool(&config);
     entities::migrations::migrate(&db_pool).await;
 
+    let use_tls = config.get(ConfigKey::UseTls).ok();
+    let certs_path = config.get(ConfigKey::CertsPath).unwrap();
     let server_url = config.get(ConfigKey::ServerUrl).unwrap();
 
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-    builder
-        .set_private_key_file(
-            format!("{}/key.pem", config.get(ConfigKey::CertsPath).unwrap()),
-            SslFiletype::PEM,
-        )
-        .unwrap();
-    builder
-        .set_certificate_chain_file(format!(
-            "{}/cert.pem",
-            config.get(ConfigKey::CertsPath).unwrap()
-        ))
+    let store = RedisSessionStore::new(config.get(ConfigKey::DragonflyUrl).unwrap())
+        .await
         .unwrap();
 
     let server = HttpServer::new(move || {
@@ -61,12 +56,7 @@ async fn main() -> std::io::Result<()> {
                 db_pool: db_pool.clone(),
             })
             .wrap(SessionMiddleware::new(
-                RedisActorSessionStore::new(
-                    config
-                        .get(ConfigKey::DragonflyUrl)
-                        .unwrap()
-                        .replace("redis://", ""),
-                ),
+                store.clone(),
                 Key::from(config.get(ConfigKey::SecretKey).unwrap().as_bytes()),
             ))
             .wrap(
@@ -106,6 +96,7 @@ async fn main() -> std::io::Result<()> {
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", ApiDoc::openapi()),
             )
+            .service(handlers::index)
             .service(
                 web::scope("/auth")
                     .service((
@@ -142,15 +133,56 @@ async fn main() -> std::io::Result<()> {
                     ))),
             )
             .default_service(web::route().to(handlers::not_found))
-    })
-    .bind_openssl(&server_url, builder)?
+    });
+
+    let server = match use_tls.clone() {
+        Some(use_tls) if use_tls == "true" => {
+            let rustls_config = ServerConfig::builder()
+                .with_safe_defaults()
+                .with_no_client_auth();
+
+            let cert_file =
+                &mut BufReader::new(File::open(format!("{}/cert.pem", certs_path)).unwrap());
+            let key_file =
+                &mut BufReader::new(File::open(format!("{}/key.pem", certs_path)).unwrap());
+
+            let cert_chain = certs(cert_file)
+                .unwrap()
+                .into_iter()
+                .map(Certificate)
+                .collect();
+            let mut keys: Vec<PrivateKey> = pkcs8_private_keys(key_file)
+                .unwrap()
+                .into_iter()
+                .map(PrivateKey)
+                .collect();
+
+            if keys.is_empty() {
+                error!("Couldn't locate private keys");
+                process::exit(1);
+            }
+
+            let rustls_config = rustls_config
+                .with_single_cert(cert_chain, keys.remove(0))
+                .unwrap();
+
+            server.bind_rustls(&server_url, rustls_config)
+        }
+        _ => server.bind(&server_url),
+    }?
     .run();
 
-    let (server, _) = tokio::join!(server, server_started(&server_url));
+    let use_tls = use_tls.unwrap();
+    let (server, _) = tokio::join!(server, server_started(&use_tls, &server_url));
 
     server
 }
 
-async fn server_started(url: &str) {
-    info!("Server started at https://{url}");
+async fn server_started(use_tls: &str, url: &str) {
+    let mut url = format!("https://{url}");
+    if use_tls == "false" {
+        url = url.replace("https", "http")
+    };
+
+    info!("Server started at {url}");
 }

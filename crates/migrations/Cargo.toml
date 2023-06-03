@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 adrastos_core = { path = "../core" }
-clap = { version = "4.3.0", features = ["derive"] }
+clap = { version = "4.3.1", features = ["derive"] }

@@ -2,9 +2,10 @@ use std::{collections::HashMap, env, fmt};
 
 use crate::error::Error;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ConfigKey {
     CertsPath,
+    UseTls,
     SecretKey,
     ClientUrl,
     ServerUrl,
@@ -30,6 +31,7 @@ impl fmt::Display for ConfigKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             ConfigKey::CertsPath => "CERTS_PATH",
+            ConfigKey::UseTls => "USE_TLS",
             ConfigKey::SecretKey => "SECRET_KEY",
             ConfigKey::ClientUrl => "CLIENT_URL",
             ConfigKey::ServerUrl => "SERVER_URL",
@@ -61,7 +63,7 @@ struct Entry<'a> {
     default: Option<&'a str>,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Config(HashMap<ConfigKey, Option<String>>);
 
 impl Config {
@@ -71,6 +73,11 @@ impl Config {
                 keys: vec![ConfigKey::CertsPath],
                 required: false,
                 default: Some("../../certs"),
+            },
+            Entry {
+                keys: vec![ConfigKey::UseTls],
+                required: false,
+                default: Some("true"),
             },
             Entry {
                 keys: vec![ConfigKey::ClientUrl],
