@@ -1,8 +1,6 @@
-import { Home as HomePage } from '~/components';
-
 const Home: React.FC = () => (
   <main>
-    <HomePage />
+    <div></div>
   </main>
 );
 

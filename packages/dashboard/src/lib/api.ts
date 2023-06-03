@@ -38,7 +38,14 @@ interface LoginData {
 }
 
 export const postLogin = async (data: LoginData) => {
-  const res = await client.post('/auth/login', data);
+  const res = await client.post<
+    AxiosResponse<{ success: true; accessToken: string }>
+  >('/auth/login', data);
+  return res.data;
+};
+
+export const getLogout = async () => {
+  const res = await client.get('/auth/logout');
   return res.data;
 };
 

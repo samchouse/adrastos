@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "email dev",
     "export": "email export",
-    "build": "cd lib && run -T tsc",
-    "watch": "cd lib && run -T tsc -w",
-    "start": "node out/lib/worker.js"
+    "worker:dev": "run -T conc \"cd lib && run -T tsc -w\" \"run -T nodemon out/lib/worker.js\"",
+    "worker:build": "cd lib && run -T tsc",
+    "worker:start": "node out/lib/worker.js"
   },
   "dependencies": {
     "@react-email/components": "0.0.6",
