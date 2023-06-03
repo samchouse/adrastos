@@ -54,7 +54,6 @@ services:
     ports:
       - 8000:8000
     volumes:
-      - letsencrypt:/work/certs
       - ~/.postgresql/root.crt:/work/certs/cockroach.crt
 
   emails:

@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 use actix_cors::Cors;
 use actix_session::{storage::RedisSessionStore, SessionMiddleware};
 use actix_web::{
@@ -35,42 +37,17 @@ async fn main() -> std::io::Result<()> {
         process::exit(1)
     });
 
-    let rustls_config = ServerConfig::builder()
-        .with_safe_defaults()
-        .with_no_client_auth();
-
-    let cert_file =
-        &mut BufReader::new(File::open(config.get(ConfigKey::CertPath).unwrap()).unwrap());
-    let key_file =
-        &mut BufReader::new(File::open(config.get(ConfigKey::KeyPath).unwrap()).unwrap());
-
-    let cert_chain = certs(cert_file)
-        .unwrap()
-        .into_iter()
-        .map(Certificate)
-        .collect();
-    let mut keys: Vec<PrivateKey> = pkcs8_private_keys(key_file)
-        .unwrap()
-        .into_iter()
-        .map(PrivateKey)
-        .collect();
-
-    if keys.is_empty() {
-        error!("Couldn't locate private keys");
-        process::exit(1);
-    }
-
-    let rustls_config = rustls_config
-        .with_single_cert(cert_chain, keys.remove(0))
-        .unwrap();
-
     let db_pool = postgres::create_pool(&config);
     entities::migrations::migrate(&db_pool).await;
 
+    let use_tls = config.get(ConfigKey::UseTls).ok();
+    let certs_path = config.get(ConfigKey::CertsPath).unwrap();
     let server_url = config.get(ConfigKey::ServerUrl).unwrap();
+
     let store = RedisSessionStore::new(config.get(ConfigKey::DragonflyUrl).unwrap())
         .await
         .unwrap();
+
     let server = HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
@@ -155,15 +132,56 @@ async fn main() -> std::io::Result<()> {
                     ))),
             )
             .default_service(web::route().to(handlers::not_found))
-    })
-    .bind_rustls(&server_url, rustls_config)?
+    });
+
+    let server = match use_tls.clone() {
+        Some(use_tls) if use_tls == "true" => {
+            let rustls_config = ServerConfig::builder()
+                .with_safe_defaults()
+                .with_no_client_auth();
+
+            let cert_file =
+                &mut BufReader::new(File::open(format!("{}/cert.pem", certs_path)).unwrap());
+            let key_file =
+                &mut BufReader::new(File::open(format!("{}/key.pem", certs_path)).unwrap());
+
+            let cert_chain = certs(cert_file)
+                .unwrap()
+                .into_iter()
+                .map(Certificate)
+                .collect();
+            let mut keys: Vec<PrivateKey> = pkcs8_private_keys(key_file)
+                .unwrap()
+                .into_iter()
+                .map(PrivateKey)
+                .collect();
+
+            if keys.is_empty() {
+                error!("Couldn't locate private keys");
+                process::exit(1);
+            }
+
+            let rustls_config = rustls_config
+                .with_single_cert(cert_chain, keys.remove(0))
+                .unwrap();
+
+            server.bind_rustls(&server_url, rustls_config)
+        }
+        _ => server.bind(&server_url),
+    }?
     .run();
 
-    let (server, _) = tokio::join!(server, server_started(&server_url));
+    let use_tls = use_tls.unwrap();
+    let (server, _) = tokio::join!(server, server_started(&use_tls, &server_url));
 
     server
 }
 
-async fn server_started(url: &str) {
-    info!("Server started at https://{url}");
+async fn server_started(use_tls: &str, url: &str) {
+    let mut url = format!("https://{url}");
+    if use_tls == "false" {
+        url = url.replace("https", "http")
+    };
+
+    info!("Server started at {url}");
 }
