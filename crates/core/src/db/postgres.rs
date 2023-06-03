@@ -1,12 +1,14 @@
 use core::fmt;
+use std::{fs::File, io::BufReader};
 
 use deadpool_postgres::{
     tokio_postgres::{Config, NoTls},
     Manager, ManagerConfig, Pool, RecyclingMethod,
 };
-use openssl::ssl::{SslConnector, SslMethod};
-use postgres_openssl::MakeTlsConnector;
+use rustls::{Certificate, ClientConfig, RootCertStore};
+use rustls_pemfile::certs;
 use tokio_postgres::config::SslMode;
+use tokio_postgres_rustls::MakeRustlsConnect;
 
 use crate::config::{self, ConfigKey};
 
@@ -51,13 +53,20 @@ pub fn create_pool(config: &config::Config) -> Pool {
     let mgr = match pg_config.get_ssl_mode() {
         SslMode::Disable => Manager::from_config(pg_config, NoTls, manager_config),
         _ => {
-            let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
-            builder
-                .set_ca_file(config.get(ConfigKey::CockroachCertPath).unwrap())
-                .unwrap();
-            let connector = MakeTlsConnector::new(builder.build());
+            let ca_cert = &mut BufReader::new(
+                File::open(config.get(ConfigKey::CockroachCertPath).unwrap()).unwrap(),
+            );
+            let ca_cert = Certificate(certs(ca_cert).unwrap()[0].clone());
 
-            Manager::from_config(pg_config, connector, manager_config)
+            let mut root_store = RootCertStore::empty();
+            root_store.add(&ca_cert).unwrap();
+
+            let config = ClientConfig::builder()
+                .with_safe_defaults()
+                .with_root_certificates(root_store)
+                .with_no_client_auth();
+
+            Manager::from_config(pg_config, MakeRustlsConnect::new(config), manager_config)
         }
     };
 

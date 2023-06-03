@@ -2,7 +2,7 @@ use std::{collections::HashMap, env, fmt};
 
 use crate::error::Error;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ConfigKey {
     CertPath,
     KeyPath,
@@ -65,7 +65,7 @@ struct Entry<'a> {
     default: Option<&'a str>,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Config(HashMap<ConfigKey, Option<String>>);
 
 impl Config {
