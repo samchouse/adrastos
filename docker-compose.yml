@@ -2,7 +2,7 @@ name: adrastos
 version: '3.9'
 
 services:
-  crdb:
+  cockroach:
     image: cockroachdb/cockroach:latest
     profiles:
       - db
@@ -13,7 +13,7 @@ services:
     environment:
       - COCKROACH_DATABASE=adrastos
     volumes:
-      - crdb:/cockroach/cockroach-data
+      - cockroach:/cockroach/cockroach-data
 
   dragonfly:
     image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
@@ -32,7 +32,7 @@ services:
     profiles:
       - deploy
     env_file:
-      - deploy.env
+      - nginx.env
     ports:
       - 80:80
       - 443:443
@@ -41,6 +41,14 @@ services:
       - ./data/nginx/conf.d:/etc/nginx/user_conf.d
       - ./data/nginx/nginxconfig.io:/etc/nginx/nginxconfig.io
       - ./data/letsencrypt/cloudflare.ini:/etc/letsencrypt/cloudflare.ini
+
+  emails:
+    image: ghcr.io/xenfo/adrastos-emails:latest
+    restart: unless-stopped
+    profiles:
+      - deploy
+    env_file:
+      - .env
 
   app:
     image: ghcr.io/xenfo/adrastos-app:latest
@@ -56,17 +64,7 @@ services:
     volumes:
       - ~/.postgresql/root.crt:/work/certs/cockroach.crt
 
-  emails:
-    image: ghcr.io/xenfo/adrastos-emails:latest
-    restart: unless-stopped
-    profiles:
-      - deploy
-    depends_on:
-      - nginx
-    env_file:
-      - .env
-
 volumes:
-  crdb:
+  cockroach:
   dragonfly:
   letsencrypt:
