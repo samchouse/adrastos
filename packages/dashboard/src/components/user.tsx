@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink, LogOut } from 'lucide-react';
+import { ExternalLink, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -39,6 +39,19 @@ export const User = () => (
           </p>
         </div>
       </DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      <Link href="/user/profile">
+        <DropdownMenuItem className="cursor-pointer">
+          <UserIcon className="mr-2 h-4 w-4" />
+          <span>Profile</span>
+        </DropdownMenuItem>
+      </Link>
+      <Link href="/user/settings">
+        <DropdownMenuItem className="cursor-pointer">
+          <Settings className="mr-2 h-4 w-4" />
+          <span>Settings</span>
+        </DropdownMenuItem>
+      </Link>
       <DropdownMenuSeparator />
       <Link href="/home">
         <DropdownMenuItem className="cursor-pointer">

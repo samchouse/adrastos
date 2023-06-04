@@ -50,3 +50,14 @@ export {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger
 } from './dropdown-menu';
+export { ScrollArea, ScrollBar } from './scroll-area';
+export {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow
+} from './table';
