@@ -20,22 +20,22 @@ __metadata:
     "@radix-ui/react-scroll-area": ^1.0.4
     "@radix-ui/react-slot": ^1.0.2
     "@radix-ui/react-switch": ^1.0.3
-    "@t3-oss/env-nextjs": ^0.3.1
-    "@tanstack/react-query": ^4.29.11
-    "@tanstack/react-query-devtools": ^4.29.11
+    "@t3-oss/env-nextjs": ^0.4.0
+    "@tanstack/react-query": ^4.29.12
+    "@tanstack/react-query-devtools": ^4.29.12
     "@tanstack/react-table": ^8.9.1
     autoprefixer: ^10.4.14
     axios: ^1.4.0
     class-variance-authority: ^0.6.0
     clsx: ^1.2.1
     jotai: ^2.1.1
-    lucide-react: ^0.223.0
+    lucide-react: ^0.233.0
     next: ^13.4.4
     postcss: ^8.4.24
     react: ^18.2.0
     react-dom: ^18.2.0
-    react-hook-form: ^7.44.1
-    tailwind-merge: ^1.12.0
+    react-hook-form: ^7.44.3
+    tailwind-merge: ^1.13.0
     tailwindcss: ^3.3.2
     tailwindcss-animate: ^1.0.5
     zod: ^3.21.4
@@ -47,11 +47,11 @@ __metadata:
   resolution: "@adrastos/emails@workspace:packages/emails"
   dependencies:
     "@react-email/components": 0.0.6
-    "@t3-oss/env-core": ^0.3.1
-    dotenv: ^16.0.3
+    "@t3-oss/env-core": ^0.4.0
+    dotenv: ^16.1.3
     pino: ^8.14.1
     react-email: 1.9.3
-    redis: ^4.6.6
+    redis: ^4.6.7
     zod: ^3.21.4
   languageName: unknown
   linkType: soft
@@ -1908,14 +1908,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@redis/client@npm:1.5.7":
-  version: 1.5.7
-  resolution: "@redis/client@npm:1.5.7"
+"@redis/client@npm:1.5.8":
+  version: 1.5.8
+  resolution: "@redis/client@npm:1.5.8"
   dependencies:
     cluster-key-slot: 1.1.2
     generic-pool: 3.9.0
     yallist: 4.0.0
-  checksum: 3ded14d947b1aba9121fb2608c99960d89716b1ef9baf48ef68384a30fc8e2fe2f1be7a959247d81e7ce15a38ea9e3fce512f3fdce5a400da88dc96496b09e89
+  checksum: ff4a6cbf4f132baad7e481cd4a60af7031a3528e290a646695a9a3be704ed5818f50e9676070c8bad5e4b18d99369b46fcdc052ef6c023fa2391be8696808ff1
   languageName: node
   linkType: hard
 
@@ -1937,12 +1937,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@redis/search@npm:1.1.2":
-  version: 1.1.2
-  resolution: "@redis/search@npm:1.1.2"
+"@redis/search@npm:1.1.3":
+  version: 1.1.3
+  resolution: "@redis/search@npm:1.1.3"
   peerDependencies:
     "@redis/client": ^1.0.0
-  checksum: fc3c0bd62c150ea7f8b3f08b0e67893b4e8df71b4820d750de6ba00ccff3720fdc5d4f50618e385c9e183c784635185e2e98a3e6c3d20ac30f2c60996f38b992
+  checksum: 5f82616d1a868ebaf6cce46a7b6f7f53f0e92a299958ccf6d3ea099687c2f309d586e0bec9f25aa5174301f8508b54ebbec8835c1642cdb67b8b4d2f81a15872
   languageName: node
   linkType: hard
 
@@ -1981,25 +1981,25 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@t3-oss/env-core@npm:0.3.1, @t3-oss/env-core@npm:^0.3.1":
-  version: 0.3.1
-  resolution: "@t3-oss/env-core@npm:0.3.1"
+"@t3-oss/env-core@npm:0.4.0, @t3-oss/env-core@npm:^0.4.0":
+  version: 0.4.0
+  resolution: "@t3-oss/env-core@npm:0.4.0"
   peerDependencies:
     typescript: ">=4.7.2"
     zod: ^3.0.0
-  checksum: 054f76e11522f6c6e07aa558f2fb325e9b05f83d13c8963ca3bb0cf3a398d54aec46c38c9ff7be9d08c8d05a11c5b221406f3908bf5c95517fe45756fc7df818
+  checksum: f299a28d8721f3d369929920c436fbff0b11966ba1e482f9438f48f9fec4d342e7a1f8a3015dc70da77326c0516afb8c7b70d51e81edbd79502dc0fe518520ca
   languageName: node
   linkType: hard
 
-"@t3-oss/env-nextjs@npm:^0.3.1":
-  version: 0.3.1
-  resolution: "@t3-oss/env-nextjs@npm:0.3.1"
+"@t3-oss/env-nextjs@npm:^0.4.0":
+  version: 0.4.0
+  resolution: "@t3-oss/env-nextjs@npm:0.4.0"
   dependencies:
-    "@t3-oss/env-core": 0.3.1
+    "@t3-oss/env-core": 0.4.0
   peerDependencies:
     typescript: ">=4.7.2"
     zod: ^3.0.0
-  checksum: 3df43671191390b282e358e49c8d1722bd26defacefa3a50e5e17945d7cf29671bba478662edf03749bf5b17119f3228c57c5a18c4c483bb0906dbe1a7e105ba
+  checksum: edc2d788e6311019b1f1a1e913acd2647778cb075a37647e192f48e200734f9b2cd8533d100ce2c4aa6d71e2eaff0d6cd610e38f342aaaca67047f903499acf6
   languageName: node
   linkType: hard
 
@@ -2019,24 +2019,24 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tanstack/react-query-devtools@npm:^4.29.11":
-  version: 4.29.11
-  resolution: "@tanstack/react-query-devtools@npm:4.29.11"
+"@tanstack/react-query-devtools@npm:^4.29.12":
+  version: 4.29.12
+  resolution: "@tanstack/react-query-devtools@npm:4.29.12"
   dependencies:
     "@tanstack/match-sorter-utils": ^8.7.0
     superjson: ^1.10.0
     use-sync-external-store: ^1.2.0
   peerDependencies:
-    "@tanstack/react-query": 4.29.11
+    "@tanstack/react-query": 4.29.12
     react: ^16.8.0 || ^17.0.0 || ^18.0.0
     react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
-  checksum: 30378a1a58bad5633495c104ab132d8aff17c42a7a13a018c78570edbc8105f3e3cde74939fc4effe3b7b2599c806be0cb3ab42b4b6dc59ef9832b154779b107
+  checksum: 095c1f0fb8e6573e08331a6512f4dda38a1ff4f2e5958fed7abc45ede3f2027142ab934247bb9ea04d47255dcb502810f1db335d4b4123a3dcb4087f26fda920
   languageName: node
   linkType: hard
 
-"@tanstack/react-query@npm:^4.29.11":
-  version: 4.29.11
-  resolution: "@tanstack/react-query@npm:4.29.11"
+"@tanstack/react-query@npm:^4.29.12":
+  version: 4.29.12
+  resolution: "@tanstack/react-query@npm:4.29.12"
   dependencies:
     "@tanstack/query-core": 4.29.11
     use-sync-external-store: ^1.2.0
@@ -2049,7 +2049,7 @@ __metadata:
       optional: true
     react-native:
       optional: true
-  checksum: 94730795d1dfb2a8f76a33de4b65200bd983aa1f5ab0b3e645b6316479c69a5650efb0b7142056f31d657bae12c01eb43c79fae807bf9be86a00d650f86f6d34
+  checksum: aea231af648688c5eafdbbda0667034221cca8b77e00690ab54950b7cc0296d14646931aee44fc5f18d5ce4d683b5d234b053eed5c0a5c340bbbacdab873a70b
   languageName: node
   linkType: hard
 
@@ -3520,10 +3520,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dotenv@npm:^16.0.3":
-  version: 16.0.3
-  resolution: "dotenv@npm:16.0.3"
-  checksum: afcf03f373d7a6d62c7e9afea6328e62851d627a4e73f2e12d0a8deae1cd375892004f3021883f8aec85932cd2834b091f568ced92b4774625b321db83b827f8
+"dotenv@npm:^16.1.3":
+  version: 16.1.3
+  resolution: "dotenv@npm:16.1.3"
+  checksum: 8f73bae720161cf365b679de162fe79a05f5b7a21d0d2b8bf9fb0601a2ed30f7e9dc49fa8b752d93206e4b7d427eccea2f383a1622cd5da4a1824f43bf8f780b
   languageName: node
   linkType: hard
 
@@ -5664,12 +5664,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lucide-react@npm:^0.223.0":
-  version: 0.223.0
-  resolution: "lucide-react@npm:0.223.0"
+"lucide-react@npm:^0.233.0":
+  version: 0.233.0
+  resolution: "lucide-react@npm:0.233.0"
   peerDependencies:
     react: ^16.5.1 || ^17.0.0 || ^18.0.0
-  checksum: ab58c4c99e3e369ebde60f0d3dbd4c86721ac9d2c1ef64450b4cdc988db30a963567833617b104c99bcd9e75c239906a99bb79e6db6d018103e016af6daa8b6d
+  checksum: 4c7c6cd9a6bb5b1286cb4babe3da680d91ecc9c15d0128f541e665dd67e53df814f5baac737adfabd4ac014cd20a755b082cd559ad34d425cac2928cbc53acbf
   languageName: node
   linkType: hard
 
@@ -6910,12 +6910,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-hook-form@npm:^7.44.1":
-  version: 7.44.1
-  resolution: "react-hook-form@npm:7.44.1"
+"react-hook-form@npm:^7.44.3":
+  version: 7.44.3
+  resolution: "react-hook-form@npm:7.44.3"
   peerDependencies:
     react: ^16.8.0 || ^17 || ^18
-  checksum: ad49f47471a5dc0a1b42e8dc39b753e24c4317be090fd920f854d3ebcd6d807803193a55ba78eef86851fd7453de9d46940d911396d594433c12c528bb22dca3
+  checksum: 8dc97e705d28d842c60fd79b0f07b8b045c458c234e3bf422baab87a844d0ebecbdf3e349538eaaa5c12366cd85169f60a52ed84dd31cdd99729899e424548bf
   languageName: node
   linkType: hard
 
@@ -7090,17 +7090,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"redis@npm:^4.6.6":
-  version: 4.6.6
-  resolution: "redis@npm:4.6.6"
+"redis@npm:^4.6.7":
+  version: 4.6.7
+  resolution: "redis@npm:4.6.7"
   dependencies:
     "@redis/bloom": 1.2.0
-    "@redis/client": 1.5.7
+    "@redis/client": 1.5.8
     "@redis/graph": 1.1.0
     "@redis/json": 1.0.4
-    "@redis/search": 1.1.2
+    "@redis/search": 1.1.3
     "@redis/time-series": 1.0.4
-  checksum: fb2e667d91406105c229964ddaf120a8eaae02c1f583f384f68962e166542199300fd75af9572285af988870636b8e75b04562e6d9c250ab95e43c3d87a1cb72
+  checksum: d48ff22269d9f22962b40ecd7623c10ad18a26aaffea0987cf80d9ba4f5d72708c6d2782062e6fc1f4255e6aa111b3356e48f636ef26aa0cc75864470d1e60f8
   languageName: node
   linkType: hard
 
@@ -7805,10 +7805,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tailwind-merge@npm:^1.12.0":
-  version: 1.12.0
-  resolution: "tailwind-merge@npm:1.12.0"
-  checksum: 5ef323eec1051c4aa9626e29498f6c058dbbb242ca8156aa298de41ada3eda05a8f5f1260a57112c155f63b2e94c4b4ccab5386d60fae54de07aac6d9dbc60e4
+"tailwind-merge@npm:^1.13.0":
+  version: 1.13.0
+  resolution: "tailwind-merge@npm:1.13.0"
+  checksum: 03452dbcf389051bd4d60645e9f27699a0214e5dc910c7570068baf25adfe384e415f246276cde6bbdd0f414df3053dbf009b033d586a19de45db6b48f4fe954
   languageName: node
   linkType: hard
 
