@@ -1,6 +1,6 @@
 import { Card, CardHeader, CardTitle, LoginForm } from '~/components';
 
-const Page = () => (
+const Page: React.FC = () => (
   <main>
     <div className="flex h-screen w-screen items-center justify-center">
       <Card className="max-w-[500px] lg:min-w-[500px]">

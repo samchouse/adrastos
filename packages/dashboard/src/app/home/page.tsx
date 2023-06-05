@@ -1,6 +1,8 @@
+import { Home } from '~/components';
+
 const Page: React.FC = () => (
   <main>
-    <div></div>
+    <Home />
   </main>
 );
 
