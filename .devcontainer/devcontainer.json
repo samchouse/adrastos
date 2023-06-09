@@ -1,12 +1,20 @@
 {
   "name": "Adrastos",
+  "forwardPorts": [3000, 8000],
   "build": { "dockerfile": "Dockerfile" },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
   "customizations": {
     "vscode": {
       "settings": {
         "editor.cursorBlinking": "expand",
         "workbench.colorTheme": "Moonlight II Italic",
         "workbench.productIconTheme": "fluent-icons",
+        "editor.tabSize": 2,
+        "eslint.format.enable": true,
+        "git.autofetch": true,
+        "files.eol": "\n",
         "editor.bracketPairColorization.enabled": true,
         "gitlens.hovers.currentLine.over": "line",
         "gitlens.statusBar.enabled": false,
@@ -88,9 +96,5 @@
         "GitHub.copilot-nightly"
       ]
     }
-  },
-  "features": {
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
-  },
-  "forwardPorts": [3000, 8000]
+  }
 }
