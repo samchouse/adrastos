@@ -1,4 +1,100 @@
 {
-	"build": { "dockerfile": "Dockerfile" },
-	"forwardPorts": [3000, 8000]
+  "name": "Adrastos",
+  "forwardPorts": [3000, 8000],
+  "build": { "dockerfile": "Dockerfile" },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.cursorBlinking": "expand",
+        "workbench.colorTheme": "Moonlight II Italic",
+        "workbench.productIconTheme": "fluent-icons",
+        "editor.tabSize": 2,
+        "eslint.format.enable": true,
+        "git.autofetch": true,
+        "files.eol": "\n",
+        "editor.bracketPairColorization.enabled": true,
+        "gitlens.hovers.currentLine.over": "line",
+        "gitlens.statusBar.enabled": false,
+        "gitlens.hovers.enabled": false,
+        "editor.suggest.showWords": false,
+        "gitlens.codeLens.enabled": false,
+        "gitlens.currentLine.enabled": false,
+        "explorer.fileNesting.enabled": true,
+        "github.copilot.enable": {
+          "*": true
+        },
+        "explorer.fileNesting.patterns": {
+          "package.json": "package-lock.json,yarn.lock,pnpm-lock.yaml",
+          "go.mod": "go.sum",
+          ".gitignore": ".prettierignore,.eslintignore,.dockerignore",
+          "*.mjs": "${capture}.mjs.map, ${capture}.min.mjs, ${capture}.d.ts",
+          "tsconfig.json": "tsconfig.*.json",
+          ".env": "*.env"
+        },
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+        },
+        "[jsonc]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[typescript]": {
+          "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+        },
+        "[javascript]": {
+          "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[toml]": {
+          "editor.defaultFormatter": "tamasfe.even-better-toml"
+        },
+        "[dockerfile]": {
+          "editor.defaultFormatter": "ms-azuretools.vscode-docker"
+        },
+        "[yaml]": {
+          "editor.defaultFormatter": "redhat.vscode-yaml"
+        }
+      },
+      "extensions": [
+        "formulahendry.auto-rename-tag",
+        "aaron-bond.better-comments",
+        "mikestead.dotenv",
+        "miguelsolorio.fluent-icons",
+        "atomiks.moonlight",
+        "hangxingliu.vscode-nginx-conf-hint",
+        "csstools.postcss",
+        "streetsidesoftware.code-spell-checker",
+        "denoland.vscode-deno",
+        "ms-azuretools.vscode-docker",
+        "dbaeumer.vscode-eslint",
+        "tamasfe.even-better-toml",
+        "eamodio.gitlens",
+        "ecmel.vscode-html-css",
+        "oderwat.indent-rainbow",
+        "ms-vscode.vscode-typescript-next",
+        "ms-vsliveshare.vsliveshare",
+        "DavidAnson.vscode-markdownlint",
+        "unifiedjs.vscode-mdx",
+        "christian-kohler.path-intellisense",
+        "ms-playwright.playwright",
+        "esbenp.prettier-vscode",
+        "yoavbls.pretty-ts-errors",
+        "redhat.vscode-commons",
+        "rust-lang.rust-analyzer",
+        "syler.sass-indented",
+        "foxundermoon.shell-format",
+        "timonwong.shellcheck",
+        "bradlc.vscode-tailwindcss",
+        "ZixuanChen.vitest-explorer",
+        "WakaTime.vscode-wakatime",
+        "redhat.vscode-xml",
+        "redhat.vscode-yaml",
+        "GitHub.copilot-nightly"
+      ]
+    }
+  }
 }
