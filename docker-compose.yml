@@ -44,6 +44,7 @@ services:
 
   emails:
     image: ghcr.io/xenfo/adrastos-emails:latest
+    pull_policy: always
     restart: unless-stopped
     profiles:
       - deploy
@@ -52,6 +53,7 @@ services:
 
   app:
     image: ghcr.io/xenfo/adrastos-app:latest
+    pull_policy: always
     restart: unless-stopped
     profiles:
       - deploy
