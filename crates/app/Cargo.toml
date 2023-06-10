@@ -57,3 +57,4 @@ lettre = { version = "0.10.4", default-features = false, features = [
 actix-cors = "0.6.4"
 rustls = "0.20.8"
 rustls-pemfile = "1.0.2"
+clap = { version = "4.3.3", features = ["derive"] }

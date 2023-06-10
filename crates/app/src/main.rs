@@ -11,6 +11,8 @@ use adrastos_core::{
     db::{postgres, redis},
     entities,
 };
+use clap::Parser;
+use cli::{Cli, commands::Command};
 use dotenvy::dotenv;
 use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
 use openapi::ApiDoc;
@@ -22,6 +24,7 @@ use tracing::{error, info};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+mod cli;
 mod handlers;
 mod middleware;
 mod openapi;
@@ -38,7 +41,12 @@ async fn main() -> std::io::Result<()> {
     });
 
     let db_pool = postgres::create_pool(&config);
-    entities::migrations::migrate(&db_pool).await;
+
+    let cli = Cli::parse();
+    match &cli.command {
+        Some(Command::Migrate) => {},
+        None => entities::migrations::migrate(&db_pool).await,
+    }
 
     let use_tls = config.get(ConfigKey::UseTls).ok();
     let certs_path = config.get(ConfigKey::CertsPath).unwrap();

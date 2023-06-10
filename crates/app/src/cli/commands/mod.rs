@@ -1,9 +1,7 @@
 use clap::Subcommand;
 
 #[derive(Subcommand)]
-pub enum Commands {
+pub enum Command {
     /// Apply all pending migrations
-    Apply,
+    Migrate,
 }
-
-// fn apply() {}
