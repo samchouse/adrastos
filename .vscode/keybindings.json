@@ -1,0 +1,10 @@
+[
+	{
+		"key": "ctrl+shift+d",
+		"command": "workbench.action.terminal.sendSequence",
+		"args": {
+			"text": "\u0003"
+		},
+		"when": "terminalFocus"
+	}
+]
