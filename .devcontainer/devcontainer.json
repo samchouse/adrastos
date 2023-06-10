@@ -8,8 +8,8 @@
   "customizations": {
     "vscode": {
       "settings": {
-        "editor.fontFamily": "'MonoLisa Nerd Font', 'Fira Code', Consolas",
-        "terminal.integrated.fontFamily": "'MonoLisa Nerd Font', 'MesloLGS NF', Hack, Consolas",
+        "editor.fontFamily": "Menlo, Monaco, Consolas",
+        "terminal.integrated.fontFamily": "Menlo, Monaco, Hack, Consolas",
         "editor.cursorBlinking": "expand",
         "editor.insertSpaces": false,
         "editor.accessibilitySupport": "off",
@@ -22,12 +22,10 @@
         "editor.cursorStyle": "line",
         "typescript.updateImportsOnFileMove.enabled": "always",
         "editor.linkedEditing": true,
-        "jest.autoRun": "off",
         "javascript.updateImportsOnFileMove.enabled": "always",
         "editor.lineNumbers": "on",
         "git.autofetch": true,
         "files.eol": "\n",
-        "go.toolsManagement.autoUpdate": true,
         "markdown.preview.typographer": true,
         "cSpell.userWords": [
           "aheeva",
@@ -86,7 +84,6 @@
           ".env": "*.env"
         },
         "explorer.fileNesting.enabled": true,
-        "svelte.enable-ts-plugin": true,
         "gitlens.hovers.currentLine.over": "line",
         "gitlens.statusBar.enabled": false,
         "gitlens.hovers.enabled": false,
@@ -94,10 +91,6 @@
         "editor.suggest.showWords": false,
         "gitlens.codeLens.enabled": false,
         "gitlens.currentLine.enabled": false,
-        "go.alternateTools": {
-          "go": "/home/xenfo/.local/share/rtx/shims/go"
-        },
-        "rome.requireConfiguration": true,
         "terminal.integrated.sendKeybindingsToShell": true,
         "[typescriptreact]": {
           "editor.defaultFormatter": "dbaeumer.vscode-eslint"

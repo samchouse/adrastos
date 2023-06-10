@@ -13,6 +13,7 @@ RUN sed -i 's/plugins=(git/\0 zsh-syntax-highlighting/g' ~/.zshrc
 
 RUN curl -sS https://starship.rs/install.sh | sh -s -- -y
 RUN echo "\neval \"\$(starship init zsh)\"" >> ~/.zshrc
+RUN starship preset plain-text-symbols -o ~/.config/starship.toml
 
 RUN curl https://rtx.pub/install.sh | sh
 RUN echo -e "\neval \"\$(/root/.local/share/rtx/bin/rtx activate -s zsh)\"" >> ~/.zshrc
