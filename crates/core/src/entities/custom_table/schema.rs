@@ -10,7 +10,7 @@ use tokio_postgres::Row;
 use utoipa::ToSchema;
 
 use crate::{
-    entities::{Identity, Migrate, Query},
+    entities::{Identity, Init, Query},
     error::Error,
 };
 
@@ -106,8 +106,8 @@ impl Identity for CustomTableSchema {
     }
 }
 
-impl Migrate for CustomTableSchema {
-    fn migrate() -> String {
+impl Init for CustomTableSchema {
+    fn init() -> String {
         Table::create()
             .table(Self::table())
             .if_not_exists()

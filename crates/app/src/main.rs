@@ -10,14 +10,16 @@ use adrastos_core::{
     config::{Config, ConfigKey},
     db::{postgres, redis},
     entities,
+    migrations::Migrations,
 };
 use clap::Parser;
-use cli::{Cli, commands::Command};
+use cli::{commands::Command, Cli};
 use dotenvy::dotenv;
 use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
 use openapi::ApiDoc;
 use rustls::{Certificate, PrivateKey, ServerConfig};
 use rustls_pemfile::{certs, pkcs8_private_keys};
+use sea_query::PostgresQueryBuilder;
 use serde_json::json;
 use std::{fs::File, io::BufReader, process};
 use tracing::{error, info};
@@ -41,11 +43,25 @@ async fn main() -> std::io::Result<()> {
     });
 
     let db_pool = postgres::create_pool(&config);
+    entities::init(&db_pool).await;
 
     let cli = Cli::parse();
-    match &cli.command {
-        Some(Command::Migrate) => {},
-        None => entities::migrations::migrate(&db_pool).await,
+    if cli.command == Some(Command::Migrate) {
+        let conn = db_pool.get().await.unwrap();
+        
+        let migrations = Migrations::all_from("0.1.1");
+        for migration in &migrations {
+            info!("Migration: {}", migration.version);
+            for query in &migration.queries {
+                info!("Query: {}", query.to_string(PostgresQueryBuilder));
+
+                conn.execute(query.to_string(PostgresQueryBuilder).as_str(), &[])
+                    .await
+                    .unwrap();
+            }
+        }
+
+        return Ok(());
     }
 
     let use_tls = config.get(ConfigKey::UseTls).ok();

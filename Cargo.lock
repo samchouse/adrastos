@@ -332,6 +332,7 @@ dependencies = [
  "rustls 0.21.1",
  "rustls-pemfile",
  "sea-query",
+ "semver",
  "serde",
  "serde_json",
  "tokio",

@@ -14,14 +14,15 @@ pub use connection::*;
 pub use refresh_token_tree::*;
 pub use user::*;
 
+use self::custom_table::schema::CustomTableSchema;
+
 pub mod connection;
 pub mod custom_table;
-pub mod migrations;
 pub mod refresh_token_tree;
 pub mod user;
 
-trait Migrate {
-    fn migrate() -> String;
+trait Init {
+    fn init() -> String;
 }
 
 pub trait Identity {
@@ -84,7 +85,7 @@ pub trait Mutate: Sized {
 }
 
 #[async_trait]
-impl<T: Identity + Query + Migrate + From<Row> + Sync> Mutate for T {
+impl<T: Identity + Query + Init + From<Row> + Sync> Mutate for T {
     async fn find(
         db_pool: &web::Data<deadpool_postgres::Pool>,
         expressions: Vec<SimpleExpr>,
@@ -174,5 +175,32 @@ impl<T: Identity + Query + Migrate + From<Row> + Sync> Mutate for T {
             })?;
 
         Ok(())
+    }
+}
+
+pub async fn init(db_pool: &deadpool_postgres::Pool) {
+    let conn = db_pool.get().await.unwrap();
+
+    let query = conn
+        .query(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';",
+            &[],
+        )
+        .await
+        .unwrap();
+    let count = query.get(0).unwrap().get::<_, i64>(0);
+    if count > 0 {
+        return;
+    }
+
+    let inits = vec![
+        User::init(),
+        Connection::init(),
+        RefreshTokenTree::init(),
+        CustomTableSchema::init(),
+    ];
+
+    for init in inits {
+        conn.execute(init.as_str(), &[]).await.unwrap();
     }
 }

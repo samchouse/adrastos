@@ -6,5 +6,6 @@ pub mod db;
 pub mod entities;
 pub mod error;
 pub mod id;
+pub mod migrations;
 pub mod url;
 pub mod util;

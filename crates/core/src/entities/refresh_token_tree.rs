@@ -13,7 +13,7 @@ use validator::{ValidationError, ValidationErrors};
 
 use crate::{error::Error, util};
 
-use super::{Identity, Migrate, Query, User};
+use super::{Identity, Init, Query, User};
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
@@ -39,8 +39,8 @@ impl Identity for RefreshTokenTree {
     }
 }
 
-impl Migrate for RefreshTokenTree {
-    fn migrate() -> String {
+impl Init for RefreshTokenTree {
+    fn init() -> String {
         Table::create()
             .table(Self::table())
             .if_not_exists()

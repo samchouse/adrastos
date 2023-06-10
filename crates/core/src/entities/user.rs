@@ -15,7 +15,7 @@ use validator::Validate;
 
 use crate::{auth, error::Error};
 
-use super::{Connection, Identity, JoinKeys, Migrate, Query, RefreshTokenTree};
+use super::{Connection, Identity, JoinKeys, Init, Query, RefreshTokenTree};
 
 pub struct UserSelectBuilder {
     query_builder: sea_query::SelectStatement,
@@ -138,8 +138,8 @@ impl Identity for User {
     }
 }
 
-impl Migrate for User {
-    fn migrate() -> String {
+impl Init for User {
+    fn init() -> String {
         Table::create()
             .table(Self::table())
             .if_not_exists()
