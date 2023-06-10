@@ -152,7 +152,7 @@
         "WakaTime.vscode-wakatime",
         "redhat.vscode-xml",
         "redhat.vscode-yaml",
-        "GitHub.copilot-nightly"
+        "GitHub.copilot"
       ]
     }
   }
