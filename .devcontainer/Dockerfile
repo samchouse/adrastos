@@ -19,7 +19,7 @@ RUN starship preset plain-text-symbols -o ~/.config/starship.toml
 RUN curl https://rtx.pub/install.sh | sh
 RUN echo -e "\neval \"\$(/root/.local/share/rtx/bin/rtx activate -s zsh)\"" >> ~/.zshrc
 ENV PATH ${PATH}:/root/.local/share/rtx/bin
-RUN rtx use --global node@20
+RUN rtx use --global node@latest
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 RUN rustup toolchain install nightly
