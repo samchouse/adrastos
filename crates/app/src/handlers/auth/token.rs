@@ -28,7 +28,10 @@ pub async fn refresh(
     config: web::Data<config::Config>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let refresh_token = auth::TokenType::verify(&config, util::get_refresh_token_cookie(&req)?.value().into())?;
+    let refresh_token = auth::TokenType::verify(
+        &config,
+        util::get_refresh_token_cookie(&req)?.value().into(),
+    )?;
     if refresh_token.token_type != TokenType::Refresh {
         return Err(Error::Forbidden("Not a refresh token".into()));
     }

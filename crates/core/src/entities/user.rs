@@ -15,7 +15,7 @@ use validator::Validate;
 
 use crate::{auth, error::Error};
 
-use super::{Connection, Identity, JoinKeys, Init, Query, RefreshTokenTree};
+use super::{Connection, Identity, Init, JoinKeys, Query, RefreshTokenTree};
 
 pub struct UserSelectBuilder {
     query_builder: sea_query::SelectStatement,

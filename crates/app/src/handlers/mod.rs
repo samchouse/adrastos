@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse, Responder, get};
+use actix_web::{get, web, HttpResponse, Responder};
 use adrastos_core::{
     config::{Config, ConfigKey},
     error::Error,

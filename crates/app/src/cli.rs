@@ -1,8 +1,10 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
-use self::commands::Command;
-
-pub mod commands;
+#[derive(Subcommand, PartialEq)]
+pub enum Command {
+    /// Apply all pending migrations
+    Migrate,
+}
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None, propagate_version = true)]

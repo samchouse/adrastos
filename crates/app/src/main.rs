@@ -9,17 +9,17 @@ use adrastos_core::{
     auth::oauth2::OAuth2,
     config::{Config, ConfigKey},
     db::{postgres, redis},
-    entities,
+    entities::{self, Identity, System},
     migrations::Migrations,
 };
 use clap::Parser;
-use cli::{commands::Command, Cli};
+use cli::{Cli, Command};
 use dotenvy::dotenv;
 use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
 use openapi::ApiDoc;
 use rustls::{Certificate, PrivateKey, ServerConfig};
 use rustls_pemfile::{certs, pkcs8_private_keys};
-use sea_query::PostgresQueryBuilder;
+use sea_query::{Expr, PostgresQueryBuilder, Query};
 use serde_json::json;
 use std::{fs::File, io::BufReader, process};
 use tracing::{error, info};
@@ -37,7 +37,7 @@ async fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt::init();
     dotenv().ok();
 
-    let config = Config::new().unwrap_or_else(|err| {
+    let mut config = Config::new().unwrap_or_else(|err| {
         error!("missing required environment variables: {:#?}", err);
         process::exit(1)
     });
@@ -45,10 +45,40 @@ async fn main() -> std::io::Result<()> {
     let db_pool = postgres::create_pool(&config);
     entities::init(&db_pool).await;
 
+    {
+        let conn = db_pool.get().await.unwrap();
+        config.attach_system(
+            conn.query(
+                &Query::select()
+                    .from(System::table())
+                    .columns([
+                        <System as Identity>::Iden::Id,
+                        <System as Identity>::Iden::CurrentVersion,
+                        <System as Identity>::Iden::PreviousVersion,
+                        <System as Identity>::Iden::SmtpConfig,
+                        <System as Identity>::Iden::GoogleConfig,
+                        <System as Identity>::Iden::FacebookConfig,
+                        <System as Identity>::Iden::GithubConfig,
+                        <System as Identity>::Iden::TwitterConfig,
+                        <System as Identity>::Iden::DiscordConfig,
+                    ])
+                    .and_where(Expr::col(<System as Identity>::Iden::Id).eq("system"))
+                    .to_string(PostgresQueryBuilder),
+                &[],
+            )
+            .await
+            .unwrap()
+            .into_iter()
+            .next()
+            .unwrap()
+            .into(),
+        );
+    }
+
     let cli = Cli::parse();
     if cli.command == Some(Command::Migrate) {
         let conn = db_pool.get().await.unwrap();
-        
+
         let migrations = Migrations::all_from("0.1.1");
         for migration in &migrations {
             info!("Migration: {}", migration.version);
@@ -105,16 +135,20 @@ async fn main() -> std::io::Result<()> {
                 .into()
             }))
             .app_data(web::Data::new(
-                AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(
-                    &config.get(ConfigKey::SmtpHost).unwrap(),
-                )
-                .unwrap()
-                .port(config.get(ConfigKey::SmtpPort).unwrap().parse().unwrap())
-                .credentials(Credentials::new(
-                    config.get(ConfigKey::SmtpUsername).unwrap(),
-                    config.get(ConfigKey::SmtpPassword).unwrap(),
-                ))
-                .build::<Tokio1Executor>(),
+                if let Ok(smtp_host) = config.get(ConfigKey::SmtpHost) {
+                    Some(
+                        AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&smtp_host)
+                            .unwrap()
+                            .port(config.get(ConfigKey::SmtpPort).unwrap().parse().unwrap())
+                            .credentials(Credentials::new(
+                                config.get(ConfigKey::SmtpUsername).unwrap(),
+                                config.get(ConfigKey::SmtpPassword).unwrap(),
+                            ))
+                            .build::<Tokio1Executor>(),
+                    )
+                } else {
+                    None
+                },
             ))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")

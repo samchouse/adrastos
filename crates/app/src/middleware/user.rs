@@ -11,7 +11,11 @@ use actix_web::{
     Error, FromRequest, HttpMessage,
 };
 use actix_web_httpauth::headers::authorization::{Authorization, Bearer};
-use adrastos_core::{auth::TokenType, config, entities::{self, RefreshTokenTreeIden, RefreshTokenTree, Connection, ConnectionIden}};
+use adrastos_core::{
+    auth::TokenType,
+    config,
+    entities::{self, Connection, ConnectionIden, RefreshTokenTree, RefreshTokenTreeIden},
+};
 use futures_util::future::LocalBoxFuture;
 use sea_query::Alias;
 
@@ -73,7 +77,9 @@ where
                     let user = entities::User::select()
                         .by_id(&access_token.claims.sub)
                         .join::<Connection>(Alias::new(ConnectionIden::UserId.to_string()))
-                        .join::<RefreshTokenTree>(Alias::new(RefreshTokenTreeIden::UserId.to_string()))
+                        .join::<RefreshTokenTree>(Alias::new(
+                            RefreshTokenTreeIden::UserId.to_string(),
+                        ))
                         .finish(&db_pool)
                         .await;
                     if let Ok(user) = user {

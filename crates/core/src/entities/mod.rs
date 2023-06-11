@@ -12,6 +12,7 @@ use crate::error::Error;
 
 pub use connection::*;
 pub use refresh_token_tree::*;
+pub use system::*;
 pub use user::*;
 
 use self::custom_table::schema::CustomTableSchema;
@@ -19,6 +20,7 @@ use self::custom_table::schema::CustomTableSchema;
 pub mod connection;
 pub mod custom_table;
 pub mod refresh_token_tree;
+pub mod system;
 pub mod user;
 
 trait Init {
@@ -194,13 +196,40 @@ pub async fn init(db_pool: &deadpool_postgres::Pool) {
     }
 
     let inits = vec![
+        System::init(),
         User::init(),
         Connection::init(),
         RefreshTokenTree::init(),
         CustomTableSchema::init(),
     ];
-
     for init in inits {
-        conn.execute(init.as_str(), &[]).await.unwrap();
+        conn.execute(&init, &[]).await.unwrap();
     }
+
+    let query = sea_query::Query::insert()
+        .into_table(System::table())
+        .columns([
+            <System as Identity>::Iden::Id,
+            <System as Identity>::Iden::CurrentVersion,
+            <System as Identity>::Iden::PreviousVersion,
+            <System as Identity>::Iden::SmtpConfig,
+            <System as Identity>::Iden::GoogleConfig,
+            <System as Identity>::Iden::FacebookConfig,
+            <System as Identity>::Iden::GithubConfig,
+            <System as Identity>::Iden::TwitterConfig,
+            <System as Identity>::Iden::DiscordConfig,
+        ])
+        .values_panic([
+            "system".into(),
+            env!("CARGO_PKG_VERSION").into(),
+            None::<String>.into(),
+            None::<String>.into(),
+            None::<String>.into(),
+            None::<String>.into(),
+            None::<String>.into(),
+            None::<String>.into(),
+            None::<String>.into(),
+        ])
+        .to_string(PostgresQueryBuilder);
+    conn.execute(&query, &[]).await.unwrap();
 }

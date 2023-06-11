@@ -10,7 +10,7 @@ use serde_json::Value;
 use totp_rs::{Algorithm, Secret, TOTP};
 
 use crate::{
-    entities::{User, UserIden, Mutate},
+    entities::{Mutate, User, UserIden},
     error::Error,
 };
 
