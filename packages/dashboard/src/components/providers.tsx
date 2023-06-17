@@ -9,7 +9,7 @@ export const Providers: React.FC<React.PropsWithChildren> = ({ children }) => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ReactQueryDevtools />
+      <ReactQueryDevtools position="bottom-right" />
 
       {children}
     </QueryClientProvider>

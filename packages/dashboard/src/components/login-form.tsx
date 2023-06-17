@@ -8,7 +8,6 @@ import {
   SiGoogle,
   SiTwitter
 } from '@icons-pack/react-simple-icons';
-import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -25,7 +24,8 @@ import {
   FormMessage,
   Input
 } from '~/components/ui';
-import { getOauth2LoginUrl, postLogin } from '~/lib/api';
+import { useLoginMutation } from '~/hooks/mutations';
+import { getOauth2LoginUrl } from '~/lib';
 
 const formSchema = z.object({
   email: z
@@ -40,16 +40,14 @@ const formSchema = z.object({
 });
 
 export const LoginForm: React.FC = () => {
+  const { mutate } = useLoginMutation();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
       password: ''
     }
-  });
-  const { mutate } = useMutation({
-    mutationFn: async (data: Parameters<typeof postLogin>[0]) =>
-      await postLogin(data)
   });
 
   return (

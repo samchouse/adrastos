@@ -13,10 +13,10 @@ import { cn } from '~/lib/utils';
 import logo from '../../../public/logo.svg';
 
 const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
-  <section className="flex flex-row">
+  <section className="flex h-screen flex-col">
     <div
       className={cn(
-        'bg-background absolute left-0 top-0 z-30 flex w-screen justify-between border-b px-4 py-3'
+        'bg-background relative z-30 flex w-screen justify-between border-b px-4 py-3'
       )}
     >
       <div className="flex flex-row">
@@ -55,7 +55,7 @@ const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
       <User />
     </div>
 
-    <div className="bg-background z-20 h-screen grow">{children}</div>
+    <div className="bg-background z-20 m-5 h-full">{children}</div>
   </section>
 );
 

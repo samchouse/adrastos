@@ -46,7 +46,7 @@ export const User = () => (
           <span>Profile</span>
         </DropdownMenuItem>
       </Link>
-      <Link href="/user/settings">
+      <Link href="/dashboard/settings">
         <DropdownMenuItem className="cursor-pointer">
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>

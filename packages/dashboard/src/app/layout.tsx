@@ -66,7 +66,9 @@ const RootLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
         </div>
       </div>
 
-      <Providers>{children}</Providers>
+      <Providers>
+        <main>{children}</main>
+      </Providers>
     </body>
   </html>
 );

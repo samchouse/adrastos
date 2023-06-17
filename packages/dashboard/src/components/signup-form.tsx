@@ -21,33 +21,43 @@ import {
 } from '~/components/ui';
 import { postSignup } from '~/lib/api';
 
-const formSchema = z.object({
-  firstName: z
-    .string()
-    .nonempty({ message: 'First name is required' })
-    .max(50, { message: 'First name must be less than 50 characters' }),
-  lastName: z
-    .string()
-    .nonempty({ message: 'Last name is required' })
-    .max(50, { message: 'Last name must be less than 50 characters' }),
-  email: z
-    .string()
-    .nonempty({ message: 'Email is required' })
-    .email({ message: 'Invalid email address' }),
-  username: z
-    .string()
-    .nonempty({ message: 'Username is required' })
-    .min(5, { message: 'Username must be at least 5 characters' })
-    .max(64, { message: 'Username must be less than 64 characters' }),
-  password: z
-    .string()
-    .nonempty({ message: 'Password is required' })
-    .min(8, { message: 'Password must be at least 8 characters' })
-    .max(64, { message: 'Password must be less than 64 characters' }),
-  tac: z
-    .boolean()
-    .refine((v) => v, { message: 'You must accept the Terms and Conditions' })
-});
+const formSchema = z
+  .object({
+    firstName: z
+      .string()
+      .nonempty({ message: 'First name is required' })
+      .max(50, { message: 'First name must be less than 50 characters' }),
+    lastName: z
+      .string()
+      .nonempty({ message: 'Last name is required' })
+      .max(50, { message: 'Last name must be less than 50 characters' }),
+    email: z
+      .string()
+      .nonempty({ message: 'Email is required' })
+      .email({ message: 'Invalid email address' }),
+    username: z
+      .string()
+      .nonempty({ message: 'Username is required' })
+      .min(5, { message: 'Username must be at least 5 characters' })
+      .max(64, { message: 'Username must be less than 64 characters' }),
+    password: z
+      .string()
+      .nonempty({ message: 'Password is required' })
+      .min(8, { message: 'Password must be at least 8 characters' })
+      .max(64, { message: 'Password must be less than 64 characters' }),
+    confirmPassword: z.string().nonempty({ message: 'Re-enter your password' }),
+    tac: z
+      .boolean()
+      .refine((v) => v, { message: 'You must accept the Terms and Conditions' })
+  })
+  .superRefine(({ password, confirmPassword }, ctx) => {
+    if (password !== confirmPassword)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "The passwords don't match",
+        path: ['confirmPassword']
+      });
+  });
 
 export const SignupForm: React.FC = () => {
   const form = useForm<z.infer<typeof formSchema>>({
@@ -134,6 +144,23 @@ export const SignupForm: React.FC = () => {
                   <FormLabel>Password</FormLabel>
                   <FormControl>
                     <Input type="password" placeholder="Password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem className="w-full">
+                  <FormLabel>Confirm Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Confirm Password"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -58,7 +58,6 @@ async fn main() -> std::io::Result<()> {
                 .into(),
         );
     }
-    println!("config: {:#?}", config);
 
     let cli = Cli::parse();
     if cli.command == Some(Command::Migrate) {
@@ -161,9 +160,11 @@ async fn main() -> std::io::Result<()> {
                         handlers::auth::mfa::regenerate,
                     ))),
             )
-            .service(
-                web::scope("/config").service((handlers::config::oauth2, handlers::config::smtp)),
-            )
+            .service(web::scope("/config").service((
+                handlers::config::details,
+                handlers::config::oauth2,
+                handlers::config::smtp,
+            )))
             .service(
                 web::scope("/tables")
                     .service((

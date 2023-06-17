@@ -1,7 +1,7 @@
 const Page: React.FC = () => (
-  <main>
+  <div>
     <div></div>
-  </main>
+  </div>
 );
 
 export default Page;

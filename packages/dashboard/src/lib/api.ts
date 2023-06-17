@@ -2,7 +2,7 @@ import axios, { AxiosError, AxiosResponse } from 'axios';
 
 import { env } from '~/env';
 
-const client = axios.create({
+export const client = axios.create({
   baseURL: '/api'
 });
 
@@ -12,11 +12,8 @@ client.interceptors.response.use(
     err: AxiosError<{
       success: false;
     }>
-  ) => {
-    if (err.response?.data) return Promise.reject(err.response.data);
-
-    return Promise.reject(err);
-  }
+  ) =>
+    err.response?.data ? Promise.reject(err.response.data) : Promise.reject(err)
 );
 
 interface SignupData {
@@ -38,9 +35,10 @@ interface LoginData {
 }
 
 export const postLogin = async (data: LoginData) => {
-  const res = await client.post<
-    AxiosResponse<{ success: true; accessToken: string }>
-  >('/auth/login', data);
+  const res = await client.post<{ success: true; accessToken: string }>(
+    '/auth/login',
+    data
+  );
   return res.data;
 };
 
@@ -52,3 +50,54 @@ export const getLogout = async () => {
 export const getOauth2LoginUrl = (
   provider: 'google' | 'facebook' | 'github' | 'twitter' | 'discord'
 ) => `${env.NEXT_PUBLIC_BACKEND_URL}/auth/oauth2/login?provider=${provider}`;
+
+export const getConfigDetails = async () => {
+  const res = await client.get<{
+    success: true;
+    smtpConfig: {
+      host: string;
+      port: number;
+      username: string;
+      password: string;
+      senderName: string;
+      senderEmail: string;
+    };
+    oauth2Config: {
+      google: {
+        clientId: string;
+        clientSecret: string;
+      };
+      facebook: {
+        clientId: string;
+        clientSecret: string;
+      };
+      github: {
+        clientId: string;
+        clientSecret: string;
+      };
+      twitter: {
+        clientId: string;
+        clientSecret: string;
+      };
+      discord: {
+        clientId: string;
+        clientSecret: string;
+      };
+    };
+  }>('/config/details');
+  return res.data;
+};
+
+interface ConfigSmtpData {
+  host: string;
+  port: number;
+  username: string;
+  password?: string;
+  senderName: string;
+  senderEmail: string;
+}
+
+export const postConfigSmtp = async (data?: ConfigSmtpData) => {
+  const res = await client.post('/config/smtp', data);
+  return res.data;
+};

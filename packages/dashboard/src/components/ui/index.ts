@@ -61,3 +61,4 @@ export {
   TableHeader,
   TableRow
 } from './table';
+export { Switch } from './switch';
