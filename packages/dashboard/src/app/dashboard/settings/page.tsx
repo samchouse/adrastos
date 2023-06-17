@@ -207,9 +207,12 @@ const Page: React.FC = () => {
                 type="reset"
                 variant="ghost"
                 disabled={
-                  !form.formState.isDirty &&
-                  smtpEnabled &&
-                  !!configData?.smtpConfig
+                  (!form.formState.isDirty &&
+                    smtpEnabled &&
+                    !!configData?.smtpConfig) ||
+                  (!smtpEnabled && !configData?.smtpConfig) ||
+                  isLoading ||
+                  mutationIsLoading
                 }
                 onClick={() => {
                   if (configData?.smtpConfig) {
@@ -228,6 +231,7 @@ const Page: React.FC = () => {
                   (!form.formState.isDirty &&
                     smtpEnabled &&
                     !!configData?.smtpConfig) ||
+                  (!smtpEnabled && !configData?.smtpConfig) ||
                   isLoading ||
                   mutationIsLoading
                 }

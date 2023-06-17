@@ -25,10 +25,15 @@ export const metadata = {
 
 const RootLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
   <html lang="en" className="dark">
-    <body className={cn(workSans.className, 'bg-background text-primary')}>
+    <body
+      className={cn(
+        workSans.className,
+        'bg-background text-primary flex h-screen flex-col'
+      )}
+    >
       <div
         className={cn(
-          'bg-background absolute left-0 top-0 z-10 flex w-screen justify-between border-b px-4 py-3'
+          'bg-background relative z-10 flex w-screen justify-between border-b px-4 py-3'
         )}
       >
         <div className="flex flex-row">
@@ -66,9 +71,9 @@ const RootLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
         </div>
       </div>
 
-      <Providers>
-        <main>{children}</main>
-      </Providers>
+      <main className="bg-background h-full">
+        <Providers>{children}</Providers>
+      </main>
     </body>
   </html>
 );

@@ -44,7 +44,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <span
         aria-disabled={props.disabled}
-        className="aria-disabled:cursor-not-allowed"
+        className="leading-[0] aria-disabled:cursor-not-allowed"
       >
         <Comp
           className={cn(buttonVariants({ variant, size, className }))}
