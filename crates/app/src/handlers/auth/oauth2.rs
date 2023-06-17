@@ -1,3 +1,5 @@
+use tokio::sync::Mutex;
+
 use adrastos_core::{
     auth::{
         self,
@@ -69,14 +71,14 @@ pub async fn login(
 
 #[get("/callback")]
 pub async fn callback(
-    config: web::Data<config::Config>,
+    config: web::Data<Mutex<config::Config>>,
     oauth2: web::Data<OAuth2>,
     params: web::Query<CallbackParams>,
     db_pool: web::Data<deadpool_postgres::Pool>,
     redis_pool: web::Data<deadpool_redis::Pool>,
     session: Session,
 ) -> actix_web::Result<impl Responder, Error> {
-    let client_url = config.get(ConfigKey::ClientUrl)?;
+    let client_url = config.lock().await.get(ConfigKey::ClientUrl)?;
 
     let provider = OAuth2Provider::try_from(params.provider.as_str())
         .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;
@@ -150,7 +152,7 @@ pub async fn callback(
             .finish());
     }
 
-    let auth = auth::authenticate(&db_pool, &config, &user).await?;
+    let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
     Ok(HttpResponse::Found()
         .cookie(auth.cookie)
         .append_header(("Location", client_url))

@@ -14,6 +14,7 @@ use adrastos_core::{
 use chrono::Utc;
 use sea_query::Alias;
 use serde_json::{json, Value};
+use tokio::sync::Mutex;
 
 #[utoipa::path(
     get,
@@ -25,11 +26,11 @@ use serde_json::{json, Value};
 #[get("/token/refresh")]
 pub async fn refresh(
     req: HttpRequest,
-    config: web::Data<config::Config>,
+    config: web::Data<Mutex<config::Config>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let refresh_token = auth::TokenType::verify(
-        &config,
+        &config.lock().await.clone(),
         util::get_refresh_token_cookie(&req)?.value().into(),
     )?;
     if refresh_token.token_type != TokenType::Refresh {
@@ -63,8 +64,8 @@ pub async fn refresh(
         return Err(Error::Forbidden("Refresh token is invalid".into()));
     }
 
-    let access_token = TokenType::Access.sign(&config, &user)?;
-    let refresh_token = TokenType::Access.sign(&config, &user)?;
+    let access_token = TokenType::Access.sign(&config.lock().await.clone(), &user)?;
+    let refresh_token = TokenType::Access.sign(&config.lock().await.clone(), &user)?;
 
     let cookie_expiration = OffsetDateTime::from_unix_timestamp(
         refresh_token.expires_at.timestamp(),

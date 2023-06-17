@@ -8,6 +8,7 @@ use crate::config::ConfigKey;
 use super::OAuth2;
 
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
 pub enum OAuth2Provider {
     Google,
     Facebook,

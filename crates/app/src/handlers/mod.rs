@@ -1,3 +1,5 @@
+use tokio::sync::Mutex;
+
 use actix_web::{get, web, HttpResponse, Responder};
 use adrastos_core::{
     config::{Config, ConfigKey},
@@ -5,12 +7,16 @@ use adrastos_core::{
 };
 
 pub mod auth;
+pub mod config;
 pub mod tables;
 
 #[get("/")]
-pub async fn index(config: web::Data<Config>) -> actix_web::Result<impl Responder, Error> {
+pub async fn index(config: web::Data<Mutex<Config>>) -> actix_web::Result<impl Responder, Error> {
     Ok(HttpResponse::PermanentRedirect()
-        .append_header(("Location", config.get(ConfigKey::ClientUrl).unwrap()))
+        .append_header((
+            "Location",
+            config.lock().await.get(ConfigKey::ClientUrl).unwrap(),
+        ))
         .finish())
 }
 

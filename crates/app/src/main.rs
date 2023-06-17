@@ -9,7 +9,7 @@ use adrastos_core::{
     auth::oauth2::OAuth2,
     config::{Config, ConfigKey},
     db::{postgres, redis},
-    entities::{self, Identity, System},
+    entities::{self, System},
     migrations::Migrations,
 };
 use clap::Parser;
@@ -19,9 +19,10 @@ use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, T
 use openapi::ApiDoc;
 use rustls::{Certificate, PrivateKey, ServerConfig};
 use rustls_pemfile::{certs, pkcs8_private_keys};
-use sea_query::{Expr, PostgresQueryBuilder, Query};
+use sea_query::PostgresQueryBuilder;
 use serde_json::json;
 use std::{fs::File, io::BufReader, process};
+use tokio::sync::Mutex;
 use tracing::{error, info};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -43,37 +44,21 @@ async fn main() -> std::io::Result<()> {
     });
 
     let db_pool = postgres::create_pool(&config);
-    entities::init(&db_pool).await;
+    entities::init(&db_pool, &config).await;
 
     {
         let conn = db_pool.get().await.unwrap();
         config.attach_system(
-            conn.query(
-                &Query::select()
-                    .from(System::table())
-                    .columns([
-                        <System as Identity>::Iden::Id,
-                        <System as Identity>::Iden::CurrentVersion,
-                        <System as Identity>::Iden::PreviousVersion,
-                        <System as Identity>::Iden::SmtpConfig,
-                        <System as Identity>::Iden::GoogleConfig,
-                        <System as Identity>::Iden::FacebookConfig,
-                        <System as Identity>::Iden::GithubConfig,
-                        <System as Identity>::Iden::TwitterConfig,
-                        <System as Identity>::Iden::DiscordConfig,
-                    ])
-                    .and_where(Expr::col(<System as Identity>::Iden::Id).eq("system"))
-                    .to_string(PostgresQueryBuilder),
-                &[],
-            )
-            .await
-            .unwrap()
-            .into_iter()
-            .next()
-            .unwrap()
-            .into(),
+            conn.query(&System::get(), &[])
+                .await
+                .unwrap()
+                .into_iter()
+                .next()
+                .unwrap()
+                .into(),
         );
     }
+    println!("config: {:#?}", config);
 
     let cli = Cli::parse();
     if cli.command == Some(Command::Migrate) {
@@ -119,9 +104,9 @@ async fn main() -> std::io::Result<()> {
                     .allow_any_method()
                     .allow_any_origin(),
             )
-            .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(OAuth2::new(&config)))
+            .app_data(web::Data::new(Mutex::new(config.clone())))
             .app_data(web::Data::new(redis::create_pool(&config)))
             .app_data(web::JsonConfig::default().error_handler(|err, _| {
                 let err_string = err.to_string();
@@ -175,6 +160,9 @@ async fn main() -> std::io::Result<()> {
                         handlers::auth::mfa::confirm,
                         handlers::auth::mfa::regenerate,
                     ))),
+            )
+            .service(
+                web::scope("/config").service((handlers::config::oauth2, handlers::config::smtp)),
             )
             .service(
                 web::scope("/tables")

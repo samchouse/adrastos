@@ -9,6 +9,7 @@ use adrastos_core::{
     id::Id,
     util,
 };
+use tokio::sync::Mutex;
 
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
@@ -65,7 +66,7 @@ pub struct LoginBody {
 #[post("/signup")]
 pub async fn signup(
     body: web::Json<SignupBody>,
-    config: web::Data<config::Config>,
+    config: web::Data<Mutex<config::Config>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
     redis_pool: web::Data<deadpool_redis::Pool>,
     mailer: web::Data<Option<AsyncSmtpTransport<Tokio1Executor>>>,
@@ -110,11 +111,12 @@ pub async fn signup(
                 )
             })?;
 
-        let mut conn = redis::Client::open(config.get(ConfigKey::DragonflyUrl).unwrap())
-            .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
-            .get_async_connection()
-            .await
-            .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?;
+        let mut conn =
+            redis::Client::open(config.lock().await.get(ConfigKey::DragonflyUrl).unwrap())
+                .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
+                .get_async_connection()
+                .await
+                .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?;
         conn.publish::<_, _, ()>("emails", verification_token)
             .await
             .unwrap();
@@ -171,7 +173,7 @@ pub async fn signup(
 pub async fn login(
     session: Session,
     body: web::Json<LoginBody>,
-    config: web::Data<config::Config>,
+    config: web::Data<Mutex<config::Config>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let user = User::select()
@@ -205,7 +207,7 @@ pub async fn login(
         })));
     }
 
-    let auth = auth::authenticate(&db_pool, &config, &user).await?;
+    let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
     Ok(HttpResponse::Ok().cookie(auth.cookie).json(json!({
         "success": true,
         "user": user,
@@ -217,11 +219,12 @@ pub async fn login(
 pub async fn logout(
     req: HttpRequest,
     user: RequiredUser,
-    config: web::Data<config::Config>,
+    config: web::Data<Mutex<config::Config>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let mut cookie = util::get_refresh_token_cookie(&req)?;
-    let refresh_token = auth::TokenType::verify(&config, cookie.value().into())?;
+    let refresh_token =
+        auth::TokenType::verify(&config.lock().await.clone(), cookie.value().into())?;
     if refresh_token.token_type != TokenType::Refresh {
         return Err(Error::Unauthorized);
     }

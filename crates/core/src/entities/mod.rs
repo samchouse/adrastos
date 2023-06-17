@@ -8,7 +8,10 @@ use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{Alias, Iden, PostgresQueryBuilder, SelectStatement, SimpleExpr};
 use serde_json::Value;
 
-use crate::error::Error;
+use crate::{
+    config::{Config, ConfigKey},
+    error::Error,
+};
 
 pub use connection::*;
 pub use refresh_token_tree::*;
@@ -180,7 +183,7 @@ impl<T: Identity + Query + Init + From<Row> + Sync> Mutate for T {
     }
 }
 
-pub async fn init(db_pool: &deadpool_postgres::Pool) {
+pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
     let conn = db_pool.get().await.unwrap();
 
     let query = conn
@@ -206,6 +209,69 @@ pub async fn init(db_pool: &deadpool_postgres::Pool) {
         conn.execute(&init, &[]).await.unwrap();
     }
 
+    let mut smtp_config = None;
+    if let Ok(host) = config.get(ConfigKey::SmtpHost) {
+        if let Ok(port) = config.get(ConfigKey::SmtpPort) {
+            if let Ok(username) = config.get(ConfigKey::SmtpUsername) {
+                if let Ok(password) = config.get(ConfigKey::SmtpPassword) {
+                    smtp_config = Some(SmtpConfig {
+                        host,
+                        port: port.parse().unwrap(),
+                        username,
+                        password,
+                        sender_name: "Adrastos".into(),
+                        sender_email: "no-reply@adrastos.xenfo.dev".into(),
+                    });
+                }
+            }
+        }
+    }
+    let mut google_config = None;
+    if let Ok(client_id) = config.get(ConfigKey::GoogleClientId) {
+        if let Ok(client_secret) = config.get(ConfigKey::GoogleClientSecret) {
+            google_config = Some(OAuth2Config {
+                client_id,
+                client_secret,
+            });
+        }
+    }
+    let mut facebook_config = None;
+    if let Ok(client_id) = config.get(ConfigKey::FacebookClientId) {
+        if let Ok(client_secret) = config.get(ConfigKey::FacebookClientSecret) {
+            facebook_config = Some(OAuth2Config {
+                client_id,
+                client_secret,
+            });
+        }
+    }
+    let mut github_config = None;
+    if let Ok(client_id) = config.get(ConfigKey::GitHubClientId) {
+        if let Ok(client_secret) = config.get(ConfigKey::GitHubClientSecret) {
+            github_config = Some(OAuth2Config {
+                client_id,
+                client_secret,
+            });
+        }
+    }
+    let mut twitter_config = None;
+    if let Ok(client_id) = config.get(ConfigKey::TwitterClientId) {
+        if let Ok(client_secret) = config.get(ConfigKey::TwitterClientSecret) {
+            twitter_config = Some(OAuth2Config {
+                client_id,
+                client_secret,
+            });
+        }
+    }
+    let mut discord_config = None;
+    if let Ok(client_id) = config.get(ConfigKey::DiscordClientId) {
+        if let Ok(client_secret) = config.get(ConfigKey::DiscordClientSecret) {
+            discord_config = Some(OAuth2Config {
+                client_id,
+                client_secret,
+            });
+        }
+    }
+
     let query = sea_query::Query::insert()
         .into_table(System::table())
         .columns([
@@ -223,12 +289,30 @@ pub async fn init(db_pool: &deadpool_postgres::Pool) {
             "system".into(),
             env!("CARGO_PKG_VERSION").into(),
             None::<String>.into(),
-            None::<String>.into(),
-            None::<String>.into(),
-            None::<String>.into(),
-            None::<String>.into(),
-            None::<String>.into(),
-            None::<String>.into(),
+            smtp_config
+                .as_ref()
+                .and_then(|v| serde_json::to_string(v).ok())
+                .into(),
+            google_config
+                .as_ref()
+                .and_then(|v| serde_json::to_string(v).ok())
+                .into(),
+            facebook_config
+                .as_ref()
+                .and_then(|v| serde_json::to_string(v).ok())
+                .into(),
+            github_config
+                .as_ref()
+                .and_then(|v| serde_json::to_string(v).ok())
+                .into(),
+            twitter_config
+                .as_ref()
+                .and_then(|v| serde_json::to_string(v).ok())
+                .into(),
+            discord_config
+                .as_ref()
+                .and_then(|v| serde_json::to_string(v).ok())
+                .into(),
         ])
         .to_string(PostgresQueryBuilder);
     conn.execute(&query, &[]).await.unwrap();

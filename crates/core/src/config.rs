@@ -147,32 +147,29 @@ impl Config {
         let mut config = Config::default();
         let mut missing_keys = vec![];
 
-        Config::options()
-            .iter()
-            .filter(|entry| !entry.system)
-            .for_each(|entry| {
-                entry.keys.iter().for_each(|key| {
-                    let value = match env::var(key.to_string()) {
-                        Ok(value) => Some(value),
-                        Err(error) => match error {
-                            env::VarError::NotPresent => {
-                                if let Some(default) = &entry.default {
-                                    Some(default.to_string())
-                                } else {
-                                    if entry.required {
-                                        missing_keys.push(key.to_string())
-                                    }
-
-                                    None
+        Config::options().iter().for_each(|entry| {
+            entry.keys.iter().for_each(|key| {
+                let value = match env::var(key.to_string()) {
+                    Ok(value) => Some(value),
+                    Err(error) => match error {
+                        env::VarError::NotPresent => {
+                            if let Some(default) = &entry.default {
+                                Some(default.to_string())
+                            } else {
+                                if entry.required {
+                                    missing_keys.push(key.to_string())
                                 }
-                            }
-                            err => panic!("{}", err),
-                        },
-                    };
 
-                    config.0.insert(key.clone(), value);
-                });
+                                None
+                            }
+                        }
+                        err => panic!("{}", err),
+                    },
+                };
+
+                config.0.insert(key.clone(), value);
             });
+        });
 
         if !missing_keys.is_empty() {
             return Err(missing_keys);

@@ -15,6 +15,7 @@ use chrono::Duration;
 use deadpool_redis::redis;
 use serde::Deserialize;
 use serde_json::{json, Value};
+use tokio::sync::Mutex;
 
 use crate::{middleware::user, session::SessionKey};
 
@@ -113,7 +114,7 @@ pub async fn confirm(
 pub async fn verify(
     session: Session,
     body: web::Json<CVDBody>,
-    config: web::Data<Config>,
+    config: web::Data<Mutex<Config>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let Ok(Some(retries)) = session.get::<u8>(&SessionKey::MfaRetries.to_string()) else {
@@ -155,7 +156,7 @@ pub async fn verify(
     )
     .await?;
 
-    let auth = auth::authenticate(&db_pool, &config, &user).await?;
+    let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
     Ok(HttpResponse::Ok().cookie(auth.cookie).json(json!({
         "success": true,
         "user": user,
