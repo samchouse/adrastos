@@ -65,7 +65,7 @@ pub async fn refresh(
     }
 
     let access_token = TokenType::Access.sign(&config.lock().await.clone(), &user)?;
-    let refresh_token = TokenType::Access.sign(&config.lock().await.clone(), &user)?;
+    let refresh_token = TokenType::Refresh.sign(&config.lock().await.clone(), &user)?;
 
     let cookie_expiration = OffsetDateTime::from_unix_timestamp(
         refresh_token.expires_at.timestamp(),
@@ -90,9 +90,9 @@ pub async fn refresh(
     Ok(HttpResponse::Ok()
         .cookie(
             Cookie::build("refreshToken", refresh_token.token)
-                .path("/auth")
                 .secure(true)
                 .http_only(true)
+                .path("/api/auth")
                 .expires(Expiration::from(cookie_expiration))
                 .finish(),
         )

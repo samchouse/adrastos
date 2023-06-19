@@ -93,6 +93,11 @@ pub async fn smtp(
                     "A password is required to enable SMTP".to_string(),
                 ));
             };
+            if password.is_empty() {
+                return Err(Error::BadRequest(
+                    "A password is required to enable SMTP".to_string(),
+                ));
+            };
 
             Ok(Some(SmtpConfig {
                 host: body.host.clone(),

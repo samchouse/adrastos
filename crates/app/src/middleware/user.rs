@@ -8,7 +8,7 @@ use std::{
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     http::header::Header,
-    Error, FromRequest, HttpMessage,
+    web, Error, FromRequest, HttpMessage,
 };
 use actix_web_httpauth::headers::authorization::{Authorization, Bearer};
 use adrastos_core::{
@@ -18,6 +18,12 @@ use adrastos_core::{
 };
 use futures_util::future::LocalBoxFuture;
 use sea_query::Alias;
+use serde::Deserialize;
+
+#[derive(Deserialize, Debug)]
+struct ReqParams {
+    auth: Option<String>,
+}
 
 pub struct GetUser {
     pub config: config::Config,
@@ -63,17 +69,25 @@ where
 
     forward_ready!(service);
 
-    fn call(&self, req: ServiceRequest) -> Self::Future {
+    fn call(&self, mut req: ServiceRequest) -> Self::Future {
         let config = self.config.clone();
         let service = self.service.clone();
         let db_pool = self.db_pool.clone();
         let authorization = Authorization::<Bearer>::parse(&req);
 
         Box::pin(async move {
-            if let Ok(auth) = authorization {
-                if let Ok(access_token) =
-                    TokenType::verify(&config, auth.into_scheme().token().into())
-                {
+            let authorization = authorization
+                .ok()
+                .map(|a| a.into_scheme().token().to_owned())
+                .or(req
+                    .extract::<web::Query<ReqParams>>() // TODO(@Xenfo): should mark this token as used in the database
+                    .await
+                    .map(|q| q.auth.clone())
+                    .ok()
+                    .flatten());
+
+            if let Some(token) = authorization {
+                if let Ok(access_token) = TokenType::verify(&config, token) {
                     let user = entities::User::select()
                         .by_id(&access_token.claims.sub)
                         .join::<Connection>(Alias::new(ConnectionIden::UserId.to_string()))

@@ -1,7 +1,6 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -18,8 +17,8 @@ import {
   FormLabel,
   FormMessage,
   Input
-} from '~/components/ui';
-import { postSignup } from '~/lib/api';
+} from '~/components';
+import { useSignupMutation } from '~/hooks';
 
 const formSchema = z
   .object({
@@ -60,6 +59,8 @@ const formSchema = z
   });
 
 export const SignupForm: React.FC = () => {
+  const { mutate } = useSignupMutation();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -70,10 +71,6 @@ export const SignupForm: React.FC = () => {
       password: '',
       tac: false
     }
-  });
-  const { mutate } = useMutation({
-    mutationFn: async (data: Parameters<typeof postSignup>[0]) =>
-      await postSignup(data)
   });
 
   return (
@@ -143,7 +140,12 @@ export const SignupForm: React.FC = () => {
                 <FormItem className="w-full">
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="Password" {...field} />
+                    <Input
+                      {...field}
+                      type="password"
+                      placeholder="Password"
+                      data-form-type="password,new"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -157,9 +159,10 @@ export const SignupForm: React.FC = () => {
                   <FormLabel>Confirm Password</FormLabel>
                   <FormControl>
                     <Input
-                      type="password"
-                      placeholder="Confirm Password"
                       {...field}
+                      type="password"
+                      data-form-type="password,confirmation"
+                      placeholder="Confirm Password"
                     />
                   </FormControl>
                   <FormMessage />

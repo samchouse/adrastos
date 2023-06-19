@@ -95,13 +95,13 @@ impl Config {
                 keys: vec![ConfigKey::ClientUrl],
                 system: false,
                 required: false,
-                default: Some("https://localhost:3000"),
+                default: Some("http://127.0.0.1:3000"),
             },
             Entry {
                 keys: vec![ConfigKey::ServerUrl],
                 system: false,
                 required: false,
-                default: Some("localhost:8000"),
+                default: Some("127.0.0.1:8000"),
             },
             Entry {
                 keys: vec![ConfigKey::SecretKey],

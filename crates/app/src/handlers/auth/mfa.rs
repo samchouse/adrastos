@@ -160,7 +160,6 @@ pub async fn verify(
     Ok(HttpResponse::Ok().cookie(auth.cookie).json(json!({
         "success": true,
         "user": user,
-        "accessToken": auth.token.clone().token,
     })))
 }
 

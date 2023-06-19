@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import {
+  Auth,
   Button,
   NavigationMenu,
   NavigationMenuItem,
@@ -72,7 +73,9 @@ const RootLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
       </div>
 
       <main className="bg-background h-full">
-        <Providers>{children}</Providers>
+        <Providers>
+          <Auth>{children}</Auth>
+        </Providers>
       </main>
     </body>
   </html>

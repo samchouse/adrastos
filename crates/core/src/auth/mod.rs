@@ -112,6 +112,7 @@ pub async fn authenticate(
     let cookie = Cookie::build("refreshToken", refresh_token.token.clone())
         .secure(true)
         .http_only(true)
+        .path("/api/auth")
         .expires(Expiration::from(cookie_expiration))
         .finish();
 

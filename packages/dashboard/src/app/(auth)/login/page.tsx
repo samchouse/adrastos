@@ -1,4 +1,6 @@
-import { Card, CardHeader, CardTitle, LoginForm } from '~/components';
+import { Card, CardHeader, CardTitle } from '~/components';
+
+import { LoginForm } from './form';
 
 const Page: React.FC = () => (
   <div className="flex h-full w-screen items-center justify-center">

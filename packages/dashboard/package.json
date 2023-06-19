@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_EXTRA_CA_CERTS=../../certs/rootCA.pem next dev",
+    "dev": "NODE_EXTRA_CA_CERTS=../../certs/rootCA.pem next dev -H localhost -H 127.0.0.1",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -38,6 +38,7 @@
     "zod": "^3.21.4"
   },
   "devDependencies": {
+    "@total-typescript/ts-reset": "^0.4.2",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.24",
     "tailwindcss": "^3.3.2"

@@ -18,6 +18,7 @@ pub struct SmtpConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct OAuth2Config {
     pub client_id: String,
     pub client_secret: String,

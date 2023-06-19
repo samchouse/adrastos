@@ -210,8 +210,7 @@ pub async fn login(
     let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
     Ok(HttpResponse::Ok().cookie(auth.cookie).json(json!({
         "success": true,
-        "user": user,
-        "accessToken": auth.token.clone().token,
+        "user": user
     })))
 }
 
