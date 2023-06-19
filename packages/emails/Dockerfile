@@ -7,6 +7,6 @@ COPY ./packages/emails ./packages/emails
 RUN yarn install
 
 WORKDIR /work/packages/emails
-RUN yarn build
+RUN yarn worker:build
 
-CMD [ "yarn", "start" ]
+CMD [ "yarn", "worker:start" ]

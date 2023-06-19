@@ -40,13 +40,13 @@ export const User = () => (
         </div>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
-      <Link href="/user/profile">
+      <Link href="/dashboard/profile">
         <DropdownMenuItem className="cursor-pointer">
           <UserIcon className="mr-2 h-4 w-4" />
           <span>Profile</span>
         </DropdownMenuItem>
       </Link>
-      <Link href="/user/settings">
+      <Link href="/dashboard/settings">
         <DropdownMenuItem className="cursor-pointer">
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>

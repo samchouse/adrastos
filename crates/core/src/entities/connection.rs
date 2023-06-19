@@ -12,7 +12,7 @@ use utoipa::ToSchema;
 
 use crate::error::Error;
 
-use super::{Identity, Migrate, Query, User};
+use super::{Identity, Init, Query, User};
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
@@ -37,8 +37,8 @@ impl Identity for Connection {
     }
 }
 
-impl Migrate for Connection {
-    fn migrate() -> String {
+impl Init for Connection {
+    fn init() -> String {
         Table::create()
             .table(Self::table())
             .if_not_exists()
@@ -137,7 +137,8 @@ impl Query for Connection {
     }
 }
 
-impl From<Row> for Connection { // TODO(@Xenfo): automate this trait
+impl From<Row> for Connection {
+    // TODO(@Xenfo): automate this trait
     fn from(row: Row) -> Self {
         Self {
             id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),

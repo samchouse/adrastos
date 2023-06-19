@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug};
 
 use actix_web::web;
 use chrono::Duration;
@@ -175,7 +175,7 @@ impl OAuth2 {
         Ok(token)
     }
 
-    pub async fn fetch_user<T: OAuth2UserMethods + DeserializeOwned>(
+    pub async fn fetch_user<T: OAuth2UserMethods + DeserializeOwned + Debug>(
         &self,
         token: &StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
     ) -> Result<OAuth2User, String> {
@@ -184,6 +184,7 @@ impl OAuth2 {
         let user_info = client
             .get(T::get_user_info_url())
             .bearer_auth(token.access_token().secret())
+            .header("User-Agent", "Adrastos")
             .send()
             .await
             .map_err(|error| error.to_string())?

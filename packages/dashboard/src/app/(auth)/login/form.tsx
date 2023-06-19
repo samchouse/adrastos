@@ -8,7 +8,7 @@ import {
   SiGoogle,
   SiTwitter
 } from '@icons-pack/react-simple-icons';
-import { useMutation } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -24,8 +24,18 @@ import {
   FormLabel,
   FormMessage,
   Input
-} from '~/components/ui';
-import { getOauth2LoginUrl, postLogin } from '~/lib/api';
+} from '~/components';
+import { useTokenRefreshQuery } from '~/hooks';
+import { useLoginMutation } from '~/hooks/mutations';
+import { getOauth2LoginUrl, providers } from '~/lib';
+
+const providerIcons = {
+  google: <SiGoogle className="h-4 w-4" />,
+  facebook: <SiFacebook className="h-4 w-4" />,
+  github: <SiGithub className="h-4 w-4" />,
+  twitter: <SiTwitter className="h-4 w-4" />,
+  discord: <SiDiscord className="h-4 w-4" />
+};
 
 const formSchema = z.object({
   email: z
@@ -40,16 +50,15 @@ const formSchema = z.object({
 });
 
 export const LoginForm: React.FC = () => {
+  const { data } = useTokenRefreshQuery();
+  const { mutate, isLoading } = useLoginMutation();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
       password: ''
     }
-  });
-  const { mutate } = useMutation({
-    mutationFn: async (data: Parameters<typeof postLogin>[0]) =>
-      await postLogin(data)
   });
 
   return (
@@ -88,7 +97,8 @@ export const LoginForm: React.FC = () => {
 
         <CardFooter>
           <div className="w-full">
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Login
             </Button>
 
@@ -104,31 +114,18 @@ export const LoginForm: React.FC = () => {
             </div>
 
             <div className="grid w-full grid-cols-5 gap-2">
-              <Button asChild variant="outline" className="w-full">
-                <Link href={getOauth2LoginUrl('google')}>
-                  <SiGoogle className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full">
-                <Link href={getOauth2LoginUrl('facebook')}>
-                  <SiFacebook className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full">
-                <Link href={getOauth2LoginUrl('github')}>
-                  <SiGithub className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full">
-                <Link href={getOauth2LoginUrl('twitter')}>
-                  <SiTwitter className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full">
-                <Link href={getOauth2LoginUrl('discord')}>
-                  <SiDiscord className="h-4 w-4" />
-                </Link>
-              </Button>
+              {providers.map((provider) => (
+                <Button
+                  key={provider}
+                  asChild
+                  variant="outline"
+                  className="w-full"
+                >
+                  <Link href={getOauth2LoginUrl(provider, data?.accessToken)}>
+                    {providerIcons[provider]}
+                  </Link>
+                </Button>
+              ))}
             </div>
 
             <Link

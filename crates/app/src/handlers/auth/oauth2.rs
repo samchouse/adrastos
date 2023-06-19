@@ -1,3 +1,5 @@
+use tokio::sync::Mutex;
+
 use adrastos_core::{
     auth::{
         self,
@@ -14,6 +16,7 @@ use actix_web::{get, http::header, web, HttpResponse, Responder};
 use chrono::Utc;
 use sea_query::Expr;
 use serde::Deserialize;
+use tracing::error;
 
 use crate::{middleware::user, session::SessionKey};
 
@@ -69,14 +72,14 @@ pub async fn login(
 
 #[get("/callback")]
 pub async fn callback(
-    config: web::Data<config::Config>,
+    config: web::Data<Mutex<config::Config>>,
     oauth2: web::Data<OAuth2>,
     params: web::Query<CallbackParams>,
     db_pool: web::Data<deadpool_postgres::Pool>,
     redis_pool: web::Data<deadpool_redis::Pool>,
     session: Session,
 ) -> actix_web::Result<impl Responder, Error> {
-    let client_url = config.get(ConfigKey::ClientUrl)?;
+    let client_url = config.lock().await.get(ConfigKey::ClientUrl)?;
 
     let provider = OAuth2Provider::try_from(params.provider.as_str())
         .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;
@@ -98,7 +101,8 @@ pub async fn callback(
         .await
         .map_err(Error::InternalServerError)?;
 
-    let oauth2_user = provider.fetch_user(&oauth2, &token).await.map_err(|_| {
+    let oauth2_user = provider.fetch_user(&oauth2, &token).await.map_err(|e| {
+        error!("Unable to fetch the user from the OAuth provider: {}", e);
         Error::InternalServerError("Unable to fetch the user from the OAuth provider".into())
     })?;
 
@@ -150,9 +154,9 @@ pub async fn callback(
             .finish());
     }
 
-    let auth = auth::authenticate(&db_pool, &config, &user).await?;
+    let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
     Ok(HttpResponse::Found()
         .cookie(auth.cookie)
-        .append_header(("Location", client_url))
+        .append_header(("Location", format!("{}/dashboard", client_url)))
         .finish())
 }

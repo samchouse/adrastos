@@ -8,6 +8,7 @@ use crate::config::ConfigKey;
 use super::OAuth2;
 
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
 pub enum OAuth2Provider {
     Google,
     Facebook,
@@ -111,29 +112,29 @@ pub struct OAuth2ProviderInfo {
     pub scopes: Vec<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct GoogleUser {
     sub: String,
     email: String,
     email_verified: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct FacebookUser {
     id: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct GitHubUser {
-    id: String,
+    id: u32,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct TwitterUser {
     id: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct DiscordUser {
     id: String,
     email: String,
@@ -183,7 +184,7 @@ impl OAuth2UserMethods for GitHubUser {
     }
 
     fn get_id(&self) -> String {
-        self.id.clone()
+        self.id.to_string()
     }
 }
 

@@ -1,7 +1,6 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -18,38 +17,50 @@ import {
   FormLabel,
   FormMessage,
   Input
-} from '~/components/ui';
-import { postSignup } from '~/lib/api';
+} from '~/components';
+import { useSignupMutation } from '~/hooks';
 
-const formSchema = z.object({
-  firstName: z
-    .string()
-    .nonempty({ message: 'First name is required' })
-    .max(50, { message: 'First name must be less than 50 characters' }),
-  lastName: z
-    .string()
-    .nonempty({ message: 'Last name is required' })
-    .max(50, { message: 'Last name must be less than 50 characters' }),
-  email: z
-    .string()
-    .nonempty({ message: 'Email is required' })
-    .email({ message: 'Invalid email address' }),
-  username: z
-    .string()
-    .nonempty({ message: 'Username is required' })
-    .min(5, { message: 'Username must be at least 5 characters' })
-    .max(64, { message: 'Username must be less than 64 characters' }),
-  password: z
-    .string()
-    .nonempty({ message: 'Password is required' })
-    .min(8, { message: 'Password must be at least 8 characters' })
-    .max(64, { message: 'Password must be less than 64 characters' }),
-  tac: z
-    .boolean()
-    .refine((v) => v, { message: 'You must accept the Terms and Conditions' })
-});
+const formSchema = z
+  .object({
+    firstName: z
+      .string()
+      .nonempty({ message: 'First name is required' })
+      .max(50, { message: 'First name must be less than 50 characters' }),
+    lastName: z
+      .string()
+      .nonempty({ message: 'Last name is required' })
+      .max(50, { message: 'Last name must be less than 50 characters' }),
+    email: z
+      .string()
+      .nonempty({ message: 'Email is required' })
+      .email({ message: 'Invalid email address' }),
+    username: z
+      .string()
+      .nonempty({ message: 'Username is required' })
+      .min(5, { message: 'Username must be at least 5 characters' })
+      .max(64, { message: 'Username must be less than 64 characters' }),
+    password: z
+      .string()
+      .nonempty({ message: 'Password is required' })
+      .min(8, { message: 'Password must be at least 8 characters' })
+      .max(64, { message: 'Password must be less than 64 characters' }),
+    confirmPassword: z.string().nonempty({ message: 'Re-enter your password' }),
+    tac: z
+      .boolean()
+      .refine((v) => v, { message: 'You must accept the Terms and Conditions' })
+  })
+  .superRefine(({ password, confirmPassword }, ctx) => {
+    if (password !== confirmPassword)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "The passwords don't match",
+        path: ['confirmPassword']
+      });
+  });
 
 export const SignupForm: React.FC = () => {
+  const { mutate } = useSignupMutation();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,10 +71,6 @@ export const SignupForm: React.FC = () => {
       password: '',
       tac: false
     }
-  });
-  const { mutate } = useMutation({
-    mutationFn: async (data: Parameters<typeof postSignup>[0]) =>
-      await postSignup(data)
   });
 
   return (
@@ -133,7 +140,30 @@ export const SignupForm: React.FC = () => {
                 <FormItem className="w-full">
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="Password" {...field} />
+                    <Input
+                      {...field}
+                      type="password"
+                      placeholder="Password"
+                      data-form-type="password,new"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem className="w-full">
+                  <FormLabel>Confirm Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="password"
+                      data-form-type="password,confirmation"
+                      placeholder="Confirm Password"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

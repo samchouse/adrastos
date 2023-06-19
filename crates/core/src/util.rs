@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use actix_web::{HttpRequest, cookie::Cookie};
+use actix_web::{cookie::Cookie, HttpRequest};
 use validator::ValidationError;
 
 use crate::error::Error;

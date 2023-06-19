@@ -9,19 +9,25 @@ use adrastos_core::{
     auth::oauth2::OAuth2,
     config::{Config, ConfigKey},
     db::{postgres, redis},
-    entities,
+    entities::{self, System},
+    migrations::Migrations,
 };
+use clap::Parser;
+use cli::{Cli, Command};
 use dotenvy::dotenv;
 use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
 use openapi::ApiDoc;
 use rustls::{Certificate, PrivateKey, ServerConfig};
 use rustls_pemfile::{certs, pkcs8_private_keys};
+use sea_query::PostgresQueryBuilder;
 use serde_json::json;
 use std::{fs::File, io::BufReader, process};
+use tokio::sync::Mutex;
 use tracing::{error, info};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+mod cli;
 mod handlers;
 mod middleware;
 mod openapi;
@@ -32,13 +38,45 @@ async fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt::init();
     dotenv().ok();
 
-    let config = Config::new().unwrap_or_else(|err| {
+    let mut config = Config::new().unwrap_or_else(|err| {
         error!("missing required environment variables: {:#?}", err);
         process::exit(1)
     });
 
     let db_pool = postgres::create_pool(&config);
-    entities::migrations::migrate(&db_pool).await;
+    entities::init(&db_pool, &config).await;
+
+    {
+        let conn = db_pool.get().await.unwrap();
+        config.attach_system(
+            conn.query(&System::get(), &[])
+                .await
+                .unwrap()
+                .into_iter()
+                .next()
+                .unwrap()
+                .into(),
+        );
+    }
+
+    let cli = Cli::parse();
+    if cli.command == Some(Command::Migrate) {
+        let conn = db_pool.get().await.unwrap();
+
+        let migrations = Migrations::all_from("0.1.1");
+        for migration in &migrations {
+            info!("Migration: {}", migration.version);
+            for query in &migration.queries {
+                info!("Query: {}", query.to_string(PostgresQueryBuilder));
+
+                conn.execute(query.to_string(PostgresQueryBuilder).as_str(), &[])
+                    .await
+                    .unwrap();
+            }
+        }
+
+        return Ok(());
+    }
 
     let use_tls = config.get(ConfigKey::UseTls).ok();
     let certs_path = config.get(ConfigKey::CertsPath).unwrap();
@@ -65,9 +103,9 @@ async fn main() -> std::io::Result<()> {
                     .allow_any_method()
                     .allow_any_origin(),
             )
-            .app_data(web::Data::new(config.clone()))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(OAuth2::new(&config)))
+            .app_data(web::Data::new(Mutex::new(config.clone())))
             .app_data(web::Data::new(redis::create_pool(&config)))
             .app_data(web::JsonConfig::default().error_handler(|err, _| {
                 let err_string = err.to_string();
@@ -81,16 +119,20 @@ async fn main() -> std::io::Result<()> {
                 .into()
             }))
             .app_data(web::Data::new(
-                AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(
-                    &config.get(ConfigKey::SmtpHost).unwrap(),
-                )
-                .unwrap()
-                .port(config.get(ConfigKey::SmtpPort).unwrap().parse().unwrap())
-                .credentials(Credentials::new(
-                    config.get(ConfigKey::SmtpUsername).unwrap(),
-                    config.get(ConfigKey::SmtpPassword).unwrap(),
-                ))
-                .build::<Tokio1Executor>(),
+                if let Ok(smtp_host) = config.get(ConfigKey::SmtpHost) {
+                    Some(
+                        AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&smtp_host)
+                            .unwrap()
+                            .port(config.get(ConfigKey::SmtpPort).unwrap().parse().unwrap())
+                            .credentials(Credentials::new(
+                                config.get(ConfigKey::SmtpUsername).unwrap(),
+                                config.get(ConfigKey::SmtpPassword).unwrap(),
+                            ))
+                            .build::<Tokio1Executor>(),
+                    )
+                } else {
+                    None
+                },
             ))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
@@ -118,6 +160,11 @@ async fn main() -> std::io::Result<()> {
                         handlers::auth::mfa::regenerate,
                     ))),
             )
+            .service(web::scope("/config").service((
+                handlers::config::details,
+                handlers::config::oauth2,
+                handlers::config::smtp,
+            )))
             .service(
                 web::scope("/tables")
                     .service((
