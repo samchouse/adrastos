@@ -25,6 +25,7 @@ import {
   FormMessage,
   Input
 } from '~/components';
+import { useTokenRefreshQuery } from '~/hooks';
 import { useLoginMutation } from '~/hooks/mutations';
 import { getOauth2LoginUrl, providers } from '~/lib';
 
@@ -49,7 +50,8 @@ const formSchema = z.object({
 });
 
 export const LoginForm: React.FC = () => {
-  const { mutate, isLoading, data } = useLoginMutation();
+  const { data } = useTokenRefreshQuery();
+  const { mutate, isLoading } = useLoginMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

@@ -144,7 +144,7 @@ export const OAuth2Card: React.FC = () => {
             <div className="flex flex-col gap-y-3">
               {providers.map((provider) => (
                 <div key={provider}>
-                  <div className="flex justify-between">
+                  <div className="flex items-center justify-between">
                     <h3 className="text-base font-medium">
                       {providerNames[provider]}
                     </h3>

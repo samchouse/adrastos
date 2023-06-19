@@ -48,13 +48,7 @@ pub async fn details(
 
     Ok(HttpResponse::Ok().json(json!({
         "success": true,
-        "smtpConfig": system.smtp_config.map(|c| json!({
-            "host": c.host,
-            "port": c.port,
-            "username": c.username,
-            "senderName": c.sender_name,
-            "senderEmail": c.sender_email,
-        })),
+        "smtpConfig": system.smtp_config,
         "oauth2Config": {
             "google": system.google_config,
             "facebook": system.facebook_config,

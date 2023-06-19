@@ -2,6 +2,7 @@ use std::fmt;
 
 use sea_query::{enum_def, Alias, ColumnDef, Expr, PostgresQueryBuilder, Query, Table};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use tokio_postgres::Row;
 
 use super::{Identity, Init};
@@ -12,6 +13,7 @@ pub struct SmtpConfig {
     pub host: String,
     pub port: u16,
     pub username: String,
+    #[serde(skip_serializing)]
     pub password: String, // TODO(@Xenfo): Encrypt this
     pub sender_name: String,
     pub sender_email: String,
@@ -71,7 +73,17 @@ impl System {
                     <System as Identity>::Iden::SmtpConfig,
                     self.smtp_config
                         .as_ref()
-                        .and_then(|v| serde_json::to_string(v).ok())
+                        .map(|v| {
+                            json!({
+                                "host": v.host,
+                                "port": v.port,
+                                "username": v.username,
+                                "password": v.password,
+                                "senderName": v.sender_name,
+                                "senderEmail": v.sender_email,
+                            })
+                            .to_string()
+                        })
                         .into(),
                 ),
                 (

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { client, getConfigDetails, getTokenRefresh } from '~/lib';
+import { getConfigDetails, getTokenRefresh } from '~/lib';
 
 export const queryKeys = {
   tokenRefresh: ['auth', 'token', 'refresh'] as const,
@@ -14,9 +14,12 @@ export const useTokenRefreshQuery = () =>
     refetchInterval: 1000 * 60 * 10
   });
 
-export const useConfigDetailsQuery = () =>
-  useQuery({
+export const useConfigDetailsQuery = () => {
+  const { isSuccess } = useTokenRefreshQuery();
+
+  return useQuery({
     queryKey: queryKeys.configDetails,
     queryFn: async () => await getConfigDetails(),
-    enabled: client.defaults.headers.Authorization !== undefined
+    enabled: isSuccess
   });
+};

@@ -122,7 +122,7 @@ pub async fn signup(
             .unwrap();
 
         let mut pubsub = conn.into_pubsub();
-        pubsub.subscribe("html").await.map_err(|_| {
+        pubsub.subscribe("html").await.map_err(|_| { // TODO(@Xenfo): set a timeout
             Error::InternalServerError("An error occurred while subscribing to Redis".into())
         })?;
 

@@ -1,12 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import {
-  client,
-  postConfigOAuth2,
-  postConfigSmtp,
-  postLogin,
-  postSignup
-} from '~/lib';
+import { postConfigOAuth2, postConfigSmtp, postLogin, postSignup } from '~/lib';
 
 import { queryKeys } from './queries';
 
@@ -17,17 +11,16 @@ export const useSignupMutation = () =>
       await postSignup(data)
   });
 
-export const useLoginMutation = () =>
-  useMutation({
+export const useLoginMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
     mutationKey: ['auth', 'login'],
     mutationFn: async (data: Parameters<typeof postLogin>[0]) =>
       await postLogin(data),
-    onSuccess: (data) => {
-      client.defaults.headers.common[
-        'Authorization'
-      ] = `Bearer ${data.accessToken}`;
-    }
+    onSuccess: () => queryClient.refetchQueries(queryKeys.tokenRefresh)
   });
+};
 
 export const useConfigSmtpMutation = () => {
   const queryClient = useQueryClient();
