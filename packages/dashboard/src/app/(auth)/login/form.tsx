@@ -10,6 +10,7 @@ import {
 } from '@icons-pack/react-simple-icons';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
@@ -50,8 +51,9 @@ const formSchema = z.object({
 });
 
 export const LoginForm: React.FC = () => {
+  const router = useRouter();
   const { data } = useTokenRefreshQuery();
-  const { mutate, isLoading } = useLoginMutation();
+  const { mutateAsync, isLoading } = useLoginMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -63,7 +65,12 @@ export const LoginForm: React.FC = () => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit((values) => mutate(values))}>
+      <form
+        onSubmit={form.handleSubmit(async (values) => {
+          await mutateAsync(values);
+          router.push('/dashboard');
+        })}
+      >
         <CardContent>
           <div className="flex flex-col gap-1">
             <FormField

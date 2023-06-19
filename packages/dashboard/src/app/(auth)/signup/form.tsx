@@ -1,7 +1,10 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
@@ -18,7 +21,7 @@ import {
   FormMessage,
   Input
 } from '~/components';
-import { useSignupMutation } from '~/hooks';
+import { useSignupMutation, useTokenRefreshQuery } from '~/hooks';
 
 const formSchema = z
   .object({
@@ -59,7 +62,9 @@ const formSchema = z
   });
 
 export const SignupForm: React.FC = () => {
+  const router = useRouter();
   const { mutate } = useSignupMutation();
+  const { isFetching, isSuccess } = useTokenRefreshQuery();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -72,6 +77,10 @@ export const SignupForm: React.FC = () => {
       tac: false
     }
   });
+
+  useEffect(() => {
+    if (isSuccess) router.push('/');
+  }, [isSuccess, router]);
 
   return (
     <Form {...form}>
@@ -183,7 +192,9 @@ export const SignupForm: React.FC = () => {
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
-                    <FormLabel>I accept the Terms and Conditions</FormLabel>
+                    <FormLabel className="cursor-pointer">
+                      I accept the Terms and Conditions
+                    </FormLabel>
                   </div>
                   <FormMessage />
                 </FormItem>
@@ -195,6 +206,7 @@ export const SignupForm: React.FC = () => {
         <CardFooter>
           <div className="w-full">
             <Button type="submit" className="w-full">
+              {isFetching && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign Up
             </Button>
 

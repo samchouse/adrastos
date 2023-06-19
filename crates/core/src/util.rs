@@ -5,6 +5,12 @@ use validator::ValidationError;
 
 use crate::error::Error;
 
+#[derive(Debug)]
+pub struct Cookies {
+    pub is_logged_in: Cookie<'static>,
+    pub refresh_token: Cookie<'static>,
+}
+
 pub fn string_to_static_str(s: String) -> &'static str {
     Box::leak(s.into_boxed_str())
 }
@@ -17,14 +23,26 @@ pub fn create_validation_error(code: &str, message: Option<String>) -> Validatio
     }
 }
 
-pub fn get_refresh_token_cookie(req: &HttpRequest) -> Result<Cookie<'static>, Error> {
+pub fn get_auth_cookies(req: &HttpRequest) -> Result<Cookies, Error> {
     let Ok(cookies) = req.cookies() else {
         return Err(Error::InternalServerError("An error occurred reading cookies".into()));
     };
 
-    let Some(cookie) = cookies.iter().find(|cookie| cookie.name() == "refreshToken") else {
+    let Some(is_logged_in_cookie) = cookies.iter().find(|cookie| cookie.name() == "isLoggedIn") else {
         return Err(Error::Unauthorized);
     };
 
-    Ok(cookie.clone())
+    let Some(refresh_token_cookie) = cookies.iter().find(|cookie| cookie.name() == "refreshToken") else {
+        return Err(Error::Unauthorized);
+    };
+
+    Ok(Cookies {
+        is_logged_in: {
+            let mut cookie = is_logged_in_cookie.clone();
+            cookie.set_path("/");
+
+            cookie
+        },
+        refresh_token: refresh_token_cookie.clone(),
+    })
 }

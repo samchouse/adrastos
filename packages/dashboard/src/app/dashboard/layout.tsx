@@ -25,7 +25,8 @@ const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { isError } = useTokenRefreshQuery();
 
   useEffect(() => {
-    if (isError) router.push(`/login?to=${pathname}`);
+    if (isError && pathname.includes('/dashboard'))
+      router.push(`/login?to=${pathname}`);
   }, [data, isError, pathname, router]);
 
   return (

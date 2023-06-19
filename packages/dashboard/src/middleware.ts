@@ -5,9 +5,12 @@ export const middleware = (request: NextRequest) => {
     request.nextUrl.pathname === '/login' &&
     request.nextUrl.searchParams.has('to')
   ) {
-    request.cookies.delete('isLoggedIn');
-    return NextResponse.next();
+    const response = NextResponse.next();
+    response.cookies.delete('isLoggedIn');
+    return response;
   }
+
+  console.log(request.cookies.get('isLoggedIn'), request.nextUrl.pathname);
 
   if (
     ['/', '/login', '/signup'].includes(request.nextUrl.pathname) &&

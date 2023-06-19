@@ -2,6 +2,7 @@
 
 import { ExternalLink, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import {
   Avatar,
@@ -16,11 +17,14 @@ import {
   DropdownMenuTrigger,
   Skeleton
 } from '~/components/ui';
-import { getLogout } from '~/lib';
+import { useLogoutMutation } from '~/hooks';
 import { User as UserType } from '~/types';
 
-export const User: React.FC<{ user?: UserType }> = ({ user }) =>
-  user ? (
+export const User: React.FC<{ user?: UserType }> = ({ user }) => {
+  const router = useRouter();
+  const { mutateAsync } = useLogoutMutation();
+
+  return user ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
@@ -66,7 +70,13 @@ export const User: React.FC<{ user?: UserType }> = ({ user }) =>
           </DropdownMenuItem>
         </Link>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={getLogout} className="cursor-pointer">
+        <DropdownMenuItem
+          onSelect={async () => {
+            await mutateAsync();
+            router.push('/');
+          }}
+          className="cursor-pointer"
+        >
           <LogOut className="mr-2 h-4 w-4" />
           <span>Logout</span>
         </DropdownMenuItem>
@@ -75,3 +85,4 @@ export const User: React.FC<{ user?: UserType }> = ({ user }) =>
   ) : (
     <Skeleton className="h-[40px] w-[40px] rounded-full" />
   );
+};
