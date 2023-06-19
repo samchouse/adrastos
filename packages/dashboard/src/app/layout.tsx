@@ -4,15 +4,7 @@ import { Work_Sans as WorkSans } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
 
-import {
-  Auth,
-  Button,
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  Providers
-} from '~/components';
+import { Auth, Buttons, Providers } from '~/components';
 import { cn } from '~/lib/utils';
 
 import logo from '../../public/logo.svg';
@@ -32,12 +24,12 @@ const RootLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
         'bg-background text-primary flex h-screen flex-col'
       )}
     >
-      <div
-        className={cn(
-          'bg-background relative z-10 flex w-screen justify-between border-b px-4 py-3'
-        )}
-      >
-        <div className="flex flex-row">
+      <Providers>
+        <header
+          className={cn(
+            'bg-background relative z-10 flex w-screen justify-between border-b px-4 py-3'
+          )}
+        >
           <Link href="/">
             <Image
               src={logo}
@@ -48,35 +40,13 @@ const RootLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
             />
           </Link>
 
-          <NavigationMenu className="flex-none">
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuLink
-                  asChild
-                  className="focus:bg-accent focus:text-accent-foreground bg-background hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent/50 data-[active]:bg-accent/50 group inline-flex h-10 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none disabled:pointer-events-none disabled:opacity-50"
-                >
-                  <Link href="/dashboard">Dashboard</Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
-        </div>
+          <Buttons />
+        </header>
 
-        <div className="space-x-3">
-          <Button asChild variant="outline">
-            <Link href="/login">Login</Link>
-          </Button>
-          <Button asChild className="">
-            <Link href="/signup">Signup</Link>
-          </Button>
-        </div>
-      </div>
-
-      <main className="bg-background h-full">
-        <Providers>
+        <main className="bg-background h-full">
           <Auth>{children}</Auth>
-        </Providers>
-      </main>
+        </main>
+      </Providers>
     </body>
   </html>
 );

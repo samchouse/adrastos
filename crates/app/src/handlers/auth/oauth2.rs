@@ -12,7 +12,7 @@ use adrastos_core::{
 };
 
 use actix_session::Session;
-use actix_web::{get, http::header, web, HttpResponse, Responder};
+use actix_web::{get, http::header, web, HttpResponse, Responder, cookie::Cookie};
 use chrono::Utc;
 use sea_query::Expr;
 use serde::Deserialize;
@@ -156,7 +156,15 @@ pub async fn callback(
 
     let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
     Ok(HttpResponse::Found()
-        .cookie(auth.cookie)
+        .cookie(auth.cookie.clone())
+        .cookie(
+            Cookie::build("isLoggedIn", true.to_string())
+                .secure(true)
+                .http_only(true)
+                .path("/")
+                .expires(auth.cookie.expires().unwrap())
+                .finish(),
+        )
         .append_header(("Location", format!("{}/dashboard", client_url)))
         .finish())
 }

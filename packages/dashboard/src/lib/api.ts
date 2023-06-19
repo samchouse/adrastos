@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
 
 import { env } from '~/env';
+import { User } from '~/types';
 
 export const client = axios.create({
   baseURL: '/api',
@@ -18,6 +19,14 @@ client.interceptors.response.use(
   ) =>
     err.response?.data ? Promise.reject(err.response.data) : Promise.reject(err)
 );
+
+export const getMe = async () => {
+  const res = await client.get<{
+    success: true;
+    user: User;
+  }>('/me');
+  return res.data;
+};
 
 interface SignupData {
   firstName: string;
