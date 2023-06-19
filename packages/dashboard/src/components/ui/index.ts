@@ -62,3 +62,5 @@ export {
   TableRow
 } from './table';
 export { Switch } from './switch';
+export { Skeleton } from './skeleton';
+export { Alert, AlertDescription, AlertTitle } from './alert';

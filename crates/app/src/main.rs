@@ -138,7 +138,7 @@ async fn main() -> std::io::Result<()> {
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", ApiDoc::openapi()),
             )
-            .service(handlers::index)
+            .service((handlers::index, handlers::me))
             .service(
                 web::scope("/auth")
                     .service((

@@ -11,7 +11,7 @@ use adrastos_core::{
 };
 use tokio::sync::Mutex;
 
-use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{cookie::Cookie, get, post, web, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
 use deadpool_redis::redis::{self, AsyncCommands};
 use futures_util::StreamExt;
@@ -122,7 +122,8 @@ pub async fn signup(
             .unwrap();
 
         let mut pubsub = conn.into_pubsub();
-        pubsub.subscribe("html").await.map_err(|_| { // TODO(@Xenfo): set a timeout
+        pubsub.subscribe("html").await.map_err(|_| {
+            // TODO(@Xenfo): set a timeout
             Error::InternalServerError("An error occurred while subscribing to Redis".into())
         })?;
 
@@ -208,10 +209,20 @@ pub async fn login(
     }
 
     let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
-    Ok(HttpResponse::Ok().cookie(auth.cookie).json(json!({
-        "success": true,
-        "user": user
-    })))
+    Ok(HttpResponse::Ok()
+        .cookie(auth.cookie.clone())
+        .cookie(
+            Cookie::build("isLoggedIn", true.to_string())
+                .secure(true)
+                .http_only(true)
+                .path("/")
+                .expires(auth.cookie.expires().unwrap())
+                .finish(),
+        )
+        .json(json!({
+            "success": true,
+            "user": user
+        })))
 }
 
 #[get("/logout")]

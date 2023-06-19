@@ -96,6 +96,14 @@ pub async fn refresh(
                 .expires(Expiration::from(cookie_expiration))
                 .finish(),
         )
+        .cookie(
+            Cookie::build("isLoggedIn", true.to_string())
+                .secure(true)
+                .http_only(true)
+                .path("/")
+                .expires(Expiration::from(cookie_expiration))
+                .finish(),
+        )
         .json(json!({
             "success": true,
             "accessToken": access_token.clone().token,
