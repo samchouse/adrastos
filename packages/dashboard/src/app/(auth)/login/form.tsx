@@ -10,7 +10,7 @@ import {
 } from '@icons-pack/react-simple-icons';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
@@ -52,6 +52,8 @@ const formSchema = z.object({
 
 export const LoginForm: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const { data } = useTokenRefreshQuery();
   const { mutateAsync, isLoading } = useLoginMutation();
 
@@ -68,7 +70,7 @@ export const LoginForm: React.FC = () => {
       <form
         onSubmit={form.handleSubmit(async (values) => {
           await mutateAsync(values);
-          router.push('/dashboard');
+          router.push(searchParams.get('to') ?? '/dashboard');
         })}
       >
         <CardContent>

@@ -1,8 +1,7 @@
-'use client';
-
 import { ExternalLink, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Dispatch, SetStateAction } from 'react';
 
 import {
   Avatar,
@@ -20,7 +19,10 @@ import {
 import { useLogoutMutation } from '~/hooks';
 import { User as UserType } from '~/types';
 
-export const User: React.FC<{ user?: UserType }> = ({ user }) => {
+export const User: React.FC<{
+  user?: UserType;
+  setIsLoggingOff: Dispatch<SetStateAction<boolean>>;
+}> = ({ user, setIsLoggingOff }) => {
   const router = useRouter();
   const { mutateAsync } = useLogoutMutation();
 
@@ -72,8 +74,10 @@ export const User: React.FC<{ user?: UserType }> = ({ user }) => {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={async () => {
+            setIsLoggingOff(true);
             await mutateAsync();
             router.push('/');
+            // setIsLoggingOff(false);
           }}
           className="cursor-pointer"
         >

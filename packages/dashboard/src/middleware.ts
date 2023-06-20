@@ -10,8 +10,6 @@ export const middleware = (request: NextRequest) => {
     return response;
   }
 
-  console.log(request.cookies.get('isLoggedIn'), request.nextUrl.pathname);
-
   if (
     ['/', '/login', '/signup'].includes(request.nextUrl.pathname) &&
     request.cookies.get('isLoggedIn')?.value === 'true'
@@ -22,5 +20,7 @@ export const middleware = (request: NextRequest) => {
     request.nextUrl.pathname.startsWith('/dashboard') &&
     request.cookies.get('isLoggedIn')?.value !== 'true'
   )
-    return NextResponse.redirect(new URL('/', request.url));
+    return NextResponse.redirect(
+      new URL(`/login?to=${request.nextUrl.pathname}`, request.url)
+    );
 };

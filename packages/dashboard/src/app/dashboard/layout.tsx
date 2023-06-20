@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   NavigationMenu,
@@ -20,14 +20,15 @@ import logo from '../../../public/logo.svg';
 const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const [isLoggingOff, setIsLoggingOff] = useState(false);
 
   const { data } = useMeQuery();
   const { isError } = useTokenRefreshQuery();
 
   useEffect(() => {
-    if (isError && pathname.includes('/dashboard'))
+    if (isError && !isLoggingOff && pathname.includes('/dashboard'))
       router.push(`/login?to=${pathname}`);
-  }, [data, isError, pathname, router]);
+  }, [data, isError, isLoggingOff, pathname, router]);
 
   return (
     <section className="flex flex-col">
@@ -69,7 +70,7 @@ const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
           </NavigationMenu>
         </div>
 
-        <User user={data?.user} />
+        <User user={data?.user} setIsLoggingOff={setIsLoggingOff} />
       </div>
 
       <div className="bg-background z-20 m-5 h-full">{children}</div>
