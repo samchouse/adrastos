@@ -77,7 +77,6 @@ export const User: React.FC<{
             setIsLoggingOff(true);
             await mutateAsync();
             router.push('/');
-            // setIsLoggingOff(false);
           }}
           className="cursor-pointer"
         >

@@ -11,6 +11,7 @@ import {
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
@@ -24,7 +25,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  Input
+  Input,
+  useToast
 } from '~/components';
 import { useTokenRefreshQuery } from '~/hooks';
 import { useLoginMutation } from '~/hooks/mutations';
@@ -52,10 +54,11 @@ const formSchema = z.object({
 
 export const LoginForm: React.FC = () => {
   const router = useRouter();
+  const { toast } = useToast();
   const searchParams = useSearchParams();
 
   const { data } = useTokenRefreshQuery();
-  const { mutateAsync, isLoading } = useLoginMutation();
+  const { mutateAsync, isLoading, isError, error } = useLoginMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -64,6 +67,14 @@ export const LoginForm: React.FC = () => {
       password: ''
     }
   });
+
+  useEffect(() => {
+    if (isError)
+      toast({
+        title: 'Login failed',
+        description: (error as { message: string }).message
+      });
+  }, [isError, error, toast]);
 
   return (
     <Form {...form}>

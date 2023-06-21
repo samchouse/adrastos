@@ -15,6 +15,7 @@ client.interceptors.response.use(
   (
     err: AxiosError<{
       success: false;
+      message: string;
     }>
   ) =>
     err.response?.data ? Promise.reject(err.response.data) : Promise.reject(err)
