@@ -100,6 +100,7 @@ pub async fn callback(
     let token = oauth2
         .confirm_login(
             provider.clone(),
+            &config,
             redis_pool,
             OAuth2LoginInfo {
                 session_csrf_token,
