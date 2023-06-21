@@ -6,6 +6,7 @@ import {
   SiTwitter
 } from '@icons-pack/react-simple-icons';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import {
   Button,
@@ -27,6 +28,7 @@ const providerIcons = {
 };
 
 export const OAuth2Card: React.FC = () => {
+  const pathname = usePathname();
   const { data } = useTokenRefreshQuery();
 
   return (
@@ -42,7 +44,9 @@ export const OAuth2Card: React.FC = () => {
         <div className="grid w-full grid-cols-5 gap-2">
           {providers.map((provider) => (
             <Button key={provider} asChild variant="outline" className="w-full">
-              <Link href={getOauth2LoginUrl(provider, data?.accessToken)}>
+              <Link
+                href={getOauth2LoginUrl(provider, data?.accessToken, pathname)}
+              >
                 {providerIcons[provider]}
               </Link>
             </Button>

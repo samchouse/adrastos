@@ -76,11 +76,12 @@ export const providers = [
 
 export const getOauth2LoginUrl = (
   provider: (typeof providers)[number],
-  auth?: string
+  auth?: string,
+  to?: string
 ) =>
   `${env.NEXT_PUBLIC_BACKEND_URL}/auth/oauth2/login?provider=${provider}${
     auth ? `&auth=${auth}` : ''
-  }`;
+  }${to ? `&to=${to}` : ''}`;
 
 export const getConfigDetails = async () => {
   const res = await client.get<{

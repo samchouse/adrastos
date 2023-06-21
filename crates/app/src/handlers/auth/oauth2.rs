@@ -12,7 +12,7 @@ use adrastos_core::{
 };
 
 use actix_session::Session;
-use actix_web::{get, http::header, web, HttpResponse, Responder, cookie::Cookie};
+use actix_web::{cookie::Cookie, get, http::header, web, HttpResponse, Responder};
 use chrono::Utc;
 use sea_query::Expr;
 use serde::Deserialize;
@@ -23,6 +23,7 @@ use crate::{middleware::user, session::SessionKey};
 #[derive(Deserialize)]
 pub struct LoginParams {
     provider: String,
+    to: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -62,6 +63,14 @@ pub async fn login(
             .insert(SessionKey::UserId.to_string(), user.id)
             .map_err(|_| {
                 Error::InternalServerError("Unable to insert user ID into session".to_string())
+            })?;
+    }
+
+    if let Some(to) = params.to.clone() {
+        session
+            .insert(SessionKey::Redirect.to_string(), to)
+            .map_err(|_| {
+                Error::InternalServerError("Unable to insert redirect URL into session".to_string())
             })?;
     }
 
@@ -154,6 +163,13 @@ pub async fn callback(
             .finish());
     }
 
+    let redirect_url = session
+        .get::<String>(&SessionKey::Redirect.to_string())
+        .map_err(|_| {
+            Error::InternalServerError("An error occurred while getting the session".into())
+        })?
+        .unwrap_or(format!("{}/dashboard", client_url));
+
     let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
     Ok(HttpResponse::Found()
         .cookie(auth.cookie.clone())
@@ -165,6 +181,6 @@ pub async fn callback(
                 .expires(auth.cookie.expires().unwrap())
                 .finish(),
         )
-        .append_header(("Location", format!("{}/dashboard", client_url)))
+        .append_header(("Location", redirect_url))
         .finish())
 }

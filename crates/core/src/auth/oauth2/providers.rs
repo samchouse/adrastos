@@ -31,8 +31,8 @@ impl OAuth2Provider {
             },
             OAuth2Provider::Facebook => OAuth2ProviderInfo {
                 client_info: (ConfigKey::FacebookClientId, ConfigKey::FacebookClientSecret),
-                auth_url: "https://www.facebook.com/v15.0/dialog/oauth".into(),
-                token_url: "https://graph.facebook.com/v15.0/oauth/access_token".into(),
+                auth_url: "https://www.facebook.com/v17.0/dialog/oauth".into(),
+                token_url: "https://graph.facebook.com/v17.0/oauth/access_token".into(),
                 scopes: vec!["public_profile".into()],
             },
             OAuth2Provider::GitHub => OAuth2ProviderInfo {
@@ -45,7 +45,7 @@ impl OAuth2Provider {
                 client_info: (ConfigKey::TwitterClientId, ConfigKey::TwitterClientSecret),
                 auth_url: "https://twitter.com/i/oauth2/authorize".into(),
                 token_url: "https://api.twitter.com/2/oauth2/token".into(),
-                scopes: vec!["users.read".into()],
+                scopes: vec!["users.read".into(), "tweet.read".into()],
             },
             OAuth2Provider::Discord => OAuth2ProviderInfo {
                 client_info: (ConfigKey::DiscordClientId, ConfigKey::DiscordClientSecret),
@@ -131,6 +131,11 @@ struct GitHubUser {
 
 #[derive(Deserialize, Debug)]
 struct TwitterUser {
+    data: TwitterUserData,
+}
+
+#[derive(Deserialize, Debug)]
+struct TwitterUserData {
     id: String,
 }
 
@@ -194,7 +199,7 @@ impl OAuth2UserMethods for TwitterUser {
     }
 
     fn get_id(&self) -> String {
-        self.id.clone()
+        self.data.id.clone()
     }
 }
 
