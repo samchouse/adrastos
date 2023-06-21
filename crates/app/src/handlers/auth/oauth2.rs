@@ -166,6 +166,7 @@ pub async fn callback(
 
     let redirect_url = session
         .get::<String>(&SessionKey::Redirect.to_string())
+        .map(|url| format!("{}/{}", client_url, url))
         .map_err(|_| {
             Error::InternalServerError("An error occurred while getting the session".into())
         })?
