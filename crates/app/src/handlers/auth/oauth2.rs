@@ -166,10 +166,10 @@ pub async fn callback(
 
     let redirect_url = session
         .get::<String>(&SessionKey::Redirect.to_string())
-        .map(|url| format!("{}/{}", client_url, url))
         .map_err(|_| {
             Error::InternalServerError("An error occurred while getting the session".into())
         })?
+        .map(|url| format!("{}/{}", client_url, url))
         .unwrap_or(format!("{}/dashboard", client_url));
 
     let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
