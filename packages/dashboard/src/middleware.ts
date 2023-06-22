@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+export const config = {
+  matcher: ['/((?!_next).*)']
+};
+
 export const middleware = (request: NextRequest) => {
   if (
     request.nextUrl.pathname === '/login' &&
