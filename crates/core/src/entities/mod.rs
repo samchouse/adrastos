@@ -6,12 +6,10 @@ use actix_web::web;
 use async_trait::async_trait;
 use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{Alias, Iden, PostgresQueryBuilder, SelectStatement, SimpleExpr};
+use secrecy::ExposeSecret;
 use serde_json::Value;
 
-use crate::{
-    config::{Config, ConfigKey},
-    error::Error,
-};
+use crate::{config::Config, error::Error};
 
 pub use connection::*;
 pub use refresh_token_tree::*;
@@ -210,15 +208,15 @@ pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
     }
 
     let mut smtp_config = None;
-    if let Ok(host) = config.get(ConfigKey::SmtpHost) {
-        if let Ok(port) = config.get(ConfigKey::SmtpPort) {
-            if let Ok(username) = config.get(ConfigKey::SmtpUsername) {
-                if let Ok(password) = config.get(ConfigKey::SmtpPassword) {
+    if let Some(host) = config.smtp_host.clone() {
+        if let Some(port) = config.smtp_port {
+            if let Some(username) = config.smtp_username.clone() {
+                if let Some(password) = config.smtp_password.clone() {
                     smtp_config = Some(SmtpConfig {
                         host,
-                        port: port.parse().unwrap(),
+                        port,
                         username,
-                        password,
+                        password: password.expose_secret().to_string(),
                         sender_name: "Adrastos".into(),
                         sender_email: "no-reply@adrastos.xenfo.dev".into(),
                     });
@@ -227,47 +225,47 @@ pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
         }
     }
     let mut google_config = None;
-    if let Ok(client_id) = config.get(ConfigKey::GoogleClientId) {
-        if let Ok(client_secret) = config.get(ConfigKey::GoogleClientSecret) {
+    if let Some(client_id) = config.google_client_id.clone() {
+        if let Some(client_secret) = config.google_client_secret.clone() {
             google_config = Some(OAuth2Config {
                 client_id,
-                client_secret,
+                client_secret: client_secret.expose_secret().to_string(),
             });
         }
     }
     let mut facebook_config = None;
-    if let Ok(client_id) = config.get(ConfigKey::FacebookClientId) {
-        if let Ok(client_secret) = config.get(ConfigKey::FacebookClientSecret) {
+    if let Some(client_id) = config.facebook_client_id.clone() {
+        if let Some(client_secret) = config.facebook_client_secret.clone() {
             facebook_config = Some(OAuth2Config {
                 client_id,
-                client_secret,
+                client_secret: client_secret.expose_secret().to_string(),
             });
         }
     }
     let mut github_config = None;
-    if let Ok(client_id) = config.get(ConfigKey::GitHubClientId) {
-        if let Ok(client_secret) = config.get(ConfigKey::GitHubClientSecret) {
+    if let Some(client_id) = config.github_client_id.clone() {
+        if let Some(client_secret) = config.github_client_secret.clone() {
             github_config = Some(OAuth2Config {
                 client_id,
-                client_secret,
+                client_secret: client_secret.expose_secret().to_string(),
             });
         }
     }
     let mut twitter_config = None;
-    if let Ok(client_id) = config.get(ConfigKey::TwitterClientId) {
-        if let Ok(client_secret) = config.get(ConfigKey::TwitterClientSecret) {
+    if let Some(client_id) = config.twitter_client_id.clone() {
+        if let Some(client_secret) = config.twitter_client_secret.clone() {
             twitter_config = Some(OAuth2Config {
                 client_id,
-                client_secret,
+                client_secret: client_secret.expose_secret().to_string(),
             });
         }
     }
     let mut discord_config = None;
-    if let Ok(client_id) = config.get(ConfigKey::DiscordClientId) {
-        if let Ok(client_secret) = config.get(ConfigKey::DiscordClientSecret) {
+    if let Some(client_id) = config.discord_client_id.clone() {
+        if let Some(client_secret) = config.discord_client_secret.clone() {
             discord_config = Some(OAuth2Config {
                 client_id,
-                client_secret,
+                client_secret: client_secret.expose_secret().to_string(),
             });
         }
     }
@@ -288,7 +286,7 @@ pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
         .values_panic([
             "system".into(),
             env!("CARGO_PKG_VERSION").into(),
-            None::<String>.into(),
+            env!("CARGO_PKG_VERSION").into(),
             smtp_config
                 .as_ref()
                 .and_then(|v| serde_json::to_string(v).ok())

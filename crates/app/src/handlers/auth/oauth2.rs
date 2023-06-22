@@ -5,7 +5,7 @@ use adrastos_core::{
         self,
         oauth2::{providers::OAuth2Provider, OAuth2, OAuth2LoginInfo},
     },
-    config::{self, ConfigKey},
+    config,
     entities::{Connection, ConnectionIden, Mutate, User},
     error::Error,
     id::Id,
@@ -88,7 +88,7 @@ pub async fn callback(
     redis_pool: web::Data<deadpool_redis::Pool>,
     session: Session,
 ) -> actix_web::Result<impl Responder, Error> {
-    let client_url = config.lock().await.get(ConfigKey::ClientUrl)?;
+    let client_url = config.lock().await.client_url.clone();
 
     let provider = OAuth2Provider::try_from(params.provider.as_str())
         .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;

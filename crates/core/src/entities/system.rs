@@ -29,7 +29,7 @@ pub struct OAuth2Config {
 pub struct System {
     pub id: String,
     pub current_version: String,
-    pub previous_version: Option<String>,
+    pub previous_version: String,
 
     pub smtp_config: Option<SmtpConfig>,
 
@@ -63,6 +63,10 @@ impl System {
         Query::update()
             .table(System::table())
             .values([
+                (
+                    <System as Identity>::Iden::CurrentVersion,
+                    self.current_version.clone().into(),
+                ),
                 (
                     <System as Identity>::Iden::PreviousVersion,
                     self.previous_version.clone().into(),
@@ -142,7 +146,11 @@ impl Init for System {
                     .string()
                     .not_null(),
             )
-            .col(ColumnDef::new(<Self as Identity>::Iden::PreviousVersion).string())
+            .col(
+                ColumnDef::new(<Self as Identity>::Iden::PreviousVersion)
+                    .string()
+                    .not_null(),
+            )
             .col(ColumnDef::new(<Self as Identity>::Iden::SmtpConfig).string())
             .col(ColumnDef::new(<Self as Identity>::Iden::GoogleConfig).string())
             .col(ColumnDef::new(<Self as Identity>::Iden::FacebookConfig).string())

@@ -10,7 +10,7 @@ use rustls_pemfile::certs;
 use tokio_postgres::config::SslMode;
 use tokio_postgres_rustls::MakeRustlsConnect;
 
-use crate::config::{self, ConfigKey};
+use crate::config;
 
 pub enum Error {
     UniqueKeyViolation,
@@ -41,11 +41,7 @@ impl fmt::Display for Error {
 }
 
 pub fn create_pool(config: &config::Config) -> Pool {
-    let pg_config = config
-        .get(ConfigKey::CockroachUrl)
-        .unwrap()
-        .parse::<Config>()
-        .unwrap();
+    let pg_config = config.postgres_url.parse::<Config>().unwrap();
     let manager_config = ManagerConfig {
         recycling_method: RecyclingMethod::Fast,
     };
@@ -54,11 +50,7 @@ pub fn create_pool(config: &config::Config) -> Pool {
         SslMode::Disable => Manager::from_config(pg_config, NoTls, manager_config),
         _ => {
             let ca_cert = &mut BufReader::new(
-                File::open(format!(
-                    "{}/cockroach.crt",
-                    config.get(ConfigKey::CertsPath).unwrap()
-                ))
-                .unwrap(),
+                File::open(format!("{}/cockroach.crt", config.certs_path)).unwrap(),
             );
             let ca_cert = Certificate(certs(ca_cert).unwrap()[0].clone());
 

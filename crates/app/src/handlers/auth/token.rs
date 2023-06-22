@@ -24,6 +24,7 @@ use tokio::sync::Mutex;
     )
 )]
 #[get("/token/refresh")]
+#[tracing::instrument(skip(config, req, db_pool))]
 pub async fn refresh(
     req: HttpRequest,
     config: web::Data<Mutex<config::Config>>,

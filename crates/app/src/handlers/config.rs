@@ -112,7 +112,7 @@ pub async fn smtp(
     }?;
 
     conn.execute(&system.set(), &[]).await.unwrap();
-    config.lock().await.attach_system(system);
+    config.lock().await.attach_system(&system);
 
     Ok(HttpResponse::Ok().json(json!({
         "success": true,
@@ -153,7 +153,7 @@ pub async fn oauth2(
     });
 
     conn.execute(&system.set(), &[]).await.unwrap();
-    config.lock().await.attach_system(system);
+    config.lock().await.attach_system(&system);
 
     Ok(HttpResponse::Ok().json(json!({
         "success": true,

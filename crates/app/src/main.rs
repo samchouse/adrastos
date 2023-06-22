@@ -2,12 +2,10 @@
 
 use actix_cors::Cors;
 use actix_session::{storage::RedisSessionStore, SessionMiddleware};
-use actix_web::{
-    cookie::Key, error::InternalError, middleware::Logger, web, App, HttpResponse, HttpServer,
-};
+use actix_web::{cookie::Key, error::InternalError, web, App, HttpResponse, HttpServer};
 use adrastos_core::{
     auth::oauth2::OAuth2,
-    config::{Config, ConfigKey},
+    config::Config,
     db::{postgres, redis},
     entities::{self, System},
     migrations::Migrations,
@@ -20,10 +18,13 @@ use openapi::ApiDoc;
 use rustls::{Certificate, PrivateKey, ServerConfig};
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use sea_query::PostgresQueryBuilder;
+use secrecy::ExposeSecret;
 use serde_json::json;
 use std::{fs::File, io::BufReader, process};
 use tokio::sync::Mutex;
 use tracing::{error, info};
+use tracing_actix_web::TracingLogger;
+use tracing_unwrap::{OptionExt, ResultExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -32,38 +33,39 @@ mod handlers;
 mod middleware;
 mod openapi;
 mod session;
+mod telemetry;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    tracing_subscriber::fmt::init();
     dotenv().ok();
+    let _guard = telemetry::register_subscriber();
 
-    let mut config = Config::new().unwrap_or_else(|err| {
-        error!("missing required environment variables: {:#?}", err);
-        process::exit(1)
-    });
+    let mut config = Config::new();
+
+    let _sentry_guard = telemetry::init_sentry(&config);
 
     let db_pool = postgres::create_pool(&config);
     entities::init(&db_pool, &config).await;
 
     {
-        let conn = db_pool.get().await.unwrap();
+        let conn = db_pool.get().await.unwrap_or_log();
         config.attach_system(
-            conn.query(&System::get(), &[])
+            &conn
+                .query(&System::get(), &[])
                 .await
-                .unwrap()
+                .unwrap_or_log()
                 .into_iter()
                 .next()
-                .unwrap()
+                .unwrap_or_log()
                 .into(),
         );
     }
 
     let cli = Cli::parse();
     if cli.command == Some(Command::Migrate) {
-        let conn = db_pool.get().await.unwrap();
+        let conn = db_pool.get().await.unwrap_or_log();
 
-        let migrations = Migrations::all_from("0.1.1");
+        let migrations = Migrations::all_from(&config.previous_version);
         for migration in &migrations {
             info!("Migration: {}", migration.version);
             for query in &migration.queries {
@@ -71,31 +73,32 @@ async fn main() -> std::io::Result<()> {
 
                 conn.execute(query.to_string(PostgresQueryBuilder).as_str(), &[])
                     .await
-                    .unwrap();
+                    .unwrap_or_log();
             }
         }
 
         return Ok(());
     }
 
-    let use_tls = config.get(ConfigKey::UseTls).ok();
-    let certs_path = config.get(ConfigKey::CertsPath).unwrap();
-    let server_url = config.get(ConfigKey::ServerUrl).unwrap();
+    let use_tls = config.use_tls;
+    let server_url = config.server_url.clone();
+    let certs_path = config.certs_path.clone();
 
-    let store = RedisSessionStore::new(config.get(ConfigKey::DragonflyUrl).unwrap())
+    let store = RedisSessionStore::new(config.redis_url.clone())
         .await
-        .unwrap();
+        .unwrap_or_log();
 
     let server = HttpServer::new(move || {
         App::new()
-            .wrap(Logger::default())
+            .wrap(TracingLogger::default())
+            .wrap(sentry_actix::Sentry::new())
             .wrap(middleware::user::GetUser {
                 config: config.clone(),
                 db_pool: db_pool.clone(),
             })
             .wrap(SessionMiddleware::new(
                 store.clone(),
-                Key::from(config.get(ConfigKey::SecretKey).unwrap().as_bytes()),
+                Key::from(config.secret_key.expose_secret().as_bytes()),
             ))
             .wrap(
                 Cors::default()
@@ -118,22 +121,25 @@ async fn main() -> std::io::Result<()> {
                 )
                 .into()
             }))
-            .app_data(web::Data::new(
-                if let Ok(smtp_host) = config.get(ConfigKey::SmtpHost) {
-                    Some(
-                        AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&smtp_host)
-                            .unwrap()
-                            .port(config.get(ConfigKey::SmtpPort).unwrap().parse().unwrap())
-                            .credentials(Credentials::new(
-                                config.get(ConfigKey::SmtpUsername).unwrap(),
-                                config.get(ConfigKey::SmtpPassword).unwrap(),
-                            ))
-                            .build::<Tokio1Executor>(),
-                    )
-                } else {
-                    None
-                },
-            ))
+            .app_data(web::Data::new(if let Some(smtp_host) = &config.smtp_host {
+                Some(
+                    AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(smtp_host)
+                        .unwrap_or_log()
+                        .port(config.smtp_port.unwrap_or_log())
+                        .credentials(Credentials::new(
+                            config.smtp_username.clone().unwrap_or_log(),
+                            config
+                                .smtp_password
+                                .clone()
+                                .unwrap_or_log()
+                                .expose_secret()
+                                .to_string(),
+                        ))
+                        .build::<Tokio1Executor>(),
+                )
+            } else {
+                None
+            }))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", ApiDoc::openapi()),
@@ -182,54 +188,52 @@ async fn main() -> std::io::Result<()> {
             .default_service(web::route().to(handlers::not_found))
     });
 
-    let server = match use_tls.clone() {
-        Some(use_tls) if use_tls == "true" => {
-            let rustls_config = ServerConfig::builder()
-                .with_safe_defaults()
-                .with_no_client_auth();
+    let server = if use_tls {
+        let rustls_config = ServerConfig::builder()
+            .with_safe_defaults()
+            .with_no_client_auth();
 
-            let cert_file =
-                &mut BufReader::new(File::open(format!("{}/cert.pem", certs_path)).unwrap());
-            let key_file =
-                &mut BufReader::new(File::open(format!("{}/key.pem", certs_path)).unwrap());
+        let cert_file =
+            &mut BufReader::new(File::open(format!("{}/cert.pem", certs_path)).unwrap_or_log());
+        let key_file =
+            &mut BufReader::new(File::open(format!("{}/key.pem", certs_path)).unwrap_or_log());
 
-            let cert_chain = certs(cert_file)
-                .unwrap()
-                .into_iter()
-                .map(Certificate)
-                .collect();
-            let mut keys: Vec<PrivateKey> = pkcs8_private_keys(key_file)
-                .unwrap()
-                .into_iter()
-                .map(PrivateKey)
-                .collect();
+        let cert_chain = certs(cert_file)
+            .unwrap_or_log()
+            .into_iter()
+            .map(Certificate)
+            .collect();
+        let mut keys: Vec<PrivateKey> = pkcs8_private_keys(key_file)
+            .unwrap_or_log()
+            .into_iter()
+            .map(PrivateKey)
+            .collect();
 
-            if keys.is_empty() {
-                error!("Couldn't locate private keys");
-                process::exit(1);
-            }
-
-            let rustls_config = rustls_config
-                .with_single_cert(cert_chain, keys.remove(0))
-                .unwrap();
-
-            server.bind_rustls(&server_url, rustls_config)
+        if keys.is_empty() {
+            error!("Couldn't locate private keys");
+            process::exit(1);
         }
-        _ => server.bind(&server_url),
+
+        let rustls_config = rustls_config
+            .with_single_cert(cert_chain, keys.remove(0))
+            .unwrap_or_log();
+
+        server.bind_rustls(&server_url, rustls_config)
+    } else {
+        server.bind(&server_url)
     }?
     .run();
 
-    let use_tls = use_tls.unwrap();
-    let (server, _) = tokio::join!(server, server_started(&use_tls, &server_url));
+    let (server, _) = tokio::join!(server, server_started(use_tls, &server_url));
 
     server
 }
 
-async fn server_started(use_tls: &str, url: &str) {
+async fn server_started(use_tls: bool, url: &str) {
     let mut url = format!("https://{url}");
-    if use_tls == "false" {
+    if !use_tls {
         url = url.replace("https", "http")
     };
 
-    info!("Server started at {url}");
+    info!("server started at {url}");
 }

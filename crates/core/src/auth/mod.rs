@@ -14,10 +14,11 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use jsonwebtoken::{
     decode, encode, errors::ErrorKind, DecodingKey, EncodingKey, Header, Validation,
 };
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::{self, Config, ConfigKey},
+    config::{self, Config},
     entities::{Mutate, RefreshTokenTree, User},
     error::Error,
     id::Id,
@@ -124,8 +125,6 @@ pub async fn authenticate(
 
 impl TokenType {
     pub fn sign(&self, config: &config::Config, user: &User) -> Result<TokenInfo, Error> {
-        let secret_key = config.get(ConfigKey::SecretKey)?;
-
         let expires_at = match self {
             TokenType::Access => Utc::now() + Duration::minutes(15),
             TokenType::Refresh => Utc::now() + Duration::days(15),
@@ -141,7 +140,7 @@ impl TokenType {
         let token = encode(
             &Header::default(),
             &claims,
-            &EncodingKey::from_secret(secret_key.as_bytes()),
+            &EncodingKey::from_secret(config.secret_key.expose_secret().as_bytes()),
         )
         .map_err(|err| {
             Error::InternalServerError(format!("Unable to encode {self} token: {err}"))
@@ -156,11 +155,9 @@ impl TokenType {
     }
 
     pub fn verify(config: &config::Config, token: String) -> Result<TokenInfo, Error> {
-        let secret_key = config.get(ConfigKey::SecretKey)?;
-
         let claims = decode::<Claims>(
             &token,
-            &DecodingKey::from_secret(secret_key.as_bytes()),
+            &DecodingKey::from_secret(config.secret_key.expose_secret().as_bytes()),
             &Validation::default(),
         )
         .map(|data| data.claims)
