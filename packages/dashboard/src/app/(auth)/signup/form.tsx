@@ -187,9 +187,9 @@ export const SignupForm: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <FormControl>
                       <Checkbox
-                        {...{ ...field, value: undefined }}
+                        {...{ ...field, value: undefined, onChange: undefined }}
                         checked={field.value}
-                        onCheckedChange={field.onChange}
+                        onCheckedChange={(state) => field.onChange(!!state)}
                       />
                     </FormControl>
                     <FormLabel className="cursor-pointer">
