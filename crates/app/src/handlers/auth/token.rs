@@ -31,7 +31,7 @@ pub async fn refresh(
 ) -> actix_web::Result<impl Responder, Error> {
     let refresh_token = auth::TokenType::verify(
         &config.lock().await.clone(),
-        util::get_refresh_token_cookie(&req)?.value().into(),
+        util::get_auth_cookies(&req)?.refresh_token.value().into(),
     )?;
     if refresh_token.token_type != TokenType::Refresh {
         return Err(Error::Forbidden("Not a refresh token".into()));

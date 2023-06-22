@@ -3,11 +3,13 @@
 import { Alert, AlertDescription, AlertTitle, Button } from '~/components';
 import { useMeQuery } from '~/hooks';
 
+import { OAuth2Card } from './_components';
+
 const Page: React.FC = () => {
   const { data } = useMeQuery();
 
   return (
-    <>
+    <div className="flex flex-col gap-y-5">
       {data?.user && (
         <Alert
           variant="default"
@@ -23,7 +25,9 @@ const Page: React.FC = () => {
           <Button variant="outline">Resend verification</Button>
         </Alert>
       )}
-    </>
+
+      <OAuth2Card />
+    </div>
   );
 };
 

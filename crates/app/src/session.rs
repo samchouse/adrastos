@@ -5,6 +5,7 @@ pub enum SessionKey {
     CsrfToken,
     LoginUserId,
     MfaRetries,
+    Redirect,
 }
 
 impl fmt::Display for SessionKey {
@@ -14,6 +15,7 @@ impl fmt::Display for SessionKey {
             SessionKey::CsrfToken => "csrf_token",
             SessionKey::LoginUserId => "login_user_id",
             SessionKey::MfaRetries => "mfa_retries",
+            SessionKey::Redirect => "redirect",
         };
 
         write!(f, "{name}")

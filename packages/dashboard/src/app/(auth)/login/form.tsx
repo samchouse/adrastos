@@ -10,6 +10,8 @@ import {
 } from '@icons-pack/react-simple-icons';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
@@ -23,7 +25,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  Input
+  Input,
+  useToast
 } from '~/components';
 import { useTokenRefreshQuery } from '~/hooks';
 import { useLoginMutation } from '~/hooks/mutations';
@@ -50,8 +53,12 @@ const formSchema = z.object({
 });
 
 export const LoginForm: React.FC = () => {
+  const router = useRouter();
+  const { toast } = useToast();
+  const searchParams = useSearchParams();
+
   const { data } = useTokenRefreshQuery();
-  const { mutate, isLoading } = useLoginMutation();
+  const { mutateAsync, isLoading, isError, error } = useLoginMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -61,9 +68,22 @@ export const LoginForm: React.FC = () => {
     }
   });
 
+  useEffect(() => {
+    if (isError)
+      toast({
+        title: 'Login failed',
+        description: (error as { message: string }).message
+      });
+  }, [isError, error, toast]);
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit((values) => mutate(values))}>
+      <form
+        onSubmit={form.handleSubmit(async (values) => {
+          await mutateAsync(values);
+          router.push(searchParams.get('to') ?? '/dashboard');
+        })}
+      >
         <CardContent>
           <div className="flex flex-col gap-1">
             <FormField

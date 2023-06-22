@@ -4,11 +4,12 @@ use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
     config::{self, ConfigKey},
-    entities::{Mutate, User, UserIden},
+    entities::{Identity, Mutate, User, UserIden},
     error::Error,
     id::Id,
     util,
 };
+use sea_query::Expr;
 use tokio::sync::Mutex;
 
 use actix_web::{cookie::Cookie, get, post, web, HttpRequest, HttpResponse, Responder};
@@ -73,6 +74,26 @@ pub async fn signup(
 ) -> actix_web::Result<impl Responder, Error> {
     if !mailchecker::is_valid(body.email.as_str()) {
         return Err(Error::BadRequest("Invalid email".into()));
+    }
+
+    if User::find(
+        &db_pool,
+        vec![Expr::col(<User as Identity>::Iden::Email).eq(body.email.clone())],
+    )
+    .await
+    .is_ok()
+    {
+        return Err(Error::BadRequest("Email already in use".into()));
+    }
+
+    if User::find(
+        &db_pool,
+        vec![Expr::col(<User as Identity>::Iden::Username).eq(body.username.clone())],
+    )
+    .await
+    .is_ok()
+    {
+        return Err(Error::BadRequest("Username already in use".into()));
     }
 
     let user = User {
@@ -232,9 +253,11 @@ pub async fn logout(
     config: web::Data<Mutex<config::Config>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let mut cookie = util::get_refresh_token_cookie(&req)?;
-    let refresh_token =
-        auth::TokenType::verify(&config.lock().await.clone(), cookie.value().into())?;
+    let mut cookies = util::get_auth_cookies(&req)?;
+    let refresh_token = auth::TokenType::verify(
+        &config.lock().await.clone(),
+        cookies.refresh_token.value().into(),
+    )?;
     if refresh_token.token_type != TokenType::Refresh {
         return Err(Error::Unauthorized);
     }
@@ -248,10 +271,14 @@ pub async fn logout(
         .delete(&db_pool)
         .await?;
 
-    cookie.make_removal();
-    Ok(HttpResponse::Ok().cookie(cookie).json(json!({
-        "success": true
-    })))
+    cookies.is_logged_in.make_removal();
+    cookies.refresh_token.make_removal();
+    Ok(HttpResponse::Ok()
+        .cookie(cookies.is_logged_in)
+        .cookie(cookies.refresh_token)
+        .json(json!({
+            "success": true
+        })))
 }
 
 #[get("/verify")]

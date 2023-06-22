@@ -1,3 +1,5 @@
+// TODO(@Xenfo): support many browser tabs being open at the same time, currently it'll invalidate the other tabs
+
 use std::{collections::HashMap, fmt};
 
 use chrono::{DateTime, Duration, Utc};

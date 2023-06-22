@@ -11,7 +11,8 @@ use oauth2::{
     EmptyExtraTokenFields, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope,
     StandardTokenResponse, TokenResponse, TokenUrl,
 };
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Deserialize};
+use tokio::sync::Mutex;
 
 use crate::config::{self, ConfigKey};
 
@@ -33,6 +34,16 @@ pub struct OAuth2LoginInfo {
     pub session_csrf_token: String,
     pub params_csrf_token: String,
     pub auth_code: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct FacebookTokenDebugResponse {
+    data: FacebookTokenDebugResponseData,
+}
+
+#[derive(Deserialize, Debug)]
+struct FacebookTokenDebugResponseData {
+    scopes: Vec<String>,
 }
 
 trait AddRequiredScopes {
@@ -123,6 +134,7 @@ impl OAuth2 {
     pub async fn confirm_login(
         &self,
         provider: OAuth2Provider,
+        config: &Mutex<config::Config>,
         redis_pool: web::Data<deadpool_redis::Pool>,
         security_info: OAuth2LoginInfo,
     ) -> Result<StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>, String> {
@@ -157,12 +169,34 @@ impl OAuth2 {
             .await
             .map_err(|_| "Unable to get the token from the OAuth provider")?;
 
-        let token_scopes = token
-            .scopes()
-            .unwrap()
-            .iter()
-            .map(|scope| scope.to_string())
-            .collect::<Vec<String>>();
+        let token_scopes = match provider {
+            OAuth2Provider::Facebook => {
+                let r_client = reqwest::Client::new();
+
+                let debug_result =
+                    r_client
+                        .get(format!(
+                        "https://graph.facebook.com/debug_token?input_token={}&access_token={}|{}",
+                        token.access_token().secret(),
+                        client.client_id().as_str(),
+                        config.lock().await.get(ConfigKey::FacebookClientSecret).unwrap(),
+                    ))
+                        .send()
+                        .await
+                        .map_err(|_| "Unable to get the app token from Facebook")?
+                        .json::<FacebookTokenDebugResponse>()
+                        .await
+                        .map_err(|_| "Unable to get the app token from Facebook")?;
+
+                debug_result.data.scopes
+            }
+            _ => token
+                .scopes()
+                .unwrap()
+                .iter()
+                .map(|scope| scope.to_string())
+                .collect::<Vec<String>>(),
+        };
         if !provider
             .info()
             .scopes

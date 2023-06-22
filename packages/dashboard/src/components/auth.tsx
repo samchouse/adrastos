@@ -10,9 +10,7 @@ export const Auth: React.FC<React.PropsWithChildren> = ({ children }) => {
 
   useEffect(() => {
     if (data?.accessToken)
-      client.defaults.headers.common[
-        'Authorization'
-      ] = `Bearer ${data.accessToken}`;
+      client.defaults.headers.Authorization = `Bearer ${data.accessToken}`;
   }, [data]);
 
   return children;

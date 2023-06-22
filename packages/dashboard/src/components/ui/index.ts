@@ -64,3 +64,16 @@ export {
 export { Switch } from './switch';
 export { Skeleton } from './skeleton';
 export { Alert, AlertDescription, AlertTitle } from './alert';
+export {
+  Toast,
+  ToastAction,
+  type ToastActionElement,
+  ToastClose,
+  ToastDescription,
+  type ToastProps,
+  ToastProvider,
+  ToastTitle,
+  ToastViewport
+} from './toast';
+export { reducer, toast, useToast } from './use-toast';
+export { Toaster } from './toaster';
