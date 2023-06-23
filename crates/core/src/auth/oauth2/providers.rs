@@ -3,8 +3,6 @@ use std::fmt;
 use oauth2::{basic::BasicTokenType, EmptyExtraTokenFields, StandardTokenResponse};
 use serde::{Deserialize, Serialize};
 
-use crate::config::ConfigKey;
-
 use super::OAuth2;
 
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Debug)]
@@ -21,7 +19,6 @@ impl OAuth2Provider {
     pub fn info(&self) -> OAuth2ProviderInfo {
         match self {
             OAuth2Provider::Google => OAuth2ProviderInfo {
-                client_info: (ConfigKey::GoogleClientId, ConfigKey::GoogleClientSecret),
                 auth_url: "https://accounts.google.com/o/oauth2/v2/auth".into(),
                 token_url: "https://oauth2.googleapis.com/token".into(),
                 scopes: vec![
@@ -30,25 +27,21 @@ impl OAuth2Provider {
                 ],
             },
             OAuth2Provider::Facebook => OAuth2ProviderInfo {
-                client_info: (ConfigKey::FacebookClientId, ConfigKey::FacebookClientSecret),
                 auth_url: "https://www.facebook.com/v17.0/dialog/oauth".into(),
                 token_url: "https://graph.facebook.com/v17.0/oauth/access_token".into(),
                 scopes: vec!["public_profile".into()],
             },
             OAuth2Provider::GitHub => OAuth2ProviderInfo {
-                client_info: (ConfigKey::GitHubClientId, ConfigKey::GitHubClientSecret),
                 auth_url: "https://github.com/login/oauth/authorize".into(),
                 token_url: "https://github.com/login/oauth/access_token".into(),
                 scopes: vec!["read:user".into()],
             },
             OAuth2Provider::Twitter => OAuth2ProviderInfo {
-                client_info: (ConfigKey::TwitterClientId, ConfigKey::TwitterClientSecret),
                 auth_url: "https://twitter.com/i/oauth2/authorize".into(),
                 token_url: "https://api.twitter.com/2/oauth2/token".into(),
                 scopes: vec!["users.read".into(), "tweet.read".into()],
             },
             OAuth2Provider::Discord => OAuth2ProviderInfo {
-                client_info: (ConfigKey::DiscordClientId, ConfigKey::DiscordClientSecret),
                 auth_url: "https://discord.com/oauth2/authorize".into(),
                 token_url: "https://discord.com/api/oauth2/token".into(),
                 scopes: vec!["identify".into(), "email".into()],
@@ -106,7 +99,6 @@ pub struct OAuth2User {
 }
 
 pub struct OAuth2ProviderInfo {
-    pub client_info: (ConfigKey, ConfigKey),
     pub auth_url: String,
     pub token_url: String,
     pub scopes: Vec<String>,

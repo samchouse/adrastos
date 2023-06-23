@@ -1,5 +1,6 @@
 # files
 *.env
+!example.env
 **/next-env.d.ts
 
 # directories

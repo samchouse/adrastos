@@ -11,10 +11,11 @@ use oauth2::{
     EmptyExtraTokenFields, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope,
     StandardTokenResponse, TokenResponse, TokenUrl,
 };
+use secrecy::ExposeSecret;
 use serde::{de::DeserializeOwned, Deserialize};
 use tokio::sync::Mutex;
 
-use crate::config::{self, ConfigKey};
+use crate::config;
 
 use self::providers::{OAuth2Provider, OAuth2ProviderInfo, OAuth2User, OAuth2UserMethods};
 
@@ -91,13 +92,33 @@ impl OAuth2 {
         Self::providers().iter().for_each(|provider| {
             let info = provider.info();
 
-            if let Ok(client_id) = config.get(info.client_info.0.clone()) && let Ok(client_secret) = config.get(info.client_info.1.clone()) {
-                oauth2.create_client(provider, &config.get(ConfigKey::ServerUrl).unwrap(), ClientInfo {
-                    client_id,
-                    client_secret,
-                    auth_url: info.auth_url,
-                    token_url: info.token_url,
-                });
+            let (client_id, client_secret) = match provider {
+                OAuth2Provider::Google => (&config.google_client_id, &config.google_client_secret),
+                OAuth2Provider::Facebook => {
+                    (&config.facebook_client_id, &config.facebook_client_secret)
+                }
+                OAuth2Provider::GitHub => (&config.github_client_id, &config.github_client_secret),
+                OAuth2Provider::Twitter => {
+                    (&config.twitter_client_id, &config.twitter_client_secret)
+                }
+                OAuth2Provider::Discord => {
+                    (&config.discord_client_id, &config.discord_client_secret)
+                }
+            };
+
+            if let Some(client_id) = client_id.to_owned() {
+                if let Some(client_secret) = client_secret.to_owned() {
+                    oauth2.create_client(
+                        provider,
+                        &config.server_url,
+                        ClientInfo {
+                            client_id,
+                            client_secret: client_secret.expose_secret().to_string(),
+                            auth_url: info.auth_url,
+                            token_url: info.token_url,
+                        },
+                    );
+                }
             }
         });
 
@@ -173,20 +194,25 @@ impl OAuth2 {
             OAuth2Provider::Facebook => {
                 let r_client = reqwest::Client::new();
 
-                let debug_result =
-                    r_client
-                        .get(format!(
+                let debug_result = r_client
+                    .get(format!(
                         "https://graph.facebook.com/debug_token?input_token={}&access_token={}|{}",
                         token.access_token().secret(),
                         client.client_id().as_str(),
-                        config.lock().await.get(ConfigKey::FacebookClientSecret).unwrap(),
+                        config
+                            .lock()
+                            .await
+                            .facebook_client_secret
+                            .as_ref()
+                            .unwrap()
+                            .expose_secret(),
                     ))
-                        .send()
-                        .await
-                        .map_err(|_| "Unable to get the app token from Facebook")?
-                        .json::<FacebookTokenDebugResponse>()
-                        .await
-                        .map_err(|_| "Unable to get the app token from Facebook")?;
+                    .send()
+                    .await
+                    .map_err(|_| "Unable to get the app token from Facebook")?
+                    .json::<FacebookTokenDebugResponse>()
+                    .await
+                    .map_err(|_| "Unable to get the app token from Facebook")?;
 
                 debug_result.data.scopes
             }

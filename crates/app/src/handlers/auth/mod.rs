@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
-    config::{self, ConfigKey},
+    config,
     entities::{Identity, Mutate, User, UserIden},
     error::Error,
     id::Id,
@@ -132,12 +132,11 @@ pub async fn signup(
                 )
             })?;
 
-        let mut conn =
-            redis::Client::open(config.lock().await.get(ConfigKey::DragonflyUrl).unwrap())
-                .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
-                .get_async_connection()
-                .await
-                .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?;
+        let mut conn = redis::Client::open(config.lock().await.redis_url.clone())
+            .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
+            .get_async_connection()
+            .await
+            .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?;
         conn.publish::<_, _, ()>("emails", verification_token)
             .await
             .unwrap();

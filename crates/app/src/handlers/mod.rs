@@ -4,10 +4,7 @@ use serde_json::json;
 use tokio::sync::Mutex;
 
 use actix_web::{get, web, HttpResponse, Responder};
-use adrastos_core::{
-    config::{Config, ConfigKey},
-    error::Error,
-};
+use adrastos_core::{config::Config, error::Error};
 
 use crate::middleware::user::RequiredUser;
 
@@ -22,10 +19,7 @@ pub async fn not_found() -> actix_web::Result<String, Error> {
 #[get("/")]
 pub async fn index(config: web::Data<Mutex<Config>>) -> actix_web::Result<impl Responder, Error> {
     Ok(HttpResponse::PermanentRedirect()
-        .append_header((
-            "Location",
-            config.lock().await.get(ConfigKey::ClientUrl).unwrap(),
-        ))
+        .append_header(("Location", config.lock().await.client_url.clone()))
         .finish())
 }
 
