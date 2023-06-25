@@ -3,7 +3,7 @@
   "style": "default",
   "rsc": true,
   "tailwind": {
-    "config": "t.js",
+    "config": "tailwind.config.ts",
     "css": "src/app/globals.css",
     "baseColor": "gray",
     "cssVariables": true
