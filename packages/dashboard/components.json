@@ -3,13 +3,13 @@
   "style": "default",
   "rsc": true,
   "tailwind": {
-    "config": "tailwind.config.ts",
+    "config": "t.js",
     "css": "src/app/globals.css",
-    "baseColor": "slate",
-    "cssVariables": false
+    "baseColor": "gray",
+    "cssVariables": true
   },
   "aliases": {
-    "components": "~/components/ui",
+    "components": "~/components",
     "utils": "~/lib/utils"
   }
 }

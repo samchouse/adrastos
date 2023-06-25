@@ -24,7 +24,7 @@ __metadata:
     "@t3-oss/env-nextjs": ^0.4.1
     "@tanstack/react-query": ^4.29.15
     "@tanstack/react-query-devtools": ^4.29.15
-    "@tanstack/react-table": ^8.9.2
+    "@tanstack/react-table": ^8.9.3
     "@total-typescript/ts-reset": ^0.4.2
     autoprefixer: ^10.4.14
     axios: ^1.4.0
@@ -2086,22 +2086,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tanstack/react-table@npm:^8.9.2":
-  version: 8.9.2
-  resolution: "@tanstack/react-table@npm:8.9.2"
+"@tanstack/react-table@npm:^8.9.3":
+  version: 8.9.3
+  resolution: "@tanstack/react-table@npm:8.9.3"
   dependencies:
-    "@tanstack/table-core": 8.9.2
+    "@tanstack/table-core": 8.9.3
   peerDependencies:
     react: ">=16"
     react-dom: ">=16"
-  checksum: 66473ee4f34c7ade6a269c6821dadf228a04e9ce76bedfa6a30bb48608f26023bb2c2b9a45cc3f2323212d676bb26f7a820cb3328c8cd37bd7369d5651fe9628
+  checksum: a71fbbc608bb11b79ecd2b1a838fad2fc4140f9eb1a25bd44b6b1b4c6acd52741b5745e3e022390c642c284d0d528249360e322c0dbc3d34fea031611c207a7d
   languageName: node
   linkType: hard
 
-"@tanstack/table-core@npm:8.9.2":
-  version: 8.9.2
-  resolution: "@tanstack/table-core@npm:8.9.2"
-  checksum: eac43f6a95a08e2edae3f66b31e78b50b826507808ba32aa2fc2fae495aa4d9cdf97a7a1b745c647fdd9ec0c2559971e26df23a98720e0a959681be1caa35f26
+"@tanstack/table-core@npm:8.9.3":
+  version: 8.9.3
+  resolution: "@tanstack/table-core@npm:8.9.3"
+  checksum: 52c7e57daaa3160450fb0bde702ec0b8aab159e2b19efd1012e03b3e167acc52839f5b39578cc8bf96e91346719f400d0435a5191384c168d9477da82f276c38
   languageName: node
   linkType: hard
 
@@ -2170,14 +2170,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:*, @types/react@npm:^18.2.13":
-  version: 18.2.13
-  resolution: "@types/react@npm:18.2.13"
+"@types/react@npm:*, @types/react@npm:^18.2.14":
+  version: 18.2.14
+  resolution: "@types/react@npm:18.2.14"
   dependencies:
     "@types/prop-types": "*"
     "@types/scheduler": "*"
     csstype: ^3.0.2
-  checksum: f7c15f19c164a29262993ea2aae2085fa38cddd9b8359fd8fefabfced91010b515a3abe2042b2b7f2f86e6b38a25b191415aa9313a9027175e3a000883c858cc
+  checksum: a6a5e8cc78f486b9020d1ad009aa6c56943c68c7c6376e0f8399e9cbcd950b7b8f5d73f00200f5379f5e58d31d57d8aed24357f301d8e86108cd438ce6c8b3dd
   languageName: node
   linkType: hard
 
@@ -2383,7 +2383,7 @@ __metadata:
   dependencies:
     "@ianvs/prettier-plugin-sort-imports": ^4.0.2
     "@types/node": ^20.3.1
-    "@types/react": ^18.2.13
+    "@types/react": ^18.2.14
     "@types/react-dom": ^18.2.6
     "@typescript-eslint/eslint-plugin": ^5.60.0
     "@typescript-eslint/parser": ^5.60.0
