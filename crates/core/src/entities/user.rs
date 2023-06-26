@@ -3,13 +3,14 @@
 use std::{collections::HashMap, fmt};
 
 use chrono::{DateTime, Utc};
-use deadpool_postgres::tokio_postgres::Row;
+use deadpool_postgres::{tokio_postgres::Row, Pool};
 use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, SelectStatement,
     SimpleExpr, Table,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tracing_unwrap::ResultExt;
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -50,6 +51,55 @@ pub struct User {
     pub connections: Option<Vec<Connection>>,
     #[serde(skip_serializing)]
     pub refresh_token_trees: Option<Vec<RefreshTokenTree>>,
+}
+
+#[derive(Debug, Validate, Serialize, Deserialize, Clone, Default)]
+pub struct UpdateUser {
+    #[validate(length(max = 50))]
+    pub first_name: Option<String>,
+    #[validate(length(max = 50))]
+    pub last_name: Option<String>,
+    #[validate(email)]
+    pub email: Option<String>,
+    #[validate(length(min = 5, max = 64))]
+    pub username: Option<String>,
+    #[validate(length(min = 8, max = 64))]
+    pub password: Option<String>,
+    pub verified: Option<bool>,
+    pub banned: Option<bool>,
+    pub mfa_secret: Option<Option<String>>,
+    pub mfa_backup_codes: Option<Option<Vec<String>>>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<Option<DateTime<Utc>>>,
+}
+
+impl User {
+    pub async fn update_new(&self, db_pool: &deadpool_postgres::Pool, update: UpdateUser) {
+        let query = sea_query::Query::update()
+            .table(Self::table())
+            .values([
+                (UserIden::FirstName, update.first_name.into()),
+                (UserIden::LastName, update.last_name.into()),
+                // (UserIden::MfaBackupCodes, update.mfa_backup_codes.into()),
+                (UserIden::UpdatedAt, Utc::now().into()),
+            ])
+            .and_where(Expr::col(UserIden::Id).eq(self.id.clone()))
+            .to_string(PostgresQueryBuilder);
+        println!("{}", query);
+
+        // db_pool
+        //     .get()
+        //     .await
+        //     .unwrap_or_log()
+        //     .execute(
+        //         &sea_query::Query::update()
+        //             .values([(UserIden::FirstName, update.first_name.into())])
+        //             .to_string(PostgresQueryBuilder),
+        //         &[],
+        //     )
+        //     .await
+        //     .unwrap_or_log();
+    }
 }
 
 impl UserSelectBuilder {

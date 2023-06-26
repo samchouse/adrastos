@@ -1,10 +1,15 @@
-use std::ops::Deref;
+use std::{collections::HashMap, ops::Deref};
 
-use serde_json::json;
+use chrono::Utc;
+use serde_json::{json, Value};
 use tokio::sync::Mutex;
 
 use actix_web::{get, web, HttpResponse, Responder};
-use adrastos_core::{config::Config, error::Error};
+use adrastos_core::{
+    config::Config,
+    entities::{Query, UpdateUser, User, UserIden},
+    error::Error,
+};
 
 use crate::middleware::user::RequiredUser;
 
@@ -28,5 +33,50 @@ pub async fn me(user: RequiredUser) -> actix_web::Result<impl Responder, Error> 
     Ok(HttpResponse::Ok().json(json!({
         "success": true,
         "user": user.deref(),
+    })))
+}
+
+#[get("/health")]
+pub async fn health(
+    db_pool: web::Data<deadpool_postgres::Pool>,
+) -> actix_web::Result<impl Responder, Error> {
+    let user = User {
+        id: "zxvczcxvzxcv".to_string(),
+        first_name: "asdfasdfasdfasdf".to_string(),
+        last_name: "asdfasdfasdfasd".to_string(),
+        username: "asdfasdfasdfasdf".to_string(),
+        email: "asdfasf@asdfa.asdfasdf".to_string(),
+        password: "asdfsdfasdfasdfasdf".to_string(),
+        verified: false,
+        banned: false,
+        mfa_secret: None,
+        mfa_backup_codes: None,
+        created_at: Utc::now(),
+        updated_at: None,
+
+        connections: None,
+        refresh_token_trees: None,
+    };
+
+    let a = user.query_update(&HashMap::from([(
+        UserIden::FirstName.to_string(),
+        Value::from("test".to_string()),
+    )]));
+    println!("{:?}", a.unwrap());
+    println!(
+        "{:?}",
+        user.update_new(
+            &db_pool,
+            UpdateUser {
+                first_name: Some("test".to_string()),
+                mfa_backup_codes: Some(None),
+                ..Default::default()
+            }
+        )
+        .await
+    );
+
+    Ok(HttpResponse::Ok().json(json!({
+        "success": true,
     })))
 }
