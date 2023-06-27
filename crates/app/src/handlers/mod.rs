@@ -1,13 +1,13 @@
-use std::{collections::HashMap, ops::Deref};
+use std::ops::Deref;
 
 use chrono::Utc;
-use serde_json::{json, Value};
+use serde_json::json;
 use tokio::sync::Mutex;
 
 use actix_web::{get, web, HttpResponse, Responder};
 use adrastos_core::{
     config::Config,
-    entities::{Query, UpdateUser, User, UserIden},
+    entities::{UpdateUser, User},
     error::Error,
 };
 
@@ -58,23 +58,15 @@ pub async fn health(
         refresh_token_trees: None,
     };
 
-    let a = user.query_update(&HashMap::from([(
-        UserIden::FirstName.to_string(),
-        Value::from("test".to_string()),
-    )]));
-    println!("{:?}", a.unwrap());
-    println!(
-        "{:?}",
-        user.update_new(
-            &db_pool,
-            UpdateUser {
-                first_name: Some("test".to_string()),
-                mfa_backup_codes: Some(None),
-                ..Default::default()
-            }
-        )
-        .await
-    );
+    user.update_new(
+        &db_pool,
+        UpdateUser {
+            first_name: Some("test".to_string()),
+            mfa_backup_codes: Some(None),
+            ..Default::default()
+        },
+    )
+    .await;
 
     Ok(HttpResponse::Ok().json(json!({
         "success": true,

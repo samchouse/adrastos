@@ -5,7 +5,7 @@ use std::{collections::HashMap, fmt};
 use actix_web::web;
 use async_trait::async_trait;
 use deadpool_postgres::tokio_postgres::Row;
-use sea_query::{Alias, Iden, PostgresQueryBuilder, SelectStatement, SimpleExpr};
+use sea_query::{Alias, Iden, PostgresQueryBuilder, SelectStatement, SimpleExpr, IntoIden};
 use secrecy::ExposeSecret;
 use serde_json::Value;
 
@@ -178,6 +178,40 @@ impl<T: Identity + Query + Init + From<Row> + Sync> Mutate for T {
             })?;
 
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+enum Update {
+    Skip,
+    Set(SimpleExpr),
+}
+
+impl<T> From<Option<T>> for Update
+where
+    T: Into<SimpleExpr>,
+{
+    fn from(value: Option<T>) -> Self {
+        match value {
+            Some(value) => Update::Set(value.into()),
+            None => Update::Skip,
+        }
+    }
+}
+
+impl Update {
+    fn create<T, I>(values: I) -> Vec<(T, SimpleExpr)>
+    where
+        T: IntoIden,
+        I: IntoIterator<Item = (T, Update)>,
+    {
+        values
+            .into_iter()
+            .filter_map(|(key, value)| match value {
+                Update::Skip => None,
+                Update::Set(value) => Some((key, value)),
+            })
+            .collect()
     }
 }
 
