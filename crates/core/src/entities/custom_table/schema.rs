@@ -1,9 +1,9 @@
 use std::fmt;
 
-use adrastos_macros::DbDeserialize;
+use adrastos_macros::{DbDeserialize, DbSelect};
 use chrono::{DateTime, Utc};
 use sea_query::{
-    enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, SimpleExpr, Table,
+    enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, Table,
 };
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -20,14 +20,11 @@ use super::fields::{
     UrlField,
 };
 
-pub struct CustomTableSchemaSelectBuilder {
-    query_builder: sea_query::SelectStatement,
-}
-
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect)]
 pub struct CustomTableSchema {
     pub id: String,
+    #[select(find)]
     pub name: String,
     pub string_fields: Vec<StringField>,
     pub number_fields: Vec<NumberField>,
@@ -52,60 +49,6 @@ pub struct UpdateCustomTableSchema {
     pub url_fields: Option<Vec<UrlField>>,
     pub select_fields: Option<Vec<SelectField>>,
     pub relation_fields: Option<Vec<RelationField>>,
-}
-
-impl CustomTableSchemaSelectBuilder {
-    pub fn by_id(&mut self, id: &str) -> &mut Self {
-        self.query_builder
-            .and_where(Expr::col(CustomTableSchemaIden::Id).eq(id));
-
-        self
-    }
-
-    pub fn by_name(&mut self, name: &str) -> &mut Self {
-        self.query_builder
-            .and_where(Expr::col(CustomTableSchemaIden::Name).eq(name));
-
-        self
-    }
-
-    pub fn and_where(&mut self, expressions: Vec<SimpleExpr>) -> &mut Self {
-        for expression in expressions {
-            self.query_builder.and_where(expression);
-        }
-
-        self
-    }
-
-    pub async fn finish(
-        &mut self,
-        db_pool: &deadpool_postgres::Pool,
-    ) -> Result<CustomTableSchema, Error> {
-        let row = db_pool
-            .get()
-            .await
-            .unwrap()
-            .query(
-                self.query_builder.to_string(PostgresQueryBuilder).as_str(),
-                &[],
-            )
-            .await
-            .map_err(|e| {
-                let error = format!(
-                    "An error occurred while fetching the {}: {e}",
-                    CustomTableSchema::error_identifier(),
-                );
-                Error::InternalServerError(error)
-            })?
-            .into_iter()
-            .next()
-            .ok_or_else(|| {
-                let message = format!("No {} was found", CustomTableSchema::error_identifier());
-                Error::BadRequest(message)
-            })?;
-
-        Ok(row.into())
-    }
 }
 
 impl CustomTableSchema {
@@ -317,31 +260,6 @@ impl Init for CustomTableSchema {
             )
             .col(ColumnDef::new(CustomTableSchemaIden::UpdatedAt).timestamp_with_time_zone())
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl CustomTableSchema {
-    pub fn select() -> CustomTableSchemaSelectBuilder {
-        CustomTableSchemaSelectBuilder {
-            query_builder: sea_query::Query::select()
-                .from(Self::table())
-                .columns([
-                    CustomTableSchemaIden::Id,
-                    CustomTableSchemaIden::Name,
-                    CustomTableSchemaIden::StringFields,
-                    CustomTableSchemaIden::NumberFields,
-                    CustomTableSchemaIden::BooleanFields,
-                    CustomTableSchemaIden::DateFields,
-                    CustomTableSchemaIden::EmailFields,
-                    CustomTableSchemaIden::UrlFields,
-                    CustomTableSchemaIden::SelectFields,
-                    CustomTableSchemaIden::RelationFields,
-                    CustomTableSchemaIden::CreatedAt,
-                    CustomTableSchemaIden::UpdatedAt,
-                ])
-                .limit(1)
-                .to_owned(),
-        }
     }
 }
 

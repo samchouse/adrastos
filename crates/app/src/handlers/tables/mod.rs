@@ -166,7 +166,7 @@ pub async fn create(
     };
 
     let found_table = CustomTableSchema::select()
-        .by_name(&custom_table.name)
+        .by_name(custom_table.name.clone())
         .finish(&db_pool)
         .await;
     if found_table.is_ok() {
@@ -242,7 +242,7 @@ pub async fn update(
     let body = body.into_inner();
 
     let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
+        .by_name(path.clone())
         .finish(&db_pool)
         .await?;
 
@@ -255,7 +255,7 @@ pub async fn update(
     if let Some(name) = body.name {
         if name != custom_table.name {
             let found_table = CustomTableSchema::select()
-                .by_name(&name)
+                .by_name(name.clone())
                 .finish(&db_pool)
                 .await;
             if found_table.is_ok() {
@@ -363,7 +363,7 @@ pub async fn delete(
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
+        .by_name(path.clone())
         .finish(&db_pool)
         .await?;
 

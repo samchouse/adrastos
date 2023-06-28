@@ -29,7 +29,7 @@ pub async fn rows(
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
+        .by_name(path.clone())
         .finish(&db_pool)
         .await?;
 
@@ -59,7 +59,7 @@ pub async fn row(
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
+        .by_name(path.clone())
         .finish(&db_pool)
         .await?;
 
@@ -95,7 +95,7 @@ pub async fn create(
     .map_err(|err| Error::BadRequest(err.to_string()))?;
 
     let custom_table = CustomTableSchema::select()
-        .by_name(&AsSnakeCase(path.into_inner()).to_string())
+        .by_name(AsSnakeCase(path.into_inner()).to_string())
         .finish(&db_pool)
         .await?;
 
@@ -532,7 +532,7 @@ pub async fn update(
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
+        .by_name(path.clone())
         .finish(&db_pool)
         .await?;
 
@@ -570,7 +570,7 @@ pub async fn delete(
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
+        .by_name(path.clone())
         .finish(&db_pool)
         .await?;
 

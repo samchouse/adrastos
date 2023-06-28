@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use adrastos_macros::DbDeserialize;
+use adrastos_macros::{DbDeserialize, DbSelect};
 use chrono::{DateTime, Utc};
 use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, SelectStatement,
@@ -18,21 +18,21 @@ use crate::{auth, error::Error};
 
 use super::{Connection, Identity, Init, JoinKeys, Query, RefreshTokenTree, Update};
 
-pub struct UserSelectBuilder {
-    query_builder: sea_query::SelectStatement,
-}
-
 #[enum_def]
-#[derive(Debug, Validate, Serialize, Deserialize, Clone, ToSchema, DbDeserialize)]
+#[derive(Debug, Validate, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: String,
+    #[select(find)]
     #[validate(length(max = 50))]
     pub first_name: String,
+    #[select(find)]
     #[validate(length(max = 50))]
     pub last_name: String,
+    #[select(find)]
     #[validate(email)]
     pub email: String,
+    #[select(find)]
     #[validate(length(min = 5, max = 64))]
     pub username: String,
     #[serde(skip_serializing)]
@@ -47,8 +47,10 @@ pub struct User {
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 
+    #[select(skip)]
     #[serde(skip_serializing)]
     pub connections: Option<Vec<Connection>>,
+    #[select(skip)]
     #[serde(skip_serializing)]
     pub refresh_token_trees: Option<Vec<RefreshTokenTree>>,
 }
@@ -72,34 +74,6 @@ pub struct UpdateUser {
 }
 
 impl UserSelectBuilder {
-    pub fn by_id(&mut self, id: &str) -> &mut Self {
-        self.query_builder.and_where(Expr::col(UserIden::Id).eq(id));
-
-        self
-    }
-
-    pub fn by_email(&mut self, email: &str) -> &mut Self {
-        self.query_builder
-            .and_where(Expr::col(UserIden::Email).eq(email));
-
-        self
-    }
-
-    pub fn by_username(&mut self, username: &str) -> &mut Self {
-        self.query_builder
-            .and_where(Expr::col(UserIden::Username).eq(username));
-
-        self
-    }
-
-    pub fn and_where(&mut self, expressions: Vec<SimpleExpr>) -> &mut Self {
-        for expression in expressions {
-            self.query_builder.and_where(expression);
-        }
-
-        self
-    }
-
     pub fn join<T: Query + Identity>(&mut self, alias: Alias) -> &mut Self {
         self.query_builder.expr(Expr::cust(
             format!(
@@ -114,33 +88,6 @@ impl UserSelectBuilder {
         ));
 
         self
-    }
-
-    pub async fn finish(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<User, Error> {
-        let row = db_pool
-            .get()
-            .await
-            .unwrap()
-            .query(
-                self.query_builder.to_string(PostgresQueryBuilder).as_str(),
-                &[],
-            )
-            .await
-            .map_err(|e| {
-                let error = format!(
-                    "An error occurred while fetching the {}: {e}",
-                    User::error_identifier(),
-                );
-                Error::InternalServerError(error)
-            })?
-            .into_iter()
-            .next()
-            .ok_or_else(|| {
-                let message = format!("No {} was found", User::error_identifier());
-                Error::BadRequest(message)
-            })?;
-
-        Ok(row.into())
     }
 }
 
@@ -251,31 +198,6 @@ impl Init for User {
             )
             .col(ColumnDef::new(UserIden::UpdatedAt).timestamp_with_time_zone())
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl User {
-    pub fn select() -> UserSelectBuilder {
-        UserSelectBuilder {
-            query_builder: sea_query::Query::select()
-                .from(Self::table())
-                .columns([
-                    UserIden::Id,
-                    UserIden::FirstName,
-                    UserIden::LastName,
-                    UserIden::Email,
-                    UserIden::Username,
-                    UserIden::Password,
-                    UserIden::Verified,
-                    UserIden::Banned,
-                    UserIden::MfaSecret,
-                    UserIden::MfaBackupCodes,
-                    UserIden::CreatedAt,
-                    UserIden::UpdatedAt,
-                ])
-                .limit(1)
-                .to_owned(),
-        }
     }
 }
 

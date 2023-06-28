@@ -1,10 +1,10 @@
 use std::fmt;
 
-use adrastos_macros::DbDeserialize;
+use adrastos_macros::{DbDeserialize, DbSelect};
 use chrono::{DateTime, Utc};
 use sea_query::{
     enum_def, Alias, ColumnDef, Expr, ForeignKey, ForeignKeyAction, Keyword, PostgresQueryBuilder,
-    SelectStatement, SimpleExpr, Table,
+    Table,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -14,11 +14,13 @@ use crate::error::Error;
 use super::{Identity, Init, Query, User, UserIden};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect)]
 pub struct Connection {
     pub id: String,
+    #[select(find)]
     pub provider: String,
     pub user_id: String,
+    #[select(find)]
     pub provider_id: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
@@ -68,7 +70,7 @@ impl Init for Connection {
 }
 
 impl Query for Connection {
-    fn query_select(expressions: Vec<SimpleExpr>) -> SelectStatement {
+    fn query_select(expressions: Vec<sea_query::SimpleExpr>) -> sea_query::SelectStatement {
         let mut query = sea_query::Query::select();
 
         for expression in expressions {

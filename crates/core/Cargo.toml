@@ -6,10 +6,9 @@ license = "AGPL-3.0-or-later"
 edition = "2021"
 
 [dependencies]
-actix-web = { version = "4.3.1", features = ["rustls", "cookies"] }
+actix-web = { version = "4.3.1", features = ["cookies"] }
 adrastos_macros = { path = "../macros" }
 argon2 = "0.5.0"
-async-trait = "0.1.68"
 chrono = "0.4.26"
 deadpool-postgres = "0.10.5"
 deadpool-redis = "0.12.0"

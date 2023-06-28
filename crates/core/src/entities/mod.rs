@@ -2,9 +2,8 @@
 
 use std::fmt;
 
-use async_trait::async_trait;
 use deadpool_postgres::tokio_postgres::Row;
-use sea_query::{Alias, Iden, IntoIden, PostgresQueryBuilder, SelectStatement, SimpleExpr};
+use sea_query::{Alias, Iden, IntoIden, PostgresQueryBuilder, SimpleExpr};
 use secrecy::ExposeSecret;
 
 use crate::{config::Config, error::Error};
@@ -32,7 +31,7 @@ pub trait Identity {
 }
 
 pub trait Query {
-    fn query_select(expressions: Vec<SimpleExpr>) -> SelectStatement;
+    fn query_select(expressions: Vec<SimpleExpr>) -> sea_query::SelectStatement;
     fn query_insert(&self) -> Result<String, Error>;
     fn query_delete(&self) -> String;
 }
@@ -101,51 +100,12 @@ impl Update {
     }
 }
 
-#[async_trait]
 pub trait Mutate: Sized {
-    async fn find(
-        db_pool: &deadpool_postgres::Pool,
-        expressions: Vec<SimpleExpr>,
-    ) -> Result<Self, Error>;
     async fn create(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error>;
     async fn delete(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error>;
 }
 
-#[async_trait]
 impl<T: Identity + Query + From<Row> + Sync> Mutate for T {
-    async fn find(
-        db_pool: &deadpool_postgres::Pool,
-        expressions: Vec<SimpleExpr>,
-    ) -> Result<Self, Error> {
-        let row = db_pool
-            .get()
-            .await
-            .unwrap()
-            .query(
-                T::query_select(expressions)
-                    .limit(1)
-                    .to_string(PostgresQueryBuilder)
-                    .as_str(),
-                &[],
-            )
-            .await
-            .map_err(|e| {
-                let error = format!(
-                    "An error occurred while fetching the {}: {e}",
-                    T::error_identifier(),
-                );
-                Error::InternalServerError(error)
-            })?
-            .into_iter()
-            .next()
-            .ok_or_else(|| {
-                let message = format!("No {} was found", Self::error_identifier());
-                Error::BadRequest(message)
-            })?;
-
-        Ok(row.into())
-    }
-
     async fn create(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error> {
         db_pool
             .get()

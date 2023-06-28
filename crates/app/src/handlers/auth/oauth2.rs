@@ -6,7 +6,7 @@ use adrastos_core::{
         oauth2::{providers::OAuth2Provider, OAuth2, OAuth2LoginInfo},
     },
     config,
-    entities::{Connection, ConnectionIden, Mutate, User},
+    entities::{Connection, Mutate, User},
     error::Error,
     id::Id,
 };
@@ -14,7 +14,6 @@ use adrastos_core::{
 use actix_session::Session;
 use actix_web::{cookie::Cookie, get, http::header, web, HttpResponse, Responder};
 use chrono::Utc;
-use sea_query::Expr;
 use serde::Deserialize;
 use tracing::error;
 
@@ -116,14 +115,11 @@ pub async fn callback(
         Error::InternalServerError("Unable to fetch the user from the OAuth provider".into())
     })?;
 
-    let connection = Connection::find(
-        &db_pool,
-        vec![
-            Expr::col(ConnectionIden::Provider).eq(&provider.to_string()),
-            Expr::col(ConnectionIden::ProviderId).eq(&oauth2_user.id),
-        ],
-    )
-    .await;
+    let connection = Connection::select()
+        .by_provider(provider.to_string())
+        .by_provider_id(oauth2_user.id.clone())
+        .finish(&db_pool)
+        .await;
 
     let user = match connection {
         Ok(conn) => Ok(User::select().by_id(&conn.user_id).finish(&db_pool).await?),

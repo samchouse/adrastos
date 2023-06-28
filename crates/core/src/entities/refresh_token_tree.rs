@@ -2,11 +2,11 @@
 
 use std::fmt;
 
-use adrastos_macros::DbDeserialize;
+use adrastos_macros::{DbDeserialize, DbSelect};
 use chrono::{DateTime, Duration, Utc};
 use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, ForeignKey, ForeignKeyAction, Keyword,
-    PostgresQueryBuilder, SelectStatement, SimpleExpr, Table,
+    PostgresQueryBuilder, Table,
 };
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -18,7 +18,7 @@ use crate::error::Error;
 use super::{Identity, Init, Query, Update, User, UserIden};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect)]
 pub struct RefreshTokenTree {
     pub id: String,
     pub user_id: String,
@@ -131,7 +131,7 @@ impl Init for RefreshTokenTree {
 }
 
 impl Query for RefreshTokenTree {
-    fn query_select(expressions: Vec<SimpleExpr>) -> SelectStatement {
+    fn query_select(expressions: Vec<sea_query::SimpleExpr>) -> sea_query::SelectStatement {
         let mut query = sea_query::Query::select();
 
         for expression in expressions {

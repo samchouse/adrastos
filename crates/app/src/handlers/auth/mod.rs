@@ -2,12 +2,11 @@ use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{Mutate, UpdateUser, User, UserIden},
+    entities::{Mutate, UpdateUser, User},
     error::Error,
     id::Id,
     util,
 };
-use sea_query::Expr;
 use tokio::sync::Mutex;
 
 use actix_web::{cookie::Cookie, get, post, web, HttpRequest, HttpResponse, Responder};
@@ -74,22 +73,20 @@ pub async fn signup(
         return Err(Error::BadRequest("Invalid email".into()));
     }
 
-    if User::find(
-        &db_pool,
-        vec![Expr::col(UserIden::Email).eq(body.email.clone())],
-    )
-    .await
-    .is_ok()
+    if User::select()
+        .by_email(body.email.clone())
+        .finish(&db_pool)
+        .await
+        .is_ok()
     {
         return Err(Error::BadRequest("Email already in use".into()));
     }
 
-    if User::find(
-        &db_pool,
-        vec![Expr::col(UserIden::Username).eq(body.username.clone())],
-    )
-    .await
-    .is_ok()
+    if User::select()
+        .by_username(body.username.clone())
+        .finish(&db_pool)
+        .await
+        .is_ok()
     {
         return Err(Error::BadRequest("Username already in use".into()));
     }
@@ -196,7 +193,7 @@ pub async fn login(
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let user = User::select()
-        .by_email(&body.email)
+        .by_email(body.email.clone())
         .finish(&db_pool)
         .await?;
 

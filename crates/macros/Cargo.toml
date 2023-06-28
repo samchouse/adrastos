@@ -9,7 +9,6 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-deadpool-postgres = "0.10.5"
+proc-macro2 = "1.0.63"
 quote = "1.0.28"
-serde_json = "1.0.99"
 syn = "2.0.22"
