@@ -1,7 +1,13 @@
 use proc_macro::TokenStream;
 
+mod db_identity;
 mod db_select;
 mod db_serialize;
+
+#[proc_macro_derive(DbIdentity, attributes(identity))]
+pub fn derive_db_identity(item: TokenStream) -> TokenStream {
+    db_identity::derive(item)
+}
 
 #[proc_macro_derive(DbDeserialize)]
 pub fn derive_db_serialize(item: TokenStream) -> TokenStream {

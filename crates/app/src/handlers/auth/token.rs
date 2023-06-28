@@ -5,7 +5,7 @@ use actix_web::{
 use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{RefreshTokenTree, RefreshTokenTreeIden, User, Mutate},
+    entities::{Mutate, RefreshTokenTree, RefreshTokenTreeIden, User},
     error::Error,
     util,
 };
