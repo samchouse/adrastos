@@ -165,9 +165,9 @@ pub async fn create(
         updated_at: None,
     };
 
-    let found_table = CustomTableSchema::select()
+    let found_table = CustomTableSchema::find()
         .by_name(custom_table.name.clone())
-        .finish(&db_pool)
+        .one(&db_pool)
         .await;
     if found_table.is_ok() {
         return Err(Error::BadRequest(
@@ -241,9 +241,9 @@ pub async fn update(
 ) -> actix_web::Result<impl Responder, Error> {
     let body = body.into_inner();
 
-    let custom_table = CustomTableSchema::select()
+    let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
-        .finish(&db_pool)
+        .one(&db_pool)
         .await?;
 
     let mut table_name = custom_table.name.clone();
@@ -254,9 +254,9 @@ pub async fn update(
 
     if let Some(name) = body.name {
         if name != custom_table.name {
-            let found_table = CustomTableSchema::select()
+            let found_table = CustomTableSchema::find()
                 .by_name(name.clone())
-                .finish(&db_pool)
+                .one(&db_pool)
                 .await;
             if found_table.is_ok() {
                 return Err(Error::BadRequest(
@@ -362,9 +362,9 @@ pub async fn delete(
     path: web::Path<String>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let custom_table = CustomTableSchema::select()
+    let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
-        .finish(&db_pool)
+        .one(&db_pool)
         .await?;
 
     custom_table.delete(&db_pool).await?;

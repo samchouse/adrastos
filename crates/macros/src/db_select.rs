@@ -81,43 +81,24 @@ pub fn derive(item: TokenStream) -> TokenStream {
     });
 
     let expanded = quote! {
+        #[derive(Debug, Clone)]
         pub struct #builder_ident {
             query_builder: sea_query::SelectStatement,
         }
 
         impl #builder_ident {
-            fn to_string(&self) -> String {
-                self.query_builder.to_string(sea_query::PostgresQueryBuilder)
-            }
-
-            pub fn by_id(&mut self, id: &str) -> &mut Self {
+            fn by_id(&mut self, id: &str) -> &mut Self {
                 self.query_builder.and_where(sea_query::Expr::col(#iden_ident::Id).eq(id));
 
                 self
             }
 
-            #(#impls)*
-
-            pub fn and_where(&mut self, expressions: Vec<sea_query::SimpleExpr>) -> &mut Self {
-                for expression in expressions {
-                    self.query_builder.and_where(expression);
-                }
-
-                self
-            }
-
-            pub fn limit(&mut self, limit: Option<u64>) -> &mut Self {
-                self.query_builder.reset_limit().limit(limit.unwrap_or(100));
-
-                self
-            }
-
-            pub async fn finish(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<#ident, crate::error::Error> {
+            async fn finish(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<#ident, crate::error::Error> {
                 let row = db_pool
                     .get()
                     .await
                     .unwrap()
-                    .query(self.to_string().as_str(), &[])
+                    .query(self.query_builder.to_string(sea_query::PostgresQueryBuilder).as_str(), &[])
                     .await
                     .map_err(|e| {
                         let error = format!(
@@ -135,19 +116,45 @@ pub fn derive(item: TokenStream) -> TokenStream {
 
                 Ok(row.into())
             }
+
+            #(#impls)*
+
+            pub fn and_where(&mut self, expressions: Vec<sea_query::SimpleExpr>) -> &mut Self {
+                for expression in expressions {
+                    self.query_builder.and_where(expression);
+                }
+
+                self
+            }
+
+            pub async fn one(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<#ident, crate::error::Error> {
+                self.query_builder.reset_limit().limit(1);
+
+                self.finish(db_pool).await
+            }
+
+            pub async fn all(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<#ident, crate::error::Error> {
+                self.query_builder.reset_limit();
+
+                self.finish(db_pool).await
+            }
         }
 
         impl #ident {
-            pub fn select() -> #builder_ident {
+            pub fn find() -> #builder_ident {
                 #builder_ident {
                     query_builder: sea_query::Query::select()
                         .from(Self::table())
                         .columns([
                             #(#aliases,)*
                         ])
-                        .limit(1)
                         .to_owned(),
                 }
+            }
+
+            pub fn find_by_id(id: &str) -> #builder_ident {
+                let mut builder = Self::find();
+                builder.by_id(id).to_owned()
             }
         }
     };

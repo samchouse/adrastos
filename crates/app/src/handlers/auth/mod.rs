@@ -73,18 +73,18 @@ pub async fn signup(
         return Err(Error::BadRequest("Invalid email".into()));
     }
 
-    if User::select()
+    if User::find()
         .by_email(body.email.clone())
-        .finish(&db_pool)
+        .one(&db_pool)
         .await
         .is_ok()
     {
         return Err(Error::BadRequest("Email already in use".into()));
     }
 
-    if User::select()
+    if User::find()
         .by_username(body.username.clone())
-        .finish(&db_pool)
+        .one(&db_pool)
         .await
         .is_ok()
     {
@@ -192,9 +192,9 @@ pub async fn login(
     config: web::Data<Mutex<config::Config>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let user = User::select()
+    let user = User::find()
         .by_email(body.email.clone())
-        .finish(&db_pool)
+        .one(&db_pool)
         .await?;
 
     let is_valid = auth::verify_password(body.password.as_str(), &user.password)

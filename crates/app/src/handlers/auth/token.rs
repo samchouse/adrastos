@@ -5,7 +5,7 @@ use actix_web::{
 use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{Mutate, RefreshTokenTree, RefreshTokenTreeIden, User},
+    entities::{RefreshTokenTree, RefreshTokenTreeIden, User, Mutate},
     error::Error,
     util,
 };
@@ -36,10 +36,9 @@ pub async fn refresh(
         return Err(Error::Forbidden("Not a refresh token".into()));
     }
 
-    let user = User::select()
-        .by_id(&refresh_token.claims.sub)
+    let user = User::find_by_id(&refresh_token.claims.sub)
         .join::<RefreshTokenTree>(Alias::new(RefreshTokenTreeIden::UserId.to_string()))
-        .finish(&db_pool)
+        .one(&db_pool)
         .await?;
 
     let refresh_token_tree = &user

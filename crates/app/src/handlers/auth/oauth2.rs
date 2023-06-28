@@ -115,14 +115,14 @@ pub async fn callback(
         Error::InternalServerError("Unable to fetch the user from the OAuth provider".into())
     })?;
 
-    let connection = Connection::select()
+    let connection = Connection::find()
         .by_provider(provider.to_string())
         .by_provider_id(oauth2_user.id.clone())
-        .finish(&db_pool)
+        .one(&db_pool)
         .await;
 
     let user = match connection {
-        Ok(conn) => Ok(User::select().by_id(&conn.user_id).finish(&db_pool).await?),
+        Ok(conn) => Ok(User::find_by_id(&conn.user_id).one(&db_pool).await?),
         Err(..) => {
             if let Ok(Some(user_id)) = session.get::<String>(&SessionKey::UserId.to_string()) {
                 let conn = Connection {
@@ -136,7 +136,7 @@ pub async fn callback(
 
                 conn.create(&db_pool).await?;
 
-                Ok(User::select().by_id(&conn.user_id).finish(&db_pool).await?)
+                Ok(User::find_by_id(&conn.user_id).one(&db_pool).await?)
             } else {
                 Err(Error::Unauthorized)
             }

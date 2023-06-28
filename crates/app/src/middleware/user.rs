@@ -88,13 +88,12 @@ where
 
             if let Some(token) = authorization {
                 if let Ok(access_token) = TokenType::verify(&config, token) {
-                    let user = entities::User::select()
-                        .by_id(&access_token.claims.sub)
+                    let user = entities::User::find_by_id(&access_token.claims.sub)
                         .join::<Connection>(Alias::new(ConnectionIden::UserId.to_string()))
                         .join::<RefreshTokenTree>(Alias::new(
                             RefreshTokenTreeIden::UserId.to_string(),
                         ))
-                        .finish(&db_pool)
+                        .one(&db_pool)
                         .await;
                     if let Ok(user) = user {
                         req.extensions_mut().insert::<entities::User>(user);

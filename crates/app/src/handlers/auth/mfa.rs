@@ -134,7 +134,7 @@ pub async fn verify(
         return Err(Error::BadRequest("You have not started the login process".into()));
     };
 
-    let user = User::select().by_id(&user_id).finish(&db_pool).await?;
+    let user = User::find_by_id(&user_id).one(&db_pool).await?;
     let Some(mfa_secret) = user.mfa_secret.clone() else {
         return Err(Error::BadRequest("MFA is disabled".into()));
     };
