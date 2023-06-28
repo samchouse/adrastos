@@ -11,7 +11,7 @@ use utoipa::ToSchema;
 
 use crate::error::Error;
 
-use super::{Identity, Init, Query, User, UserIden};
+use super::{Identity, Init, Query, User, UserIden, Join};
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect)]
@@ -69,27 +69,13 @@ impl Init for Connection {
     }
 }
 
-impl Query for Connection {
-    fn query_select(expressions: Vec<sea_query::SimpleExpr>) -> sea_query::SelectStatement {
-        let mut query = sea_query::Query::select();
-
-        for expression in expressions {
-            query.and_where(expression);
-        }
-
-        query
-            .from(Self::table())
-            .columns(vec![
-                ConnectionIden::Id,
-                ConnectionIden::Provider,
-                ConnectionIden::UserId,
-                ConnectionIden::ProviderId,
-                ConnectionIden::CreatedAt,
-                ConnectionIden::UpdatedAt,
-            ])
-            .to_owned()
+impl Join for Connection {
+    fn join(expr: sea_query::SimpleExpr) -> sea_query::SelectStatement {
+        Self::find().and_where(vec![expr]).query_builder.clone()
     }
+}
 
+impl Query for Connection {
     fn query_insert(&self) -> Result<String, Error> {
         Ok(sea_query::Query::insert()
             .into_table(Self::table())

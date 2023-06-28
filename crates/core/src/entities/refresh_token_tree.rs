@@ -15,7 +15,7 @@ use utoipa::ToSchema;
 
 use crate::error::Error;
 
-use super::{Identity, Init, Query, Update, User, UserIden};
+use super::{Identity, Init, Join, Query, Update, User, UserIden};
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect)]
@@ -130,28 +130,13 @@ impl Init for RefreshTokenTree {
     }
 }
 
-impl Query for RefreshTokenTree {
-    fn query_select(expressions: Vec<sea_query::SimpleExpr>) -> sea_query::SelectStatement {
-        let mut query = sea_query::Query::select();
-
-        for expression in expressions {
-            query.and_where(expression);
-        }
-
-        query
-            .from(Self::table())
-            .columns([
-                RefreshTokenTreeIden::Id,
-                RefreshTokenTreeIden::UserId,
-                RefreshTokenTreeIden::InactiveAt,
-                RefreshTokenTreeIden::ExpiresAt,
-                RefreshTokenTreeIden::Tokens,
-                RefreshTokenTreeIden::CreatedAt,
-                RefreshTokenTreeIden::UpdatedAt,
-            ])
-            .to_owned()
+impl Join for RefreshTokenTree {
+    fn join(expr: sea_query::SimpleExpr) -> sea_query::SelectStatement {
+        Self::find().and_where(vec![expr]).query_builder.clone()
     }
+}
 
+impl Query for RefreshTokenTree {
     fn query_insert(&self) -> Result<String, Error> {
         Ok(sea_query::Query::insert()
             .into_table(Self::table())

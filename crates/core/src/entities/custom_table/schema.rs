@@ -11,7 +11,7 @@ use tracing_unwrap::ResultExt;
 use utoipa::ToSchema;
 
 use crate::{
-    entities::{Identity, Init, Query, Update},
+    entities::{Identity, Init, Join, Query, Update},
     error::Error,
 };
 
@@ -263,33 +263,13 @@ impl Init for CustomTableSchema {
     }
 }
 
-impl Query for CustomTableSchema {
-    fn query_select(expressions: Vec<sea_query::SimpleExpr>) -> sea_query::SelectStatement {
-        let mut query = sea_query::Query::select();
-
-        for expression in expressions {
-            query.and_where(expression);
-        }
-
-        query
-            .from(Self::table())
-            .columns([
-                CustomTableSchemaIden::Id,
-                CustomTableSchemaIden::Name,
-                CustomTableSchemaIden::StringFields,
-                CustomTableSchemaIden::NumberFields,
-                CustomTableSchemaIden::BooleanFields,
-                CustomTableSchemaIden::DateFields,
-                CustomTableSchemaIden::EmailFields,
-                CustomTableSchemaIden::UrlFields,
-                CustomTableSchemaIden::SelectFields,
-                CustomTableSchemaIden::RelationFields,
-                CustomTableSchemaIden::CreatedAt,
-                CustomTableSchemaIden::UpdatedAt,
-            ])
-            .to_owned()
+impl Join for CustomTableSchema {
+    fn join(expr: sea_query::SimpleExpr) -> sea_query::SelectStatement {
+        Self::find().and_where(vec![expr]).query_builder.clone()
     }
+}
 
+impl Query for CustomTableSchema {
     fn query_insert(&self) -> Result<String, Error> {
         Ok(sea_query::Query::insert()
             .into_table(Self::table())

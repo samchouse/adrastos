@@ -31,9 +31,12 @@ pub trait Identity {
 }
 
 pub trait Query {
-    fn query_select(expressions: Vec<SimpleExpr>) -> sea_query::SelectStatement;
     fn query_insert(&self) -> Result<String, Error>;
     fn query_delete(&self) -> String;
+}
+
+pub trait Join {
+    fn join(expr: SimpleExpr) -> sea_query::SelectStatement;
 }
 
 enum JoinKeys {

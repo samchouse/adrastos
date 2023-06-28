@@ -5,8 +5,7 @@ use std::fmt;
 use adrastos_macros::{DbDeserialize, DbSelect};
 use chrono::{DateTime, Utc};
 use sea_query::{
-    enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, SelectStatement,
-    SimpleExpr, Table,
+    enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, Table,
 };
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -16,7 +15,7 @@ use validator::Validate;
 
 use crate::{auth, error::Error};
 
-use super::{Connection, Identity, Init, JoinKeys, Query, RefreshTokenTree, Update};
+use super::{Connection, Identity, Init, Join, JoinKeys, Query, RefreshTokenTree, Update};
 
 #[enum_def]
 #[derive(Debug, Validate, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect)]
@@ -74,12 +73,12 @@ pub struct UpdateUser {
 }
 
 impl UserSelectBuilder {
-    pub fn join<T: Query + Identity>(&mut self, alias: Alias) -> &mut Self {
+    pub fn join<T: Join + Identity>(&mut self, alias: Alias) -> &mut Self {
         self.query_builder.expr(Expr::cust(
             format!(
                 "(SELECT json_agg({}) FROM ({}) {}) as {}",
                 JoinKeys::from_identity::<T>(),
-                T::query_select(vec![Expr::col(alias).equals((User::table(), UserIden::Id))])
+                T::join(Expr::col(alias).equals((User::table(), UserIden::Id)))
                     .to_string(PostgresQueryBuilder),
                 JoinKeys::from_identity::<T>(),
                 JoinKeys::from_identity::<T>().plural()
@@ -202,10 +201,6 @@ impl Init for User {
 }
 
 impl Query for User {
-    fn query_select(_: Vec<SimpleExpr>) -> SelectStatement {
-        unimplemented!("User does not implement Query::query_select")
-    }
-
     fn query_insert(&self) -> Result<String, Error> {
         self.validate().map_err(|err| Error::ValidationErrors {
             message: format!(
