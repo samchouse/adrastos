@@ -50,7 +50,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
                             }
                         }
 
-                        return quote! { #ident: row.try_get(#str_ident).ok().map(|v| serde_json::from_str(v).unwrap()) }
+                        return quote! { #ident: row.try_get(#str_ident).ok().map(|v| serde_json::from_value(v).unwrap()) }
                     },
                     _ => {}
                 }

@@ -7,7 +7,7 @@ import VerificationEmail from '../emails/verification';
 import { env } from './env';
 
 const logger = pino();
-const client = redis.createClient({ url: env.DRAGONFLY_URL });
+const client = redis.createClient({ url: env.REDIS_URL });
 
 logger.info('Worker started');
 
