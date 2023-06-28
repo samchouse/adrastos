@@ -5,7 +5,7 @@ use std::{collections::HashMap, fmt};
 use actix_web::web;
 use async_trait::async_trait;
 use deadpool_postgres::tokio_postgres::Row;
-use sea_query::{Alias, Iden, PostgresQueryBuilder, SelectStatement, SimpleExpr, IntoIden};
+use sea_query::{Alias, Iden, IntoIden, PostgresQueryBuilder, SelectStatement, SimpleExpr};
 use secrecy::ExposeSecret;
 use serde_json::Value;
 
@@ -72,6 +72,40 @@ impl fmt::Display for JoinKeys {
     }
 }
 
+#[derive(Debug, Clone)]
+enum Update {
+    Skip,
+    Set(SimpleExpr),
+}
+
+impl<T> From<Option<T>> for Update
+where
+    T: Into<SimpleExpr>,
+{
+    fn from(value: Option<T>) -> Self {
+        match value {
+            Some(value) => Update::Set(value.into()),
+            None => Update::Skip,
+        }
+    }
+}
+
+impl Update {
+    fn create<T, I>(values: I) -> Vec<(T, SimpleExpr)>
+    where
+        T: IntoIden,
+        I: IntoIterator<Item = (T, Update)>,
+    {
+        values
+            .into_iter()
+            .filter_map(|(key, value)| match value {
+                Update::Skip => None,
+                Update::Set(value) => Some((key, value)),
+            })
+            .collect()
+    }
+}
+
 #[async_trait]
 pub trait Mutate: Sized {
     async fn find(
@@ -79,7 +113,7 @@ pub trait Mutate: Sized {
         expressions: Vec<SimpleExpr>,
     ) -> Result<Self, Error>;
     async fn create(&self, db_pool: &web::Data<deadpool_postgres::Pool>) -> Result<(), Error>;
-    async fn update(
+    async fn update_old(
         &self,
         db_pool: &web::Data<deadpool_postgres::Pool>,
         updated: &HashMap<String, Value>,
@@ -140,7 +174,7 @@ impl<T: Identity + Query + Init + From<Row> + Sync> Mutate for T {
         Ok(())
     }
 
-    async fn update(
+    async fn update_old(
         &self,
         db_pool: &web::Data<deadpool_postgres::Pool>,
         updated: &HashMap<String, Value>,
@@ -181,40 +215,6 @@ impl<T: Identity + Query + Init + From<Row> + Sync> Mutate for T {
     }
 }
 
-#[derive(Debug, Clone)]
-enum Update {
-    Skip,
-    Set(SimpleExpr),
-}
-
-impl<T> From<Option<T>> for Update
-where
-    T: Into<SimpleExpr>,
-{
-    fn from(value: Option<T>) -> Self {
-        match value {
-            Some(value) => Update::Set(value.into()),
-            None => Update::Skip,
-        }
-    }
-}
-
-impl Update {
-    fn create<T, I>(values: I) -> Vec<(T, SimpleExpr)>
-    where
-        T: IntoIden,
-        I: IntoIterator<Item = (T, Update)>,
-    {
-        values
-            .into_iter()
-            .filter_map(|(key, value)| match value {
-                Update::Skip => None,
-                Update::Set(value) => Some((key, value)),
-            })
-            .collect()
-    }
-}
-
 pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
     let conn = db_pool.get().await.unwrap();
 
@@ -252,7 +252,7 @@ pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
                         username,
                         password: password.expose_secret().to_string(),
                         sender_name: "Adrastos".into(),
-                        sender_email: "no-reply@adrastos.xenfo.dev".into(),
+                        sender_email: "no-reply@adrastos.example.com".into(),
                     });
                 }
             }

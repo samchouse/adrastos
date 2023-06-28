@@ -79,7 +79,7 @@ pub async fn refresh(
     tokens.push(refresh_token.claims.jti.clone());
 
     refresh_token_tree
-        .update(
+        .update_old(
             &db_pool,
             &HashMap::from([(
                 RefreshTokenTreeIden::Tokens.to_string(),

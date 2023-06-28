@@ -23,7 +23,7 @@ use crate::middleware::user::RequiredUser;
 
 #[get("/rows")]
 pub async fn rows(
-    _: RequiredUser,
+    // _: RequiredUser,
     path: web::Path<String>,
     web::Query(query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
@@ -32,6 +32,8 @@ pub async fn rows(
         .by_name(&path.into_inner())
         .finish(&db_pool)
         .await?;
+
+    println!("{:#?}", custom_table);
 
     let rows = CustomTableSelectBuilder::from(&custom_table)
         .and_where(
@@ -84,7 +86,7 @@ pub async fn row(
 
 #[post("/create")]
 pub async fn create(
-    _: RequiredUser,
+    // _: RequiredUser,
     bytes: web::Bytes,
     path: web::Path<String>,
     db_pool: web::Data<deadpool_postgres::Pool>,

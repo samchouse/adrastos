@@ -2,14 +2,15 @@
 
 use std::{collections::HashMap, fmt};
 
+use adrastos_macros::DbDeserialize;
 use chrono::{DateTime, Utc};
-use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, SelectStatement,
     SimpleExpr, Table,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tracing::error;
 use tracing_unwrap::ResultExt;
 use utoipa::ToSchema;
 use validator::Validate;
@@ -23,7 +24,7 @@ pub struct UserSelectBuilder {
 }
 
 #[enum_def]
-#[derive(Debug, Validate, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Validate, Serialize, Deserialize, Clone, ToSchema, DbDeserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: String,
@@ -53,7 +54,7 @@ pub struct User {
     pub refresh_token_trees: Option<Vec<RefreshTokenTree>>,
 }
 
-#[derive(Debug, Validate, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Validate, Clone, Default)]
 pub struct UpdateUser {
     #[validate(length(max = 50))]
     pub first_name: Option<String>,
@@ -72,7 +73,16 @@ pub struct UpdateUser {
 }
 
 impl User {
-    pub async fn update_new(&self, db_pool: &deadpool_postgres::Pool, update: UpdateUser) {
+    pub async fn update(
+        &self,
+        db_pool: &deadpool_postgres::Pool,
+        update: UpdateUser,
+    ) -> Result<(), Error> {
+        update.validate().map_err(|e| Error::ValidationErrors {
+            errors: e,
+            message: "Invalid user update".into(),
+        })?;
+
         let query = sea_query::Query::update()
             .table(Self::table())
             .values(Update::create([
@@ -96,7 +106,12 @@ impl User {
             .unwrap_or_log()
             .execute(&query, &[])
             .await
-            .unwrap_or_log();
+            .map_err(|e| {
+                error!(error = ?e);
+                Error::InternalServerError("Failed to update user".into())
+            })?;
+
+        Ok(())
     }
 }
 
@@ -440,45 +455,6 @@ impl Query for User {
             .from_table(Self::table())
             .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl From<Row> for User {
-    fn from(row: Row) -> Self {
-        let connections = row
-            .try_get::<_, serde_json::Value>(JoinKeys::Connection.plural().as_str())
-            .ok();
-        let refresh_token_trees = row
-            .try_get::<_, serde_json::Value>(JoinKeys::RefreshTokenTree.plural().as_str())
-            .ok();
-
-        Self {
-            id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),
-            first_name: row.get(<Self as Identity>::Iden::FirstName.to_string().as_str()),
-            last_name: row.get(<Self as Identity>::Iden::LastName.to_string().as_str()),
-            email: row.get(<Self as Identity>::Iden::Email.to_string().as_str()),
-            username: row.get(<Self as Identity>::Iden::Username.to_string().as_str()),
-            password: row.get(<Self as Identity>::Iden::Password.to_string().as_str()),
-            verified: row.get(<Self as Identity>::Iden::Verified.to_string().as_str()),
-            banned: row.get(<Self as Identity>::Iden::Banned.to_string().as_str()),
-            mfa_secret: row.get(<Self as Identity>::Iden::MfaSecret.to_string().as_str()),
-            mfa_backup_codes: row.get(
-                <Self as Identity>::Iden::MfaBackupCodes
-                    .to_string()
-                    .as_str(),
-            ),
-            created_at: row.get(<Self as Identity>::Iden::CreatedAt.to_string().as_str()),
-            updated_at: row.get(<Self as Identity>::Iden::UpdatedAt.to_string().as_str()),
-
-            connections: match connections {
-                Some(connections) => serde_json::from_value(connections).ok(),
-                None => None,
-            },
-            refresh_token_trees: match refresh_token_trees {
-                Some(refresh_token_trees) => serde_json::from_value(refresh_token_trees).ok(),
-                None => None,
-            },
-        }
     }
 }
 

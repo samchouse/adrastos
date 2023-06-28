@@ -2,8 +2,8 @@
 
 use std::{collections::HashMap, fmt};
 
+use adrastos_macros::DbDeserialize;
 use chrono::{DateTime, Duration, Utc};
-use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, ForeignKey, ForeignKeyAction, Keyword,
     PostgresQueryBuilder, SelectStatement, SimpleExpr, Table,
@@ -18,7 +18,7 @@ use crate::{error::Error, util};
 use super::{Identity, Init, Query, User};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize)]
 pub struct RefreshTokenTree {
     pub id: String,
     pub user_id: String,
@@ -176,20 +176,6 @@ impl Query for RefreshTokenTree {
             .from_table(Self::table())
             .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl From<Row> for RefreshTokenTree {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),
-            user_id: row.get(<Self as Identity>::Iden::UserId.to_string().as_str()),
-            inactive_at: row.get(<Self as Identity>::Iden::InactiveAt.to_string().as_str()),
-            expires_at: row.get(<Self as Identity>::Iden::ExpiresAt.to_string().as_str()),
-            tokens: row.get(<Self as Identity>::Iden::Tokens.to_string().as_str()),
-            created_at: row.get(<Self as Identity>::Iden::CreatedAt.to_string().as_str()),
-            updated_at: row.get(<Self as Identity>::Iden::UpdatedAt.to_string().as_str()),
-        }
     }
 }
 

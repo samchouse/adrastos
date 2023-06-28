@@ -82,7 +82,7 @@ pub struct UpdateBody {
 )]
 #[post("/create")]
 pub async fn create(
-    _: RequiredUser,
+    // _: RequiredUser,
     body: web::Json<CreateBody>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
@@ -313,7 +313,7 @@ pub async fn update(
         );
     }
 
-    custom_table.update(&db_pool, &updated_table).await?;
+    custom_table.update_old(&db_pool, &updated_table).await?;
 
     if let Some(updated_name) = updated_table.get(&CustomTableSchemaIden::Name.to_string()) {
         let updated_name = updated_name.as_str().unwrap();

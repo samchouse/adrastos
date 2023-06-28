@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-
 use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{Identity, Mutate, User, UserIden},
+    entities::{Identity, Mutate, UpdateUser, User},
     error::Error,
     id::Id,
     util,
@@ -20,7 +18,7 @@ use lettre::{
     message::header::ContentType, AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::json;
 use utoipa::ToSchema;
 
 use crate::{middleware::user::RequiredUser, openapi, session::SessionKey};
@@ -308,7 +306,10 @@ pub async fn verify(
 
     user.update(
         &db_pool,
-        &HashMap::from([(UserIden::Verified.to_string(), Value::from(true))]),
+        UpdateUser {
+            verified: Some(true),
+            ..Default::default()
+        },
     )
     .await
     .map_err(|_| Error::InternalServerError("Unable to update user".to_string()))?;

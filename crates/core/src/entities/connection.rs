@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt};
 
+use adrastos_macros::DbDeserialize;
 use chrono::{DateTime, Utc};
-use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{
     enum_def, Alias, ColumnDef, Expr, ForeignKey, ForeignKeyAction, Keyword, PostgresQueryBuilder,
     SelectStatement, SimpleExpr, Table,
@@ -15,7 +15,7 @@ use crate::error::Error;
 use super::{Identity, Init, Query, User};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize)]
 pub struct Connection {
     pub id: String,
     pub provider: String,
@@ -134,20 +134,6 @@ impl Query for Connection {
             .from_table(Self::table())
             .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl From<Row> for Connection {
-    // TODO(@Xenfo): automate this trait
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),
-            provider: row.get(<Self as Identity>::Iden::Provider.to_string().as_str()),
-            user_id: row.get(<Self as Identity>::Iden::UserId.to_string().as_str()),
-            provider_id: row.get(<Self as Identity>::Iden::ProviderId.to_string().as_str()),
-            created_at: row.get(<Self as Identity>::Iden::CreatedAt.to_string().as_str()),
-            updated_at: row.get(<Self as Identity>::Iden::UpdatedAt.to_string().as_str()),
-        }
     }
 }
 

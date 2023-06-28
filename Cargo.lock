@@ -320,6 +320,7 @@ name = "adrastos_core"
 version = "0.1.0"
 dependencies = [
  "actix-web",
+ "adrastos_macros",
  "argon2",
  "async-trait",
  "chrono",
@@ -349,6 +350,16 @@ dependencies = [
  "tracing-unwrap",
  "utoipa",
  "validator",
+]
+
+[[package]]
+name = "adrastos_macros"
+version = "0.1.0"
+dependencies = [
+ "deadpool-postgres",
+ "quote",
+ "serde_json",
+ "syn 2.0.22",
 ]
 
 [[package]]

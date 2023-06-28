@@ -1,10 +1,26 @@
 use std::fmt;
 
+use adrastos_macros::DbDeserialize;
 use sea_query::{enum_def, Alias, ColumnDef, Expr, PostgresQueryBuilder, Query, Table};
 use serde::{Deserialize, Serialize};
-use tokio_postgres::Row;
 
 use super::{Identity, Init};
+
+#[enum_def]
+#[derive(Debug, Serialize, Deserialize, Clone, DbDeserialize)]
+pub struct System {
+    pub id: String,
+    pub current_version: String,
+    pub previous_version: String,
+
+    pub smtp_config: Option<SmtpConfig>,
+
+    pub google_config: Option<OAuth2Config>,
+    pub facebook_config: Option<OAuth2Config>,
+    pub github_config: Option<OAuth2Config>,
+    pub twitter_config: Option<OAuth2Config>,
+    pub discord_config: Option<OAuth2Config>,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -22,22 +38,6 @@ pub struct SmtpConfig {
 pub struct OAuth2Config {
     pub client_id: String,
     pub client_secret: String,
-}
-
-#[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct System {
-    pub id: String,
-    pub current_version: String,
-    pub previous_version: String,
-
-    pub smtp_config: Option<SmtpConfig>,
-
-    pub google_config: Option<OAuth2Config>,
-    pub facebook_config: Option<OAuth2Config>,
-    pub github_config: Option<OAuth2Config>,
-    pub twitter_config: Option<OAuth2Config>,
-    pub discord_config: Option<OAuth2Config>,
 }
 
 impl System {
@@ -158,55 +158,6 @@ impl Init for System {
             .col(ColumnDef::new(<Self as Identity>::Iden::TwitterConfig).string())
             .col(ColumnDef::new(<Self as Identity>::Iden::DiscordConfig).string())
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl From<Row> for System {
-    // TODO(@Xenfo): automate this trait
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),
-            current_version: row.get(
-                <Self as Identity>::Iden::CurrentVersion
-                    .to_string()
-                    .as_str(),
-            ),
-            previous_version: row.get(
-                <Self as Identity>::Iden::PreviousVersion
-                    .to_string()
-                    .as_str(),
-            ),
-            smtp_config: row
-                .get::<_, Option<String>>(<Self as Identity>::Iden::SmtpConfig.to_string().as_str())
-                .map(|v| serde_json::from_str(&v).unwrap()),
-            google_config: row
-                .get::<_, Option<String>>(
-                    <Self as Identity>::Iden::GoogleConfig.to_string().as_str(),
-                )
-                .map(|v| serde_json::from_str(&v).unwrap()),
-            facebook_config: row
-                .get::<_, Option<String>>(
-                    <Self as Identity>::Iden::FacebookConfig
-                        .to_string()
-                        .as_str(),
-                )
-                .map(|v| serde_json::from_str(&v).unwrap()),
-            github_config: row
-                .get::<_, Option<String>>(
-                    <Self as Identity>::Iden::GithubConfig.to_string().as_str(),
-                )
-                .map(|v| serde_json::from_str(&v).unwrap()),
-            twitter_config: row
-                .get::<_, Option<String>>(
-                    <Self as Identity>::Iden::TwitterConfig.to_string().as_str(),
-                )
-                .map(|v| serde_json::from_str(&v).unwrap()),
-            discord_config: row
-                .get::<_, Option<String>>(
-                    <Self as Identity>::Iden::DiscordConfig.to_string().as_str(),
-                )
-                .map(|v| serde_json::from_str(&v).unwrap()),
-        }
     }
 }
 

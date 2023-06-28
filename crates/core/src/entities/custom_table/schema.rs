@@ -1,12 +1,12 @@
 use std::{collections::HashMap, fmt};
 
 use actix_web::web;
+use adrastos_macros::DbDeserialize;
 use chrono::{DateTime, Utc};
 use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, SimpleExpr, Table,
 };
 use serde::{Deserialize, Serialize};
-use tokio_postgres::Row;
 use utoipa::ToSchema;
 
 use crate::{
@@ -24,7 +24,7 @@ pub struct CustomTableSchemaSelectBuilder {
 }
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize)]
 pub struct CustomTableSchema {
     pub id: String,
     pub name: String,
@@ -339,61 +339,6 @@ impl Query for CustomTableSchema {
             .from_table(Self::table())
             .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl From<Row> for CustomTableSchema {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),
-            name: row.get(<Self as Identity>::Iden::Name.to_string().as_str()),
-            string_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::StringFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<StringField>>(),
-            number_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::NumberFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<NumberField>>(),
-            boolean_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::BooleanFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<BooleanField>>(),
-            date_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::DateFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<DateField>>(),
-            email_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::EmailFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<EmailField>>(),
-            url_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::UrlFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<UrlField>>(),
-            select_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::SelectFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<SelectField>>(),
-            relation_fields: row
-                .get::<_, Vec<String>>(
-                    <Self as Identity>::Iden::RelationFields
-                        .to_string()
-                        .as_str(),
-                )
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<RelationField>>(),
-            created_at: row.get(<Self as Identity>::Iden::CreatedAt.to_string().as_str()),
-            updated_at: row.get(<Self as Identity>::Iden::UpdatedAt.to_string().as_str()),
-        }
     }
 }
 

@@ -8,7 +8,7 @@ use adrastos_core::{
         mfa::{Mfa, VerificationMethod},
     },
     config::Config,
-    entities::{Mutate, User, UserIden},
+    entities::{Mutate, UpdateUser, User, UserIden},
     error::Error,
 };
 use chrono::Duration;
@@ -89,16 +89,11 @@ pub async fn confirm(
 
     user.update(
         &db_pool,
-        &HashMap::from([
-            (
-                UserIden::MfaSecret.to_string(),
-                Value::from(mfa.get_secret()),
-            ),
-            (
-                UserIden::MfaBackupCodes.to_string(),
-                Value::from(Some(backup_codes.hashed_codes)),
-            ),
-        ]),
+        UpdateUser {
+            mfa_secret: Some(Some(mfa.get_secret())),
+            mfa_backup_codes: Some(Some(backup_codes.hashed_codes)),
+            ..Default::default()
+        },
     )
     .await
     .map_err(|_| Error::InternalServerError("Error updating user".into()))?;
@@ -183,7 +178,7 @@ pub async fn disable(
     )
     .await?;
 
-    user.update(
+    user.update_old(
         &db_pool,
         &HashMap::from([
             (UserIden::MfaSecret.to_string(), Value::from(None::<String>)),
@@ -215,7 +210,7 @@ pub async fn regenerate(
         .await
         .map_err(|_| Error::InternalServerError("Error generating backup codes".into()))?;
 
-    user.update(
+    user.update_old(
         &db_pool,
         &HashMap::from([(
             UserIden::MfaBackupCodes.to_string(),
