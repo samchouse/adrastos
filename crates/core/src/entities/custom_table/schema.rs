@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
 use adrastos_macros::DbDeserialize;
 use chrono::{DateTime, Utc};
@@ -6,10 +6,12 @@ use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, SimpleExpr, Table,
 };
 use serde::{Deserialize, Serialize};
+use tracing::error;
+use tracing_unwrap::ResultExt;
 use utoipa::ToSchema;
 
 use crate::{
-    entities::{Identity, Init, Query},
+    entities::{Identity, Init, Query, Update},
     error::Error,
 };
 
@@ -37,6 +39,19 @@ pub struct CustomTableSchema {
     pub relation_fields: Vec<RelationField>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct UpdateCustomTableSchema {
+    pub name: Option<String>,
+    pub string_fields: Option<Vec<StringField>>,
+    pub number_fields: Option<Vec<NumberField>>,
+    pub boolean_fields: Option<Vec<BooleanField>>,
+    pub date_fields: Option<Vec<DateField>>,
+    pub email_fields: Option<Vec<EmailField>>,
+    pub url_fields: Option<Vec<UrlField>>,
+    pub select_fields: Option<Vec<SelectField>>,
+    pub relation_fields: Option<Vec<RelationField>>,
 }
 
 impl CustomTableSchemaSelectBuilder {
@@ -90,6 +105,132 @@ impl CustomTableSchemaSelectBuilder {
             })?;
 
         Ok(row.into())
+    }
+}
+
+impl CustomTableSchema {
+    pub async fn update(
+        &self,
+        db_pool: &deadpool_postgres::Pool,
+        update: UpdateCustomTableSchema,
+    ) -> Result<(), Error> {
+        let query = sea_query::Query::update()
+            .table(Self::table())
+            .values(Update::create([
+                (CustomTableSchemaIden::Name, update.name.into()),
+                (
+                    CustomTableSchemaIden::StringFields,
+                    update
+                        .string_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::NumberFields,
+                    update
+                        .number_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::BooleanFields,
+                    update
+                        .boolean_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::DateFields,
+                    update
+                        .date_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::EmailFields,
+                    update
+                        .email_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::UrlFields,
+                    update
+                        .url_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::SelectFields,
+                    update
+                        .select_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::RelationFields,
+                    update
+                        .relation_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (CustomTableSchemaIden::UpdatedAt, Some(Utc::now()).into()),
+            ]))
+            .and_where(Expr::col(CustomTableSchemaIden::Id).eq(self.id.clone()))
+            .to_string(PostgresQueryBuilder);
+
+        db_pool
+            .get()
+            .await
+            .unwrap_or_log()
+            .execute(&query, &[])
+            .await
+            .map_err(|e| {
+                error!(error = ?e);
+                Error::InternalServerError("Failed to update custom table schema".into())
+            })?;
+
+        Ok(())
     }
 }
 
@@ -294,40 +435,6 @@ impl Query for CustomTableSchema {
                 self.created_at.into(),
                 self.updated_at.into(),
             ])
-            .to_string(PostgresQueryBuilder))
-    }
-
-    fn query_update(&self, updated: &HashMap<String, serde_json::Value>) -> Result<String, Error> {
-        let mut query = sea_query::Query::update();
-
-        if let Some(name) = updated.get(CustomTableSchemaIden::Name.to_string().as_str()) {
-            if let Some(name) = name.as_str() {
-                query.values([(CustomTableSchemaIden::Name, name.into())]);
-            }
-        }
-        if let Some(string_fields) =
-            updated.get(CustomTableSchemaIden::StringFields.to_string().as_str())
-        {
-            let string_fields = string_fields
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|f| serde_json::from_str::<StringField>(f.as_str().unwrap()).unwrap())
-                .collect::<Vec<_>>();
-
-            query.values([(
-                CustomTableSchemaIden::StringFields,
-                string_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-            )]);
-        }
-
-        Ok(query
-            .table(Self::table())
-            .and_where(Expr::col(CustomTableSchemaIden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder))
     }
 

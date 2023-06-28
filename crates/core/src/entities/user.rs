@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
 use adrastos_macros::DbDeserialize;
 use chrono::{DateTime, Utc};
@@ -9,7 +9,6 @@ use sea_query::{
     SimpleExpr, Table,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use tracing::error;
 use tracing_unwrap::ResultExt;
 use utoipa::ToSchema;
@@ -319,10 +318,6 @@ impl Query for User {
                 hashed_password.into(),
             ])
             .to_string(PostgresQueryBuilder))
-    }
-
-    fn query_update(&self, _: &HashMap<String, Value>) -> Result<String, Error> {
-        unimplemented!("User does not implement Query::query_update")
     }
 
     fn query_delete(&self) -> String {

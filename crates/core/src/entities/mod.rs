@@ -1,12 +1,11 @@
 // TODO(@Xenfo): use `*Iden::Table` instead of Alias::new() once https://github.com/SeaQL/sea-query/issues/533 is fixed
 
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
 use async_trait::async_trait;
 use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{Alias, Iden, IntoIden, PostgresQueryBuilder, SelectStatement, SimpleExpr};
 use secrecy::ExposeSecret;
-use serde_json::Value;
 
 use crate::{config::Config, error::Error};
 
@@ -35,7 +34,6 @@ pub trait Identity {
 pub trait Query {
     fn query_select(expressions: Vec<SimpleExpr>) -> SelectStatement;
     fn query_insert(&self) -> Result<String, Error>;
-    fn query_update(&self, updated: &HashMap<String, Value>) -> Result<String, Error>;
     fn query_delete(&self) -> String;
 }
 
@@ -110,11 +108,6 @@ pub trait Mutate: Sized {
         expressions: Vec<SimpleExpr>,
     ) -> Result<Self, Error>;
     async fn create(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error>;
-    async fn update_old(
-        &self,
-        db_pool: &deadpool_postgres::Pool,
-        updated: &HashMap<String, Value>,
-    ) -> Result<(), Error>;
     async fn delete(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error>;
 }
 
@@ -163,28 +156,6 @@ impl<T: Identity + Query + From<Row> + Sync> Mutate for T {
             .map_err(|e| {
                 let error = format!(
                     "An error occurred while creating the {}: {e}",
-                    T::error_identifier(),
-                );
-                Error::InternalServerError(error)
-            })?;
-
-        Ok(())
-    }
-
-    async fn update_old(
-        &self,
-        db_pool: &deadpool_postgres::Pool,
-        updated: &HashMap<String, Value>,
-    ) -> Result<(), Error> {
-        db_pool
-            .get()
-            .await
-            .unwrap()
-            .query(self.query_update(updated)?.as_str(), &[])
-            .await
-            .map_err(|e| {
-                let error = format!(
-                    "An error occurred while updating the {}: {e}",
                     T::error_identifier(),
                 );
                 Error::InternalServerError(error)

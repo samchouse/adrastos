@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
 use adrastos_macros::DbDeserialize;
 use chrono::{DateTime, Utc};
@@ -7,7 +7,6 @@ use sea_query::{
     SelectStatement, SimpleExpr, Table,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use utoipa::ToSchema;
 
 use crate::error::Error;
@@ -109,10 +108,6 @@ impl Query for Connection {
                 self.updated_at.into(),
             ])
             .to_string(PostgresQueryBuilder))
-    }
-
-    fn query_update(&self, _: &HashMap<String, Value>) -> Result<String, Error> {
-        unimplemented!("Connection does not implement Query::query_update")
     }
 
     fn query_delete(&self) -> String {

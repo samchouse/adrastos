@@ -1,6 +1,6 @@
 // TODO(@Xenfo): support many browser tabs being open at the same time, currently it'll invalidate the other tabs
 
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
 use adrastos_macros::DbDeserialize;
 use chrono::{DateTime, Duration, Utc};
@@ -9,7 +9,6 @@ use sea_query::{
     PostgresQueryBuilder, SelectStatement, SimpleExpr, Table,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use tracing::error;
 use tracing_unwrap::ResultExt;
 use utoipa::ToSchema;
@@ -64,7 +63,7 @@ impl RefreshTokenTree {
             .await
             .map_err(|e| {
                 error!(error = ?e);
-                Error::InternalServerError("Failed to update user".into())
+                Error::InternalServerError("Failed to update refresh token tree".into())
             })?;
 
         Ok(())
@@ -173,10 +172,6 @@ impl Query for RefreshTokenTree {
                 self.created_at.into(),
             ])
             .to_string(PostgresQueryBuilder))
-    }
-
-    fn query_update(&self, _: &HashMap<String, Value>) -> Result<String, Error> {
-        unimplemented!("RefreshTokenTree does not implement Query::query_update")
     }
 
     fn query_delete(&self) -> String {
