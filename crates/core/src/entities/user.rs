@@ -1,8 +1,4 @@
-#![allow(dead_code)]
-
-use std::fmt;
-
-use adrastos_macros::{DbDeserialize, DbSelect};
+use adrastos_macros::{DbDeserialize, DbIdentity, DbSelect};
 use chrono::{DateTime, Utc};
 use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, Table,
@@ -18,7 +14,9 @@ use crate::{auth, error::Error};
 use super::{Connection, Identity, Init, Join, JoinKeys, Query, RefreshTokenTree, Update};
 
 #[enum_def]
-#[derive(Debug, Validate, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect)]
+#[derive(
+    Debug, Validate, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect, DbIdentity,
+)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: String,
@@ -139,16 +137,6 @@ impl User {
     }
 }
 
-impl Identity for User {
-    fn table() -> Alias {
-        Alias::new(UserIden::Table.to_string())
-    }
-
-    fn error_identifier() -> String {
-        "user".into()
-    }
-}
-
 impl Init for User {
     fn init() -> String {
         Table::create()
@@ -242,30 +230,5 @@ impl Query for User {
             .from_table(Self::table())
             .and_where(Expr::col(UserIden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl fmt::Display for UserIden {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            Self::Table => "users",
-            Self::Id => "id",
-            Self::FirstName => "first_name",
-            Self::LastName => "last_name",
-            Self::Email => "email",
-            Self::Username => "username",
-            Self::Password => "password",
-            Self::Verified => "verified",
-            Self::Banned => "banned",
-            Self::MfaSecret => "mfa_secret",
-            Self::MfaBackupCodes => "mfa_backup_codes",
-            Self::CreatedAt => "created_at",
-            Self::UpdatedAt => "updated_at",
-
-            Self::Connections => "connections",
-            Self::RefreshTokenTrees => "refresh_token_trees",
-        };
-
-        write!(f, "{name}")
     }
 }

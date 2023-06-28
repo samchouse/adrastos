@@ -1,8 +1,6 @@
 // TODO(@Xenfo): support many browser tabs being open at the same time, currently it'll invalidate the other tabs
 
-use std::fmt;
-
-use adrastos_macros::{DbDeserialize, DbSelect};
+use adrastos_macros::{DbDeserialize, DbIdentity, DbSelect};
 use chrono::{DateTime, Duration, Utc};
 use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, ForeignKey, ForeignKeyAction, Keyword,
@@ -18,7 +16,7 @@ use crate::error::Error;
 use super::{Identity, Init, Join, Query, Update, User, UserIden};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect, DbIdentity)]
 pub struct RefreshTokenTree {
     pub id: String,
     pub user_id: String,
@@ -67,16 +65,6 @@ impl RefreshTokenTree {
             })?;
 
         Ok(())
-    }
-}
-
-impl Identity for RefreshTokenTree {
-    fn table() -> Alias {
-        Alias::new(RefreshTokenTreeIden::Table.to_string())
-    }
-
-    fn error_identifier() -> String {
-        "refresh token tree".into()
     }
 }
 
@@ -164,22 +152,5 @@ impl Query for RefreshTokenTree {
             .from_table(Self::table())
             .and_where(Expr::col(RefreshTokenTreeIden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl fmt::Display for RefreshTokenTreeIden {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            Self::Table => "refresh_token_trees",
-            Self::Id => "id",
-            Self::UserId => "user_id",
-            Self::InactiveAt => "inactive_at",
-            Self::ExpiresAt => "expires_at",
-            Self::Tokens => "tokens",
-            Self::CreatedAt => "created_at",
-            Self::UpdatedAt => "updated_at",
-        };
-
-        write!(f, "{name}")
     }
 }

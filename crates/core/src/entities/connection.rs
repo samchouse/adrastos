@@ -1,6 +1,4 @@
-use std::fmt;
-
-use adrastos_macros::{DbDeserialize, DbSelect};
+use adrastos_macros::{DbDeserialize, DbIdentity, DbSelect};
 use chrono::{DateTime, Utc};
 use sea_query::{
     enum_def, Alias, ColumnDef, Expr, ForeignKey, ForeignKeyAction, Keyword, PostgresQueryBuilder,
@@ -11,10 +9,10 @@ use utoipa::ToSchema;
 
 use crate::error::Error;
 
-use super::{Identity, Init, Query, User, UserIden, Join};
+use super::{Identity, Init, Join, Query, User, UserIden};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect, DbIdentity)]
 pub struct Connection {
     pub id: String,
     #[select(find)]
@@ -24,16 +22,6 @@ pub struct Connection {
     pub provider_id: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
-}
-
-impl Identity for Connection {
-    fn table() -> Alias {
-        Alias::new(ConnectionIden::Table.to_string())
-    }
-
-    fn error_identifier() -> String {
-        "connection".into()
-    }
 }
 
 impl Init for Connection {
@@ -103,21 +91,5 @@ impl Query for Connection {
             .from_table(Self::table())
             .and_where(Expr::col(ConnectionIden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl fmt::Display for ConnectionIden {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            Self::Table => "connections",
-            Self::Id => "id",
-            Self::Provider => "provider",
-            Self::UserId => "user_id",
-            Self::ProviderId => "provider_id",
-            Self::CreatedAt => "created_at",
-            Self::UpdatedAt => "updated_at",
-        };
-
-        write!(f, "{name}")
     }
 }

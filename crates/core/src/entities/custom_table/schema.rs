@@ -1,6 +1,4 @@
-use std::fmt;
-
-use adrastos_macros::{DbDeserialize, DbSelect};
+use adrastos_macros::{DbDeserialize, DbSelect, DbIdentity};
 use chrono::{DateTime, Utc};
 use sea_query::{
     enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, Table,
@@ -21,7 +19,8 @@ use super::fields::{
 };
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect, DbIdentity)]
+#[identity(rename = "custom_table")]
 pub struct CustomTableSchema {
     pub id: String,
     #[select(find)]
@@ -174,16 +173,6 @@ impl CustomTableSchema {
             })?;
 
         Ok(())
-    }
-}
-
-impl Identity for CustomTableSchema {
-    fn table() -> Alias {
-        Alias::new(CustomTableSchemaIden::Table.to_string())
-    }
-
-    fn error_identifier() -> String {
-        "custom table".to_string()
     }
 }
 
@@ -341,27 +330,5 @@ impl Query for CustomTableSchema {
             .from_table(Self::table())
             .and_where(Expr::col(CustomTableSchemaIden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl fmt::Display for CustomTableSchemaIden {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            Self::Table => "custom_tables",
-            Self::Id => "id",
-            Self::Name => "name",
-            Self::StringFields => "string_fields",
-            Self::NumberFields => "number_fields",
-            Self::BooleanFields => "boolean_fields",
-            Self::DateFields => "date_fields",
-            Self::EmailFields => "email_fields",
-            Self::UrlFields => "url_fields",
-            Self::SelectFields => "select_fields",
-            Self::RelationFields => "relation_fields",
-            Self::CreatedAt => "created_at",
-            Self::UpdatedAt => "updated_at",
-        };
-
-        write!(f, "{name}")
     }
 }

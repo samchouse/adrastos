@@ -1,13 +1,11 @@
-use std::fmt;
-
-use adrastos_macros::DbDeserialize;
-use sea_query::{enum_def, Alias, ColumnDef, Expr, PostgresQueryBuilder, Query, Table};
+use adrastos_macros::{DbDeserialize, DbIdentity};
+use sea_query::{enum_def, ColumnDef, Expr, PostgresQueryBuilder, Query, Table};
 use serde::{Deserialize, Serialize};
 
 use super::{Identity, Init};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, DbDeserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, DbDeserialize, DbIdentity)]
 pub struct System {
     pub id: String,
     pub current_version: String,
@@ -118,16 +116,6 @@ impl System {
     }
 }
 
-impl Identity for System {
-    fn table() -> Alias {
-        Alias::new(SystemIden::Table.to_string())
-    }
-
-    fn error_identifier() -> String {
-        "system".into()
-    }
-}
-
 impl Init for System {
     fn init() -> String {
         Table::create()
@@ -156,24 +144,5 @@ impl Init for System {
             .col(ColumnDef::new(SystemIden::TwitterConfig).string())
             .col(ColumnDef::new(SystemIden::DiscordConfig).string())
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl fmt::Display for SystemIden {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            Self::Table => "system",
-            Self::Id => "id",
-            Self::CurrentVersion => "current_version",
-            Self::PreviousVersion => "previous_version",
-            Self::SmtpConfig => "smtp_config",
-            Self::GoogleConfig => "google_config",
-            Self::FacebookConfig => "facebook_config",
-            Self::GithubConfig => "github_config",
-            Self::TwitterConfig => "twitter_config",
-            Self::DiscordConfig => "discord_config",
-        };
-
-        write!(f, "{name}")
     }
 }
