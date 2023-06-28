@@ -33,8 +33,6 @@ pub async fn rows(
         .finish(&db_pool)
         .await?;
 
-    println!("{:#?}", custom_table);
-
     let rows = CustomTableSelectBuilder::from(&custom_table)
         .and_where(
             query
