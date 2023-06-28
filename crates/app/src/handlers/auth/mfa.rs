@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use actix_session::Session;
 use actix_web::{get, post, web, HttpResponse, Responder};
 use adrastos_core::{
@@ -8,13 +6,13 @@ use adrastos_core::{
         mfa::{Mfa, VerificationMethod},
     },
     config::Config,
-    entities::{Mutate, UpdateUser, User, UserIden},
+    entities::{UpdateUser, User},
     error::Error,
 };
 use chrono::Duration;
 use deadpool_redis::redis;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::json;
 use tokio::sync::Mutex;
 
 use crate::{middleware::user, session::SessionKey};
@@ -178,15 +176,13 @@ pub async fn disable(
     )
     .await?;
 
-    user.update_old(
+    user.update(
         &db_pool,
-        &HashMap::from([
-            (UserIden::MfaSecret.to_string(), Value::from(None::<String>)),
-            (
-                UserIden::MfaBackupCodes.to_string(),
-                Value::from(None::<Vec<String>>),
-            ),
-        ]),
+        UpdateUser {
+            mfa_secret: Some(None),
+            mfa_backup_codes: Some(None),
+            ..Default::default()
+        },
     )
     .await
     .map_err(|_| Error::InternalServerError("Error updating user".into()))?;
@@ -210,12 +206,12 @@ pub async fn regenerate(
         .await
         .map_err(|_| Error::InternalServerError("Error generating backup codes".into()))?;
 
-    user.update_old(
+    user.update(
         &db_pool,
-        &HashMap::from([(
-            UserIden::MfaBackupCodes.to_string(),
-            Value::from(Some(backup_codes.hashed_codes)),
-        )]),
+        UpdateUser {
+            mfa_backup_codes: Some(Some(backup_codes.hashed_codes)),
+            ..Default::default()
+        },
     )
     .await
     .map_err(|_| Error::InternalServerError("Error updating user".into()))?;

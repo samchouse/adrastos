@@ -82,7 +82,7 @@ pub struct UpdateBody {
 )]
 #[post("/create")]
 pub async fn create(
-    // _: RequiredUser,
+    _: RequiredUser,
     body: web::Json<CreateBody>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {

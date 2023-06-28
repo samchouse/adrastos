@@ -72,67 +72,23 @@ pub struct UpdateUser {
     pub mfa_backup_codes: Option<Option<Vec<String>>>,
 }
 
-impl User {
-    pub async fn update(
-        &self,
-        db_pool: &deadpool_postgres::Pool,
-        update: UpdateUser,
-    ) -> Result<(), Error> {
-        update.validate().map_err(|e| Error::ValidationErrors {
-            errors: e,
-            message: "Invalid user update".into(),
-        })?;
-
-        let query = sea_query::Query::update()
-            .table(Self::table())
-            .values(Update::create([
-                (UserIden::FirstName, update.first_name.into()),
-                (UserIden::LastName, update.last_name.into()),
-                (UserIden::Email, update.email.into()),
-                (UserIden::Username, update.username.into()),
-                (UserIden::Password, update.password.into()),
-                (UserIden::Verified, update.verified.into()),
-                (UserIden::Banned, update.banned.into()),
-                (UserIden::MfaSecret, update.mfa_secret.into()),
-                (UserIden::MfaBackupCodes, update.mfa_backup_codes.into()),
-                (UserIden::UpdatedAt, Some(Utc::now()).into()),
-            ]))
-            .and_where(Expr::col(UserIden::Id).eq(self.id.clone()))
-            .to_string(PostgresQueryBuilder);
-
-        db_pool
-            .get()
-            .await
-            .unwrap_or_log()
-            .execute(&query, &[])
-            .await
-            .map_err(|e| {
-                error!(error = ?e);
-                Error::InternalServerError("Failed to update user".into())
-            })?;
-
-        Ok(())
-    }
-}
-
 impl UserSelectBuilder {
     pub fn by_id(&mut self, id: &str) -> &mut Self {
-        self.query_builder
-            .and_where(Expr::col(<User as Identity>::Iden::Id).eq(id));
+        self.query_builder.and_where(Expr::col(UserIden::Id).eq(id));
 
         self
     }
 
     pub fn by_email(&mut self, email: &str) -> &mut Self {
         self.query_builder
-            .and_where(Expr::col(<User as Identity>::Iden::Email).eq(email));
+            .and_where(Expr::col(UserIden::Email).eq(email));
 
         self
     }
 
     pub fn by_username(&mut self, username: &str) -> &mut Self {
         self.query_builder
-            .and_where(Expr::col(<User as Identity>::Iden::Username).eq(username));
+            .and_where(Expr::col(UserIden::Username).eq(username));
 
         self
     }
@@ -189,11 +145,58 @@ impl UserSelectBuilder {
     }
 }
 
-impl Identity for User {
-    type Iden = UserIden;
+impl User {
+    pub async fn update(
+        &self,
+        db_pool: &deadpool_postgres::Pool,
+        update: UpdateUser,
+    ) -> Result<(), Error> {
+        update.validate().map_err(|e| Error::ValidationErrors {
+            errors: e,
+            message: "Invalid user update".into(),
+        })?;
 
+        let query = sea_query::Query::update()
+            .table(Self::table())
+            .values(Update::create([
+                (UserIden::FirstName, update.first_name.into()),
+                (UserIden::LastName, update.last_name.into()),
+                (UserIden::Email, update.email.into()),
+                (UserIden::Username, update.username.into()),
+                (
+                    UserIden::Password,
+                    update
+                        .password
+                        .map(|v| auth::hash_password(v.as_str()).unwrap_or_log())
+                        .into(),
+                ),
+                (UserIden::Verified, update.verified.into()),
+                (UserIden::Banned, update.banned.into()),
+                (UserIden::MfaSecret, update.mfa_secret.into()),
+                (UserIden::MfaBackupCodes, update.mfa_backup_codes.into()),
+                (UserIden::UpdatedAt, Some(Utc::now()).into()),
+            ]))
+            .and_where(Expr::col(UserIden::Id).eq(self.id.clone()))
+            .to_string(PostgresQueryBuilder);
+
+        db_pool
+            .get()
+            .await
+            .unwrap_or_log()
+            .execute(&query, &[])
+            .await
+            .map_err(|e| {
+                error!(error = ?e);
+                Error::InternalServerError("Failed to update user".into())
+            })?;
+
+        Ok(())
+    }
+}
+
+impl Identity for User {
     fn table() -> Alias {
-        Alias::new(<Self as Identity>::Iden::Table.to_string())
+        Alias::new(UserIden::Table.to_string())
     }
 
     fn error_identifier() -> String {
@@ -207,62 +210,47 @@ impl Init for User {
             .table(Self::table())
             .if_not_exists()
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::Id)
+                ColumnDef::new(UserIden::Id)
                     .string()
                     .not_null()
                     .primary_key(),
             )
+            .col(ColumnDef::new(UserIden::FirstName).string().not_null())
+            .col(ColumnDef::new(UserIden::LastName).string().not_null())
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::FirstName)
-                    .string()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::LastName)
-                    .string()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::Email)
+                ColumnDef::new(UserIden::Email)
                     .string()
                     .not_null()
                     .unique_key(),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::Username)
+                ColumnDef::new(UserIden::Username)
                     .string()
                     .not_null()
                     .unique_key(),
             )
+            .col(ColumnDef::new(UserIden::Password).string().not_null())
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::Password)
-                    .string()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::Verified)
+                ColumnDef::new(UserIden::Verified)
                     .boolean()
                     .not_null()
                     .default(false),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::Banned)
+                ColumnDef::new(UserIden::Banned)
                     .boolean()
                     .not_null()
                     .default(false),
             )
-            .col(ColumnDef::new(<Self as Identity>::Iden::MfaSecret).string())
+            .col(ColumnDef::new(UserIden::MfaSecret).string())
+            .col(ColumnDef::new(UserIden::MfaBackupCodes).array(ColumnType::String(None)))
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::MfaBackupCodes)
-                    .array(ColumnType::String(None)),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::CreatedAt)
+                ColumnDef::new(UserIden::CreatedAt)
                     .timestamp_with_time_zone()
                     .not_null()
                     .default(Keyword::CurrentTimestamp),
             )
-            .col(ColumnDef::new(<Self as Identity>::Iden::UpdatedAt).timestamp_with_time_zone())
+            .col(ColumnDef::new(UserIden::UpdatedAt).timestamp_with_time_zone())
             .to_string(PostgresQueryBuilder)
     }
 }
@@ -273,18 +261,18 @@ impl User {
             query_builder: sea_query::Query::select()
                 .from(Self::table())
                 .columns([
-                    <Self as Identity>::Iden::Id,
-                    <Self as Identity>::Iden::FirstName,
-                    <Self as Identity>::Iden::LastName,
-                    <Self as Identity>::Iden::Email,
-                    <Self as Identity>::Iden::Username,
-                    <Self as Identity>::Iden::Password,
-                    <Self as Identity>::Iden::Verified,
-                    <Self as Identity>::Iden::Banned,
-                    <Self as Identity>::Iden::MfaSecret,
-                    <Self as Identity>::Iden::MfaBackupCodes,
-                    <Self as Identity>::Iden::CreatedAt,
-                    <Self as Identity>::Iden::UpdatedAt,
+                    UserIden::Id,
+                    UserIden::FirstName,
+                    UserIden::LastName,
+                    UserIden::Email,
+                    UserIden::Username,
+                    UserIden::Password,
+                    UserIden::Verified,
+                    UserIden::Banned,
+                    UserIden::MfaSecret,
+                    UserIden::MfaBackupCodes,
+                    UserIden::CreatedAt,
+                    UserIden::UpdatedAt,
                 ])
                 .limit(1)
                 .to_owned(),
@@ -293,30 +281,8 @@ impl User {
 }
 
 impl Query for User {
-    fn query_select(expressions: Vec<SimpleExpr>) -> SelectStatement {
-        let mut query = sea_query::Query::select();
-
-        for expression in expressions {
-            query.and_where(expression);
-        }
-
-        query
-            .from(Self::table())
-            .columns([
-                <Self as Identity>::Iden::Id,
-                <Self as Identity>::Iden::FirstName,
-                <Self as Identity>::Iden::LastName,
-                <Self as Identity>::Iden::Email,
-                <Self as Identity>::Iden::Username,
-                <Self as Identity>::Iden::Password,
-                <Self as Identity>::Iden::Verified,
-                <Self as Identity>::Iden::Banned,
-                <Self as Identity>::Iden::MfaSecret,
-                <Self as Identity>::Iden::MfaBackupCodes,
-                <Self as Identity>::Iden::CreatedAt,
-                <Self as Identity>::Iden::UpdatedAt,
-            ])
-            .to_owned()
+    fn query_select(_: Vec<SimpleExpr>) -> SelectStatement {
+        unimplemented!("User does not implement Query::query_select")
     }
 
     fn query_insert(&self) -> Result<String, Error> {
@@ -337,12 +303,12 @@ impl Query for User {
         Ok(sea_query::Query::insert()
             .into_table(Self::table())
             .columns([
-                <Self as Identity>::Iden::Id,
-                <Self as Identity>::Iden::FirstName,
-                <Self as Identity>::Iden::LastName,
-                <Self as Identity>::Iden::Email,
-                <Self as Identity>::Iden::Username,
-                <Self as Identity>::Iden::Password,
+                UserIden::Id,
+                UserIden::FirstName,
+                UserIden::LastName,
+                UserIden::Email,
+                UserIden::Username,
+                UserIden::Password,
             ])
             .values_panic(vec![
                 self.id.clone().into(),
@@ -355,105 +321,14 @@ impl Query for User {
             .to_string(PostgresQueryBuilder))
     }
 
-    fn query_update(&self, updated: &HashMap<String, Value>) -> Result<String, Error> {
-        let mut updated_for_validation = self.clone();
-        let mut query = sea_query::Query::update();
-
-        if let Some(first_name) =
-            updated.get(<Self as Identity>::Iden::FirstName.to_string().as_str())
-        {
-            if let Some(first_name) = first_name.as_str() {
-                updated_for_validation.first_name = first_name.into();
-                query.values([(<Self as Identity>::Iden::FirstName, first_name.into())]);
-            }
-        }
-        if let Some(last_name) =
-            updated.get(<Self as Identity>::Iden::LastName.to_string().as_str())
-        {
-            if let Some(last_name) = last_name.as_str() {
-                updated_for_validation.last_name = last_name.into();
-                query.values([(<Self as Identity>::Iden::LastName, last_name.into())]);
-            }
-        }
-        if let Some(email) = updated.get(<Self as Identity>::Iden::Email.to_string().as_str()) {
-            if let Some(email) = email.as_str() {
-                updated_for_validation.email = email.into();
-                query.values([(<Self as Identity>::Iden::Email, email.into())]);
-            }
-        }
-        if let Some(username) = updated.get(<Self as Identity>::Iden::Username.to_string().as_str())
-        {
-            if let Some(username) = username.as_str() {
-                updated_for_validation.username = username.into();
-                query.values([(<Self as Identity>::Iden::Username, username.into())]);
-            }
-        }
-        if let Some(password) = updated.get(<Self as Identity>::Iden::Password.to_string().as_str())
-        {
-            if let Some(password) = password.as_str() {
-                updated_for_validation.password = password.into();
-                query.values([(<Self as Identity>::Iden::Password, password.into())]);
-            }
-        }
-        if let Some(verified) = updated.get(<Self as Identity>::Iden::Verified.to_string().as_str())
-        {
-            if let Some(verified) = verified.as_bool() {
-                updated_for_validation.verified = verified;
-                query.values([(<Self as Identity>::Iden::Verified, verified.into())]);
-            }
-        }
-        if let Some(banned) = updated.get(<Self as Identity>::Iden::Banned.to_string().as_str()) {
-            if let Some(banned) = banned.as_bool() {
-                updated_for_validation.banned = banned;
-                query.values([(<Self as Identity>::Iden::Banned, banned.into())]);
-            }
-        }
-        if let Some(mfa_secret) =
-            updated.get(<Self as Identity>::Iden::MfaSecret.to_string().as_str())
-        {
-            if let Ok(mfa_secret) = serde_json::from_value::<Option<String>>(mfa_secret.clone()) {
-                query.values([(<Self as Identity>::Iden::MfaSecret, mfa_secret.into())]);
-            }
-        }
-        if let Some(mfa_backup_codes) = updated.get(
-            <Self as Identity>::Iden::MfaBackupCodes
-                .to_string()
-                .as_str(),
-        ) {
-            if let Ok(mfa_backup_codes) =
-                serde_json::from_value::<Option<Vec<String>>>(mfa_backup_codes.clone())
-            {
-                query.values([(
-                    <Self as Identity>::Iden::MfaBackupCodes,
-                    mfa_backup_codes.into(),
-                )]);
-            }
-        }
-
-        Self {
-            password: "password".into(),
-            ..updated_for_validation
-        }
-        .validate()
-        .map_err(|err| Error::ValidationErrors {
-            message: format!(
-                "An error occurred while validating the {}",
-                Self::error_identifier(),
-            ),
-            errors: err,
-        })?;
-
-        Ok(query
-            .table(Self::table())
-            .values([(<Self as Identity>::Iden::UpdatedAt, Utc::now().into())])
-            .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
-            .to_string(PostgresQueryBuilder))
+    fn query_update(&self, _: &HashMap<String, Value>) -> Result<String, Error> {
+        unimplemented!("User does not implement Query::query_update")
     }
 
     fn query_delete(&self) -> String {
         sea_query::Query::delete()
             .from_table(Self::table())
-            .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
+            .and_where(Expr::col(UserIden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
     }
 }

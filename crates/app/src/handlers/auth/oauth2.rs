@@ -45,7 +45,7 @@ pub async fn login(
         .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;
 
     let (auth_url, csrf_token) = oauth2
-        .initialize_login(provider, redis_pool)
+        .initialize_login(provider, &redis_pool)
         .await
         .map_err(|_| Error::InternalServerError("Unable to initialize the OAuth login".into()))?;
 
@@ -101,7 +101,7 @@ pub async fn callback(
         .confirm_login(
             provider.clone(),
             &config,
-            redis_pool,
+            &redis_pool,
             OAuth2LoginInfo {
                 session_csrf_token,
                 params_csrf_token: params.state.to_string(),

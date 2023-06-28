@@ -45,17 +45,17 @@ impl System {
         Query::select()
             .from(Self::table())
             .columns([
-                <Self as Identity>::Iden::Id,
-                <Self as Identity>::Iden::CurrentVersion,
-                <Self as Identity>::Iden::PreviousVersion,
-                <Self as Identity>::Iden::SmtpConfig,
-                <Self as Identity>::Iden::GoogleConfig,
-                <Self as Identity>::Iden::FacebookConfig,
-                <Self as Identity>::Iden::GithubConfig,
-                <Self as Identity>::Iden::TwitterConfig,
-                <Self as Identity>::Iden::DiscordConfig,
+                SystemIden::Id,
+                SystemIden::CurrentVersion,
+                SystemIden::PreviousVersion,
+                SystemIden::SmtpConfig,
+                SystemIden::GoogleConfig,
+                SystemIden::FacebookConfig,
+                SystemIden::GithubConfig,
+                SystemIden::TwitterConfig,
+                SystemIden::DiscordConfig,
             ])
-            .and_where(Expr::col(<Self as Identity>::Iden::Id).eq("system"))
+            .and_where(Expr::col(SystemIden::Id).eq("system"))
             .to_string(PostgresQueryBuilder)
     }
 
@@ -64,50 +64,50 @@ impl System {
             .table(System::table())
             .values([
                 (
-                    <System as Identity>::Iden::CurrentVersion,
+                    SystemIden::CurrentVersion,
                     self.current_version.clone().into(),
                 ),
                 (
-                    <System as Identity>::Iden::PreviousVersion,
+                    SystemIden::PreviousVersion,
                     self.previous_version.clone().into(),
                 ),
                 (
-                    <System as Identity>::Iden::SmtpConfig,
+                    SystemIden::SmtpConfig,
                     self.smtp_config
                         .as_ref()
                         .and_then(|v| serde_json::to_string(v).ok())
                         .into(),
                 ),
                 (
-                    <System as Identity>::Iden::GoogleConfig,
+                    SystemIden::GoogleConfig,
                     self.google_config
                         .as_ref()
                         .and_then(|v| serde_json::to_string(v).ok())
                         .into(),
                 ),
                 (
-                    <System as Identity>::Iden::FacebookConfig,
+                    SystemIden::FacebookConfig,
                     self.facebook_config
                         .as_ref()
                         .and_then(|v| serde_json::to_string(v).ok())
                         .into(),
                 ),
                 (
-                    <System as Identity>::Iden::GithubConfig,
+                    SystemIden::GithubConfig,
                     self.github_config
                         .as_ref()
                         .and_then(|v| serde_json::to_string(v).ok())
                         .into(),
                 ),
                 (
-                    <System as Identity>::Iden::TwitterConfig,
+                    SystemIden::TwitterConfig,
                     self.twitter_config
                         .as_ref()
                         .and_then(|v| serde_json::to_string(v).ok())
                         .into(),
                 ),
                 (
-                    <System as Identity>::Iden::DiscordConfig,
+                    SystemIden::DiscordConfig,
                     self.discord_config
                         .as_ref()
                         .and_then(|v| serde_json::to_string(v).ok())
@@ -119,10 +119,8 @@ impl System {
 }
 
 impl Identity for System {
-    type Iden = SystemIden;
-
     fn table() -> Alias {
-        Alias::new(<Self as Identity>::Iden::Table.to_string())
+        Alias::new(SystemIden::Table.to_string())
     }
 
     fn error_identifier() -> String {
@@ -136,27 +134,27 @@ impl Init for System {
             .table(Self::table())
             .if_not_exists()
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::Id)
+                ColumnDef::new(SystemIden::Id)
                     .string()
                     .not_null()
                     .primary_key(),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::CurrentVersion)
+                ColumnDef::new(SystemIden::CurrentVersion)
                     .string()
                     .not_null(),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::PreviousVersion)
+                ColumnDef::new(SystemIden::PreviousVersion)
                     .string()
                     .not_null(),
             )
-            .col(ColumnDef::new(<Self as Identity>::Iden::SmtpConfig).string())
-            .col(ColumnDef::new(<Self as Identity>::Iden::GoogleConfig).string())
-            .col(ColumnDef::new(<Self as Identity>::Iden::FacebookConfig).string())
-            .col(ColumnDef::new(<Self as Identity>::Iden::GithubConfig).string())
-            .col(ColumnDef::new(<Self as Identity>::Iden::TwitterConfig).string())
-            .col(ColumnDef::new(<Self as Identity>::Iden::DiscordConfig).string())
+            .col(ColumnDef::new(SystemIden::SmtpConfig).string())
+            .col(ColumnDef::new(SystemIden::GoogleConfig).string())
+            .col(ColumnDef::new(SystemIden::FacebookConfig).string())
+            .col(ColumnDef::new(SystemIden::GithubConfig).string())
+            .col(ColumnDef::new(SystemIden::TwitterConfig).string())
+            .col(ColumnDef::new(SystemIden::DiscordConfig).string())
             .to_string(PostgresQueryBuilder)
     }
 }

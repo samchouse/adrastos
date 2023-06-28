@@ -2,7 +2,7 @@ use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{Identity, Mutate, UpdateUser, User},
+    entities::{Mutate, UpdateUser, User, UserIden},
     error::Error,
     id::Id,
     util,
@@ -76,7 +76,7 @@ pub async fn signup(
 
     if User::find(
         &db_pool,
-        vec![Expr::col(<User as Identity>::Iden::Email).eq(body.email.clone())],
+        vec![Expr::col(UserIden::Email).eq(body.email.clone())],
     )
     .await
     .is_ok()
@@ -86,7 +86,7 @@ pub async fn signup(
 
     if User::find(
         &db_pool,
-        vec![Expr::col(<User as Identity>::Iden::Username).eq(body.username.clone())],
+        vec![Expr::col(UserIden::Username).eq(body.username.clone())],
     )
     .await
     .is_ok()

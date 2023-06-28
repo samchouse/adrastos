@@ -1,9 +1,6 @@
 use std::fmt;
 
-use actix_web::{
-    cookie::{time::OffsetDateTime, Cookie, Expiration},
-    web,
-};
+use actix_web::cookie::{time::OffsetDateTime, Cookie, Expiration};
 use argon2::{
     password_hash::{
         self, rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
@@ -80,7 +77,7 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, password_hash
 }
 
 pub async fn authenticate(
-    db_pool: &web::Data<deadpool_postgres::Pool>,
+    db_pool: &deadpool_postgres::Pool,
     config: &Config,
     user: &User,
 ) -> Result<Authentication, Error> {

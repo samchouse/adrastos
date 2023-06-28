@@ -10,12 +10,13 @@ use sea_query::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tracing::error;
+use tracing_unwrap::ResultExt;
 use utoipa::ToSchema;
-use validator::{ValidationError, ValidationErrors};
 
-use crate::{error::Error, util};
+use crate::error::Error;
 
-use super::{Identity, Init, Query, User};
+use super::{Identity, Init, Query, Update, User, UserIden};
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize)]
@@ -29,11 +30,50 @@ pub struct RefreshTokenTree {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-impl Identity for RefreshTokenTree {
-    type Iden = RefreshTokenTreeIden;
+#[derive(Debug, Clone, Default)]
+pub struct UpdateRefreshTokenTree {
+    pub inactive_at: Option<DateTime<Utc>>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub tokens: Option<Vec<String>>,
+}
 
+impl RefreshTokenTree {
+    pub async fn update(
+        &self,
+        db_pool: &deadpool_postgres::Pool,
+        tokens: Vec<String>,
+    ) -> Result<(), Error> {
+        let query = sea_query::Query::update()
+            .table(Self::table())
+            .values(Update::create([
+                (RefreshTokenTreeIden::Tokens, Some(tokens).into()),
+                (
+                    RefreshTokenTreeIden::InactiveAt,
+                    Some(Utc::now() + Duration::days(15)).into(),
+                ),
+                (RefreshTokenTreeIden::UpdatedAt, Some(Utc::now()).into()),
+            ]))
+            .and_where(Expr::col(UserIden::Id).eq(self.id.clone()))
+            .to_string(PostgresQueryBuilder);
+
+        db_pool
+            .get()
+            .await
+            .unwrap_or_log()
+            .execute(&query, &[])
+            .await
+            .map_err(|e| {
+                error!(error = ?e);
+                Error::InternalServerError("Failed to update user".into())
+            })?;
+
+        Ok(())
+    }
+}
+
+impl Identity for RefreshTokenTree {
     fn table() -> Alias {
-        Alias::new(Self::Iden::Table.to_string())
+        Alias::new(RefreshTokenTreeIden::Table.to_string())
     }
 
     fn error_identifier() -> String {
@@ -47,43 +87,43 @@ impl Init for RefreshTokenTree {
             .table(Self::table())
             .if_not_exists()
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::Id)
+                ColumnDef::new(RefreshTokenTreeIden::Id)
                     .string()
                     .not_null()
                     .primary_key(),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::UserId)
+                ColumnDef::new(RefreshTokenTreeIden::UserId)
                     .string()
                     .not_null(),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::InactiveAt)
+                ColumnDef::new(RefreshTokenTreeIden::InactiveAt)
                     .timestamp_with_time_zone()
                     .not_null(),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::ExpiresAt)
+                ColumnDef::new(RefreshTokenTreeIden::ExpiresAt)
                     .timestamp_with_time_zone()
                     .not_null(),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::Tokens)
+                ColumnDef::new(RefreshTokenTreeIden::Tokens)
                     .array(ColumnType::String(None))
                     .not_null(),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::CreatedAt)
+                ColumnDef::new(RefreshTokenTreeIden::CreatedAt)
                     .timestamp_with_time_zone()
                     .not_null()
                     .default(Keyword::CurrentTimestamp),
             )
-            .col(ColumnDef::new(<Self as Identity>::Iden::UpdatedAt).timestamp_with_time_zone())
+            .col(ColumnDef::new(RefreshTokenTreeIden::UpdatedAt).timestamp_with_time_zone())
             .foreign_key(
                 ForeignKey::create()
                     .name("FK_refresh_token_tree_user_id")
-                    .from(RefreshTokenTree::table(), <Self as Identity>::Iden::UserId)
-                    .to(User::table(), <User as Identity>::Iden::Id)
+                    .from(RefreshTokenTree::table(), RefreshTokenTreeIden::UserId)
+                    .to(User::table(), UserIden::Id)
                     .on_update(ForeignKeyAction::Cascade)
                     .on_delete(ForeignKeyAction::Cascade),
             )
@@ -102,13 +142,13 @@ impl Query for RefreshTokenTree {
         query
             .from(Self::table())
             .columns([
-                <Self as Identity>::Iden::Id,
-                <Self as Identity>::Iden::UserId,
-                <Self as Identity>::Iden::InactiveAt,
-                <Self as Identity>::Iden::ExpiresAt,
-                <Self as Identity>::Iden::Tokens,
-                <Self as Identity>::Iden::CreatedAt,
-                <Self as Identity>::Iden::UpdatedAt,
+                RefreshTokenTreeIden::Id,
+                RefreshTokenTreeIden::UserId,
+                RefreshTokenTreeIden::InactiveAt,
+                RefreshTokenTreeIden::ExpiresAt,
+                RefreshTokenTreeIden::Tokens,
+                RefreshTokenTreeIden::CreatedAt,
+                RefreshTokenTreeIden::UpdatedAt,
             ])
             .to_owned()
     }
@@ -117,12 +157,12 @@ impl Query for RefreshTokenTree {
         Ok(sea_query::Query::insert()
             .into_table(Self::table())
             .columns([
-                <Self as Identity>::Iden::Id,
-                <Self as Identity>::Iden::UserId,
-                <Self as Identity>::Iden::InactiveAt,
-                <Self as Identity>::Iden::ExpiresAt,
-                <Self as Identity>::Iden::Tokens,
-                <Self as Identity>::Iden::CreatedAt,
+                RefreshTokenTreeIden::Id,
+                RefreshTokenTreeIden::UserId,
+                RefreshTokenTreeIden::InactiveAt,
+                RefreshTokenTreeIden::ExpiresAt,
+                RefreshTokenTreeIden::Tokens,
+                RefreshTokenTreeIden::CreatedAt,
             ])
             .values_panic([
                 self.id.clone().into(),
@@ -135,46 +175,14 @@ impl Query for RefreshTokenTree {
             .to_string(PostgresQueryBuilder))
     }
 
-    fn query_update(&self, updated: &HashMap<String, Value>) -> Result<String, Error> {
-        let mut errors = ValidationErrors::new();
-        let Some(tokens) = updated.get(<Self as Identity>::Iden::Tokens.to_string().as_str()) else {
-            errors.add(util::string_to_static_str(<Self as Identity>::Iden::Tokens.to_string()), ValidationError::new("required"));
-            return Err(Error::ValidationErrors { message: format!(
-                "An error occurred while validating the {}",
-                Self::error_identifier(),
-            ), errors });
-        };
-        let Some(tokens) = tokens.as_array() else {
-            errors.add(util::string_to_static_str(<Self as Identity>::Iden::Tokens.to_string()), ValidationError::new("invalid_type"));
-            return Err(Error::ValidationErrors { message: format!(
-                "An error occurred while validating the {}",
-                Self::error_identifier(),
-            ), errors });
-        };
-
-        let tokens = tokens
-            .iter()
-            .filter_map(|token| token.as_str().map(|token| token.to_string()))
-            .collect::<Vec<String>>();
-
-        Ok(sea_query::Query::update()
-            .table(Self::table())
-            .values([
-                (
-                    <Self as Identity>::Iden::InactiveAt,
-                    (Utc::now() + Duration::days(15)).into(),
-                ),
-                (<Self as Identity>::Iden::Tokens, tokens.into()),
-                (<Self as Identity>::Iden::UpdatedAt, Utc::now().into()),
-            ])
-            .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
-            .to_string(PostgresQueryBuilder))
+    fn query_update(&self, _: &HashMap<String, Value>) -> Result<String, Error> {
+        unimplemented!("RefreshTokenTree does not implement Query::query_update")
     }
 
     fn query_delete(&self) -> String {
         sea_query::Query::delete()
             .from_table(Self::table())
-            .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
+            .and_where(Expr::col(RefreshTokenTreeIden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
     }
 }

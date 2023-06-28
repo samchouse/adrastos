@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use actix_web::web;
 use chrono::Duration;
 use deadpool_redis::redis;
 use oauth2::{
@@ -128,7 +127,7 @@ impl OAuth2 {
     pub async fn initialize_login(
         &self,
         provider: OAuth2Provider,
-        redis_pool: web::Data<deadpool_redis::Pool>,
+        redis_pool: &deadpool_redis::Pool,
     ) -> Result<(Url, CsrfToken), String> {
         let client = self.0.get(&provider).ok_or("Invalid OAuth provider")?;
 
@@ -156,7 +155,7 @@ impl OAuth2 {
         &self,
         provider: OAuth2Provider,
         config: &Mutex<config::Config>,
-        redis_pool: web::Data<deadpool_redis::Pool>,
+        redis_pool: &deadpool_redis::Pool,
         security_info: OAuth2LoginInfo,
     ) -> Result<StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>, String> {
         let client = self.0.get(&provider).ok_or("Invalid OAuth provider")?;

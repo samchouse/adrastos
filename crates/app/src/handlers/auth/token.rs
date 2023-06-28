@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use actix_web::{
     cookie::{time::OffsetDateTime, Cookie, Expiration},
     get, web, HttpRequest, HttpResponse, Responder,
@@ -13,7 +11,7 @@ use adrastos_core::{
 };
 use chrono::Utc;
 use sea_query::Alias;
-use serde_json::{json, Value};
+use serde_json::json;
 use tokio::sync::Mutex;
 
 #[utoipa::path(
@@ -78,15 +76,7 @@ pub async fn refresh(
     let mut tokens = refresh_token_tree.tokens.clone();
     tokens.push(refresh_token.claims.jti.clone());
 
-    refresh_token_tree
-        .update_old(
-            &db_pool,
-            &HashMap::from([(
-                RefreshTokenTreeIden::Tokens.to_string(),
-                Value::from(tokens),
-            )]),
-        )
-        .await?;
+    refresh_token_tree.update(&db_pool, tokens).await?;
 
     Ok(HttpResponse::Ok()
         .cookie(

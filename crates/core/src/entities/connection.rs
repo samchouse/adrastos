@@ -12,7 +12,7 @@ use utoipa::ToSchema;
 
 use crate::error::Error;
 
-use super::{Identity, Init, Query, User};
+use super::{Identity, Init, Query, User, UserIden};
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize)]
@@ -26,10 +26,8 @@ pub struct Connection {
 }
 
 impl Identity for Connection {
-    type Iden = ConnectionIden;
-
     fn table() -> Alias {
-        Alias::new(<Self as Identity>::Iden::Table.to_string())
+        Alias::new(ConnectionIden::Table.to_string())
     }
 
     fn error_identifier() -> String {
@@ -43,38 +41,26 @@ impl Init for Connection {
             .table(Self::table())
             .if_not_exists()
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::Id)
+                ColumnDef::new(ConnectionIden::Id)
                     .string()
                     .not_null()
                     .primary_key(),
             )
+            .col(ColumnDef::new(ConnectionIden::UserId).string().not_null())
+            .col(ColumnDef::new(ConnectionIden::Provider).text().not_null())
+            .col(ColumnDef::new(ConnectionIden::ProviderId).text().not_null())
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::UserId)
-                    .string()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::Provider)
-                    .text()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::ProviderId)
-                    .text()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::CreatedAt)
+                ColumnDef::new(ConnectionIden::CreatedAt)
                     .timestamp_with_time_zone()
                     .not_null()
                     .default(Keyword::CurrentTimestamp),
             )
-            .col(ColumnDef::new(<Self as Identity>::Iden::UpdatedAt).timestamp_with_time_zone())
+            .col(ColumnDef::new(ConnectionIden::UpdatedAt).timestamp_with_time_zone())
             .foreign_key(
                 ForeignKey::create()
                     .name("FK_connection_user_id")
-                    .from(Connection::table(), <Self as Identity>::Iden::UserId)
-                    .to(User::table(), <User as Identity>::Iden::Id)
+                    .from(Connection::table(), ConnectionIden::UserId)
+                    .to(User::table(), UserIden::Id)
                     .on_update(ForeignKeyAction::Cascade)
                     .on_delete(ForeignKeyAction::Cascade),
             )
@@ -93,12 +79,12 @@ impl Query for Connection {
         query
             .from(Self::table())
             .columns(vec![
-                <Self as Identity>::Iden::Id,
-                <Self as Identity>::Iden::Provider,
-                <Self as Identity>::Iden::UserId,
-                <Self as Identity>::Iden::ProviderId,
-                <Self as Identity>::Iden::CreatedAt,
-                <Self as Identity>::Iden::UpdatedAt,
+                ConnectionIden::Id,
+                ConnectionIden::Provider,
+                ConnectionIden::UserId,
+                ConnectionIden::ProviderId,
+                ConnectionIden::CreatedAt,
+                ConnectionIden::UpdatedAt,
             ])
             .to_owned()
     }
@@ -107,12 +93,12 @@ impl Query for Connection {
         Ok(sea_query::Query::insert()
             .into_table(Self::table())
             .columns([
-                <Self as Identity>::Iden::Id,
-                <Self as Identity>::Iden::Provider,
-                <Self as Identity>::Iden::UserId,
-                <Self as Identity>::Iden::ProviderId,
-                <Self as Identity>::Iden::CreatedAt,
-                <Self as Identity>::Iden::UpdatedAt,
+                ConnectionIden::Id,
+                ConnectionIden::Provider,
+                ConnectionIden::UserId,
+                ConnectionIden::ProviderId,
+                ConnectionIden::CreatedAt,
+                ConnectionIden::UpdatedAt,
             ])
             .values_panic([
                 self.id.clone().into(),
@@ -126,13 +112,13 @@ impl Query for Connection {
     }
 
     fn query_update(&self, _: &HashMap<String, Value>) -> Result<String, Error> {
-        todo!()
+        unimplemented!("Connection does not implement Query::query_update")
     }
 
     fn query_delete(&self) -> String {
         sea_query::Query::delete()
             .from_table(Self::table())
-            .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
+            .and_where(Expr::col(ConnectionIden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
     }
 }

@@ -2,7 +2,6 @@
 
 use std::{collections::HashMap, fmt};
 
-use actix_web::web;
 use async_trait::async_trait;
 use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{Alias, Iden, IntoIden, PostgresQueryBuilder, SelectStatement, SimpleExpr};
@@ -29,8 +28,6 @@ trait Init {
 }
 
 pub trait Identity {
-    type Iden;
-
     fn table() -> Alias;
     fn error_identifier() -> String;
 }
@@ -109,22 +106,22 @@ impl Update {
 #[async_trait]
 pub trait Mutate: Sized {
     async fn find(
-        db_pool: &web::Data<deadpool_postgres::Pool>,
+        db_pool: &deadpool_postgres::Pool,
         expressions: Vec<SimpleExpr>,
     ) -> Result<Self, Error>;
-    async fn create(&self, db_pool: &web::Data<deadpool_postgres::Pool>) -> Result<(), Error>;
+    async fn create(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error>;
     async fn update_old(
         &self,
-        db_pool: &web::Data<deadpool_postgres::Pool>,
+        db_pool: &deadpool_postgres::Pool,
         updated: &HashMap<String, Value>,
     ) -> Result<(), Error>;
-    async fn delete(&self, db_pool: &web::Data<deadpool_postgres::Pool>) -> Result<(), Error>;
+    async fn delete(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error>;
 }
 
 #[async_trait]
-impl<T: Identity + Query + Init + From<Row> + Sync> Mutate for T {
+impl<T: Identity + Query + From<Row> + Sync> Mutate for T {
     async fn find(
-        db_pool: &web::Data<deadpool_postgres::Pool>,
+        db_pool: &deadpool_postgres::Pool,
         expressions: Vec<SimpleExpr>,
     ) -> Result<Self, Error> {
         let row = db_pool
@@ -156,7 +153,7 @@ impl<T: Identity + Query + Init + From<Row> + Sync> Mutate for T {
         Ok(row.into())
     }
 
-    async fn create(&self, db_pool: &web::Data<deadpool_postgres::Pool>) -> Result<(), Error> {
+    async fn create(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error> {
         db_pool
             .get()
             .await
@@ -176,7 +173,7 @@ impl<T: Identity + Query + Init + From<Row> + Sync> Mutate for T {
 
     async fn update_old(
         &self,
-        db_pool: &web::Data<deadpool_postgres::Pool>,
+        db_pool: &deadpool_postgres::Pool,
         updated: &HashMap<String, Value>,
     ) -> Result<(), Error> {
         db_pool
@@ -196,7 +193,7 @@ impl<T: Identity + Query + Init + From<Row> + Sync> Mutate for T {
         Ok(())
     }
 
-    async fn delete(&self, db_pool: &web::Data<deadpool_postgres::Pool>) -> Result<(), Error> {
+    async fn delete(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error> {
         db_pool
             .get()
             .await
@@ -307,15 +304,15 @@ pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
     let query = sea_query::Query::insert()
         .into_table(System::table())
         .columns([
-            <System as Identity>::Iden::Id,
-            <System as Identity>::Iden::CurrentVersion,
-            <System as Identity>::Iden::PreviousVersion,
-            <System as Identity>::Iden::SmtpConfig,
-            <System as Identity>::Iden::GoogleConfig,
-            <System as Identity>::Iden::FacebookConfig,
-            <System as Identity>::Iden::GithubConfig,
-            <System as Identity>::Iden::TwitterConfig,
-            <System as Identity>::Iden::DiscordConfig,
+            SystemIden::Id,
+            SystemIden::CurrentVersion,
+            SystemIden::PreviousVersion,
+            SystemIden::SmtpConfig,
+            SystemIden::GoogleConfig,
+            SystemIden::FacebookConfig,
+            SystemIden::GithubConfig,
+            SystemIden::TwitterConfig,
+            SystemIden::DiscordConfig,
         ])
         .values_panic([
             "system".into(),

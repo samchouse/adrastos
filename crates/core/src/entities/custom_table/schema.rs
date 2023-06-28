@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt};
 
-use actix_web::web;
 use adrastos_macros::DbDeserialize;
 use chrono::{DateTime, Utc};
 use sea_query::{
@@ -43,14 +42,14 @@ pub struct CustomTableSchema {
 impl CustomTableSchemaSelectBuilder {
     pub fn by_id(&mut self, id: &str) -> &mut Self {
         self.query_builder
-            .and_where(Expr::col(<CustomTableSchema as Identity>::Iden::Id).eq(id));
+            .and_where(Expr::col(CustomTableSchemaIden::Id).eq(id));
 
         self
     }
 
     pub fn by_name(&mut self, name: &str) -> &mut Self {
         self.query_builder
-            .and_where(Expr::col(<CustomTableSchema as Identity>::Iden::Name).eq(name));
+            .and_where(Expr::col(CustomTableSchemaIden::Name).eq(name));
 
         self
     }
@@ -65,7 +64,7 @@ impl CustomTableSchemaSelectBuilder {
 
     pub async fn finish(
         &mut self,
-        db_pool: &web::Data<deadpool_postgres::Pool>,
+        db_pool: &deadpool_postgres::Pool,
     ) -> Result<CustomTableSchema, Error> {
         let row = db_pool
             .get()
@@ -95,10 +94,8 @@ impl CustomTableSchemaSelectBuilder {
 }
 
 impl Identity for CustomTableSchema {
-    type Iden = CustomTableSchemaIden;
-
     fn table() -> Alias {
-        Alias::new(<Self as Identity>::Iden::Table.to_string())
+        Alias::new(CustomTableSchemaIden::Table.to_string())
     }
 
     fn error_identifier() -> String {
@@ -112,72 +109,72 @@ impl Init for CustomTableSchema {
             .table(Self::table())
             .if_not_exists()
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::Id)
+                ColumnDef::new(CustomTableSchemaIden::Id)
                     .string()
                     .not_null()
                     .primary_key(),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::Name)
+                ColumnDef::new(CustomTableSchemaIden::Name)
                     .string()
                     .not_null()
                     .unique_key(),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::StringFields)
+                ColumnDef::new(CustomTableSchemaIden::StringFields)
                     .array(ColumnType::String(None))
                     .not_null()
                     .default(vec![] as Vec<String>),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::NumberFields)
+                ColumnDef::new(CustomTableSchemaIden::NumberFields)
                     .array(ColumnType::String(None))
                     .not_null()
                     .default(vec![] as Vec<String>),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::BooleanFields)
+                ColumnDef::new(CustomTableSchemaIden::BooleanFields)
                     .array(ColumnType::String(None))
                     .not_null()
                     .default(vec![] as Vec<String>),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::DateFields)
+                ColumnDef::new(CustomTableSchemaIden::DateFields)
                     .array(ColumnType::String(None))
                     .not_null()
                     .default(vec![] as Vec<String>),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::EmailFields)
+                ColumnDef::new(CustomTableSchemaIden::EmailFields)
                     .array(ColumnType::String(None))
                     .not_null()
                     .default(vec![] as Vec<String>),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::UrlFields)
+                ColumnDef::new(CustomTableSchemaIden::UrlFields)
                     .array(ColumnType::String(None))
                     .not_null()
                     .default(vec![] as Vec<String>),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::SelectFields)
+                ColumnDef::new(CustomTableSchemaIden::SelectFields)
                     .array(ColumnType::String(None))
                     .not_null()
                     .default(vec![] as Vec<String>),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::RelationFields)
+                ColumnDef::new(CustomTableSchemaIden::RelationFields)
                     .array(ColumnType::String(None))
                     .not_null()
                     .default(vec![] as Vec<String>),
             )
             .col(
-                ColumnDef::new(<Self as Identity>::Iden::CreatedAt)
+                ColumnDef::new(CustomTableSchemaIden::CreatedAt)
                     .timestamp_with_time_zone()
                     .not_null()
                     .default(Keyword::CurrentTimestamp),
             )
-            .col(ColumnDef::new(<Self as Identity>::Iden::UpdatedAt).timestamp_with_time_zone())
+            .col(ColumnDef::new(CustomTableSchemaIden::UpdatedAt).timestamp_with_time_zone())
             .to_string(PostgresQueryBuilder)
     }
 }
@@ -188,18 +185,18 @@ impl CustomTableSchema {
             query_builder: sea_query::Query::select()
                 .from(Self::table())
                 .columns([
-                    <Self as Identity>::Iden::Id,
-                    <Self as Identity>::Iden::Name,
-                    <Self as Identity>::Iden::StringFields,
-                    <Self as Identity>::Iden::NumberFields,
-                    <Self as Identity>::Iden::BooleanFields,
-                    <Self as Identity>::Iden::DateFields,
-                    <Self as Identity>::Iden::EmailFields,
-                    <Self as Identity>::Iden::UrlFields,
-                    <Self as Identity>::Iden::SelectFields,
-                    <Self as Identity>::Iden::RelationFields,
-                    <Self as Identity>::Iden::CreatedAt,
-                    <Self as Identity>::Iden::UpdatedAt,
+                    CustomTableSchemaIden::Id,
+                    CustomTableSchemaIden::Name,
+                    CustomTableSchemaIden::StringFields,
+                    CustomTableSchemaIden::NumberFields,
+                    CustomTableSchemaIden::BooleanFields,
+                    CustomTableSchemaIden::DateFields,
+                    CustomTableSchemaIden::EmailFields,
+                    CustomTableSchemaIden::UrlFields,
+                    CustomTableSchemaIden::SelectFields,
+                    CustomTableSchemaIden::RelationFields,
+                    CustomTableSchemaIden::CreatedAt,
+                    CustomTableSchemaIden::UpdatedAt,
                 ])
                 .limit(1)
                 .to_owned(),
@@ -218,18 +215,18 @@ impl Query for CustomTableSchema {
         query
             .from(Self::table())
             .columns([
-                <Self as Identity>::Iden::Id,
-                <Self as Identity>::Iden::Name,
-                <Self as Identity>::Iden::StringFields,
-                <Self as Identity>::Iden::NumberFields,
-                <Self as Identity>::Iden::BooleanFields,
-                <Self as Identity>::Iden::DateFields,
-                <Self as Identity>::Iden::EmailFields,
-                <Self as Identity>::Iden::UrlFields,
-                <Self as Identity>::Iden::SelectFields,
-                <Self as Identity>::Iden::RelationFields,
-                <Self as Identity>::Iden::CreatedAt,
-                <Self as Identity>::Iden::UpdatedAt,
+                CustomTableSchemaIden::Id,
+                CustomTableSchemaIden::Name,
+                CustomTableSchemaIden::StringFields,
+                CustomTableSchemaIden::NumberFields,
+                CustomTableSchemaIden::BooleanFields,
+                CustomTableSchemaIden::DateFields,
+                CustomTableSchemaIden::EmailFields,
+                CustomTableSchemaIden::UrlFields,
+                CustomTableSchemaIden::SelectFields,
+                CustomTableSchemaIden::RelationFields,
+                CustomTableSchemaIden::CreatedAt,
+                CustomTableSchemaIden::UpdatedAt,
             ])
             .to_owned()
     }
@@ -238,18 +235,18 @@ impl Query for CustomTableSchema {
         Ok(sea_query::Query::insert()
             .into_table(Self::table())
             .columns([
-                <Self as Identity>::Iden::Id,
-                <Self as Identity>::Iden::Name,
-                <Self as Identity>::Iden::StringFields,
-                <Self as Identity>::Iden::NumberFields,
-                <Self as Identity>::Iden::BooleanFields,
-                <Self as Identity>::Iden::DateFields,
-                <Self as Identity>::Iden::EmailFields,
-                <Self as Identity>::Iden::UrlFields,
-                <Self as Identity>::Iden::SelectFields,
-                <Self as Identity>::Iden::RelationFields,
-                <Self as Identity>::Iden::CreatedAt,
-                <Self as Identity>::Iden::UpdatedAt,
+                CustomTableSchemaIden::Id,
+                CustomTableSchemaIden::Name,
+                CustomTableSchemaIden::StringFields,
+                CustomTableSchemaIden::NumberFields,
+                CustomTableSchemaIden::BooleanFields,
+                CustomTableSchemaIden::DateFields,
+                CustomTableSchemaIden::EmailFields,
+                CustomTableSchemaIden::UrlFields,
+                CustomTableSchemaIden::SelectFields,
+                CustomTableSchemaIden::RelationFields,
+                CustomTableSchemaIden::CreatedAt,
+                CustomTableSchemaIden::UpdatedAt,
             ])
             .values_panic([
                 self.id.clone().into(),
@@ -303,13 +300,13 @@ impl Query for CustomTableSchema {
     fn query_update(&self, updated: &HashMap<String, serde_json::Value>) -> Result<String, Error> {
         let mut query = sea_query::Query::update();
 
-        if let Some(name) = updated.get(<Self as Identity>::Iden::Name.to_string().as_str()) {
+        if let Some(name) = updated.get(CustomTableSchemaIden::Name.to_string().as_str()) {
             if let Some(name) = name.as_str() {
-                query.values([(<Self as Identity>::Iden::Name, name.into())]);
+                query.values([(CustomTableSchemaIden::Name, name.into())]);
             }
         }
         if let Some(string_fields) =
-            updated.get(<Self as Identity>::Iden::StringFields.to_string().as_str())
+            updated.get(CustomTableSchemaIden::StringFields.to_string().as_str())
         {
             let string_fields = string_fields
                 .as_array()
@@ -319,7 +316,7 @@ impl Query for CustomTableSchema {
                 .collect::<Vec<_>>();
 
             query.values([(
-                <Self as Identity>::Iden::StringFields,
+                CustomTableSchemaIden::StringFields,
                 string_fields
                     .iter()
                     .filter_map(|f| serde_json::to_string(f).ok())
@@ -330,14 +327,14 @@ impl Query for CustomTableSchema {
 
         Ok(query
             .table(Self::table())
-            .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
+            .and_where(Expr::col(CustomTableSchemaIden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder))
     }
 
     fn query_delete(&self) -> String {
         sea_query::Query::delete()
             .from_table(Self::table())
-            .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
+            .and_where(Expr::col(CustomTableSchemaIden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder)
     }
 }
