@@ -1,16 +1,13 @@
 use actix_web::{delete, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
     db::postgres,
-    entities::{
-        custom_table::{
-            fields::{
-                BooleanField, DateField, EmailField, NumberField, RelationField, SelectField,
-                StringField, UrlField,
-            },
-            mm_relation::ManyToManyRelationTable,
-            schema::{CustomTableSchema, UpdateCustomTableSchema},
+    entities::custom_table::{
+        fields::{
+            BooleanField, DateField, EmailField, NumberField, RelationField, SelectField,
+            StringField, UrlField,
         },
-        Mutate,
+        mm_relation::ManyToManyRelationTable,
+        schema::{CustomTableSchema, UpdateCustomTableSchema},
     },
     error::Error,
     id::Id,

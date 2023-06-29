@@ -1,6 +1,6 @@
 // TODO(@Xenfo): support many browser tabs being open at the same time, currently it'll invalidate the other tabs
 
-use adrastos_macros::{DbCommon, DbSelect};
+use adrastos_macros::{DbCommon, DbQuery, DbSelect};
 use chrono::{DateTime, Duration, Utc};
 use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
@@ -10,10 +10,10 @@ use utoipa::ToSchema;
 
 use crate::error::Error;
 
-use super::{Identity, Join, Query, Update, User, UserIden};
+use super::{Identity, Join, Update, User, UserIden};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbCommon, DbSelect)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbCommon, DbSelect, DbQuery)]
 pub struct RefreshTokenTree {
     pub id: String,
     #[adrastos(relation = User)]
@@ -69,36 +69,5 @@ impl RefreshTokenTree {
 impl Join for RefreshTokenTree {
     fn join(expr: sea_query::SimpleExpr) -> sea_query::SelectStatement {
         Self::find().and_where(vec![expr]).query_builder.clone()
-    }
-}
-
-impl Query for RefreshTokenTree {
-    fn query_insert(&self) -> Result<String, Error> {
-        Ok(sea_query::Query::insert()
-            .into_table(Self::table())
-            .columns([
-                RefreshTokenTreeIden::Id,
-                RefreshTokenTreeIden::UserId,
-                RefreshTokenTreeIden::InactiveAt,
-                RefreshTokenTreeIden::ExpiresAt,
-                RefreshTokenTreeIden::Tokens,
-                RefreshTokenTreeIden::CreatedAt,
-            ])
-            .values_panic([
-                self.id.clone().into(),
-                self.user_id.clone().into(),
-                self.inactive_at.into(),
-                self.expires_at.into(),
-                self.tokens.clone().into(),
-                self.created_at.into(),
-            ])
-            .to_string(PostgresQueryBuilder))
-    }
-
-    fn query_delete(&self) -> String {
-        sea_query::Query::delete()
-            .from_table(Self::table())
-            .and_where(Expr::col(RefreshTokenTreeIden::Id).eq(self.id.clone()))
-            .to_string(PostgresQueryBuilder)
     }
 }

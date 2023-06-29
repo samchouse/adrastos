@@ -1,4 +1,4 @@
-use adrastos_macros::{DbCommon, DbSelect};
+use adrastos_macros::{DbCommon, DbQuery, DbSelect};
 use chrono::{DateTime, Utc};
 use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
@@ -9,10 +9,19 @@ use validator::Validate;
 
 use crate::{auth, error::Error};
 
-use super::{Connection, Identity, Join, JoinKeys, Query, RefreshTokenTree, Update};
+use super::{Connection, Identity, Join, JoinKeys, RefreshTokenTree, Update};
+
+fn validate_password(password: String) -> Result<String, Error> {
+    auth::hash_password(&password).map_err(|err| {
+        Error::InternalServerError(format!(
+            "An error occurred while hashing the password for the {err}"
+        ))
+    })
+}
 
 #[enum_def]
-#[derive(Debug, Validate, Serialize, Deserialize, Clone, ToSchema, DbCommon, DbSelect)]
+#[derive(Debug, Validate, Serialize, Deserialize, Clone, ToSchema, DbCommon, DbSelect, DbQuery)]
+#[adrastos(validated)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: String,
@@ -29,6 +38,7 @@ pub struct User {
     #[validate(length(min = 5, max = 64))]
     pub username: String,
     #[serde(skip_serializing)]
+    #[adrastos(transform = validate_password)]
     #[validate(length(min = 8, max = 64))]
     pub password: String,
     pub verified: bool,
@@ -130,50 +140,5 @@ impl User {
             })?;
 
         Ok(())
-    }
-}
-
-impl Query for User {
-    fn query_insert(&self) -> Result<String, Error> {
-        self.validate().map_err(|err| Error::ValidationErrors {
-            message: format!(
-                "An error occurred while validating the {}",
-                Self::error_identifier(),
-            ),
-            errors: err,
-        })?;
-
-        let hashed_password = auth::hash_password(self.password.as_str()).map_err(|err| {
-            Error::InternalServerError(format!(
-                "An error occurred while hashing the password for the {err}"
-            ))
-        })?;
-
-        Ok(sea_query::Query::insert()
-            .into_table(Self::table())
-            .columns([
-                UserIden::Id,
-                UserIden::FirstName,
-                UserIden::LastName,
-                UserIden::Email,
-                UserIden::Username,
-                UserIden::Password,
-            ])
-            .values_panic(vec![
-                self.id.clone().into(),
-                self.first_name.clone().into(),
-                self.last_name.clone().into(),
-                self.email.clone().into(),
-                self.username.clone().into(),
-                hashed_password.into(),
-            ])
-            .to_string(PostgresQueryBuilder))
-    }
-
-    fn query_delete(&self) -> String {
-        sea_query::Query::delete()
-            .from_table(Self::table())
-            .and_where(Expr::col(UserIden::Id).eq(self.id.clone()))
-            .to_string(PostgresQueryBuilder)
     }
 }

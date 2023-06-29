@@ -2,11 +2,10 @@
 
 use std::fmt;
 
-use deadpool_postgres::tokio_postgres::Row;
 use sea_query::{Alias, Iden, IntoIden, PostgresQueryBuilder, SimpleExpr};
 use secrecy::ExposeSecret;
 
-use crate::{config::Config, error::Error};
+use crate::config::Config;
 
 pub use connection::*;
 pub use refresh_token_tree::*;
@@ -26,11 +25,6 @@ pub trait Identity {
     fn error_identifier() -> String;
 }
 
-pub trait Query {
-    fn query_insert(&self) -> Result<String, Error>;
-    fn query_delete(&self) -> String;
-}
-
 pub trait Join {
     fn join(expr: SimpleExpr) -> sea_query::SelectStatement;
 }
@@ -42,7 +36,7 @@ enum JoinKeys {
 
 impl JoinKeys {
     fn plural(&self) -> String {
-        self.to_string() + "s"
+        format!("{}s", self.to_string())
     }
 
     fn from_identity<T: Identity>() -> Self {
@@ -96,49 +90,6 @@ impl Update {
                 Update::Set(value) => Some((key, value)),
             })
             .collect()
-    }
-}
-
-pub trait Mutate: Sized {
-    async fn create(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error>;
-    async fn delete(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error>;
-}
-
-impl<T: Identity + Query + From<Row> + Sync> Mutate for T {
-    async fn create(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error> {
-        db_pool
-            .get()
-            .await
-            .unwrap()
-            .query(self.query_insert()?.as_str(), &[])
-            .await
-            .map_err(|e| {
-                let error = format!(
-                    "An error occurred while creating the {}: {e}",
-                    T::error_identifier(),
-                );
-                Error::InternalServerError(error)
-            })?;
-
-        Ok(())
-    }
-
-    async fn delete(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), Error> {
-        db_pool
-            .get()
-            .await
-            .unwrap()
-            .query(self.query_delete().as_str(), &[])
-            .await
-            .map_err(|e| {
-                let error = format!(
-                    "An error occurred while deleting the {}: {e}",
-                    T::error_identifier(),
-                );
-                Error::InternalServerError(error)
-            })?;
-
-        Ok(())
     }
 }
 

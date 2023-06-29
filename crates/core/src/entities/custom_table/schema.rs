@@ -1,4 +1,4 @@
-use adrastos_macros::{DbCommon, DbSelect};
+use adrastos_macros::{DbCommon, DbQuery, DbSelect};
 use chrono::{DateTime, Utc};
 use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use tracing_unwrap::ResultExt;
 use utoipa::ToSchema;
 
 use crate::{
-    entities::{Identity, Join, Query, Update},
+    entities::{Identity, Join, Update},
     error::Error,
 };
 
@@ -17,7 +17,7 @@ use super::fields::{
 };
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbSelect, DbCommon)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbSelect, DbCommon, DbQuery)]
 #[adrastos(rename = "custom_table")]
 pub struct CustomTableSchema {
     pub id: String,
@@ -177,80 +177,5 @@ impl CustomTableSchema {
 impl Join for CustomTableSchema {
     fn join(expr: sea_query::SimpleExpr) -> sea_query::SelectStatement {
         Self::find().and_where(vec![expr]).query_builder.clone()
-    }
-}
-
-impl Query for CustomTableSchema {
-    fn query_insert(&self) -> Result<String, Error> {
-        Ok(sea_query::Query::insert()
-            .into_table(Self::table())
-            .columns([
-                CustomTableSchemaIden::Id,
-                CustomTableSchemaIden::Name,
-                CustomTableSchemaIden::StringFields,
-                CustomTableSchemaIden::NumberFields,
-                CustomTableSchemaIden::BooleanFields,
-                CustomTableSchemaIden::DateFields,
-                CustomTableSchemaIden::EmailFields,
-                CustomTableSchemaIden::UrlFields,
-                CustomTableSchemaIden::SelectFields,
-                CustomTableSchemaIden::RelationFields,
-                CustomTableSchemaIden::CreatedAt,
-                CustomTableSchemaIden::UpdatedAt,
-            ])
-            .values_panic([
-                self.id.clone().into(),
-                self.name.clone().into(),
-                self.string_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.number_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.boolean_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.date_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.email_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.url_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.select_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.relation_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.created_at.into(),
-                self.updated_at.into(),
-            ])
-            .to_string(PostgresQueryBuilder))
-    }
-
-    fn query_delete(&self) -> String {
-        sea_query::Query::delete()
-            .from_table(Self::table())
-            .and_where(Expr::col(CustomTableSchemaIden::Id).eq(self.id.clone()))
-            .to_string(PostgresQueryBuilder)
     }
 }

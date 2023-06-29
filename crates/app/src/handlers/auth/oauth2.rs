@@ -6,7 +6,7 @@ use adrastos_core::{
         oauth2::{providers::OAuth2Provider, OAuth2, OAuth2LoginInfo},
     },
     config,
-    entities::{Connection, Mutate, User},
+    entities::{Connection, User},
     error::Error,
     id::Id,
 };

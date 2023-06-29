@@ -1,15 +1,13 @@
-use adrastos_macros::{DbCommon, DbSelect};
+use adrastos_macros::{DbCommon, DbQuery, DbSelect};
 use chrono::{DateTime, Utc};
-use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
+use sea_query::{enum_def, Alias, Expr};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::error::Error;
-
-use super::{Identity, Join, Query, User};
+use super::{Identity, Join, User};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbSelect, DbCommon)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbSelect, DbCommon, DbQuery)]
 pub struct Connection {
     pub id: String,
     #[adrastos(find)]
@@ -25,36 +23,5 @@ pub struct Connection {
 impl Join for Connection {
     fn join(expr: sea_query::SimpleExpr) -> sea_query::SelectStatement {
         Self::find().and_where(vec![expr]).query_builder.clone()
-    }
-}
-
-impl Query for Connection {
-    fn query_insert(&self) -> Result<String, Error> {
-        Ok(sea_query::Query::insert()
-            .into_table(Self::table())
-            .columns([
-                ConnectionIden::Id,
-                ConnectionIden::Provider,
-                ConnectionIden::UserId,
-                ConnectionIden::ProviderId,
-                ConnectionIden::CreatedAt,
-                ConnectionIden::UpdatedAt,
-            ])
-            .values_panic([
-                self.id.clone().into(),
-                self.provider.clone().into(),
-                self.user_id.clone().into(),
-                self.provider_id.clone().into(),
-                self.created_at.into(),
-                self.updated_at.into(),
-            ])
-            .to_string(PostgresQueryBuilder))
-    }
-
-    fn query_delete(&self) -> String {
-        sea_query::Query::delete()
-            .from_table(Self::table())
-            .and_where(Expr::col(ConnectionIden::Id).eq(self.id.clone()))
-            .to_string(PostgresQueryBuilder)
     }
 }

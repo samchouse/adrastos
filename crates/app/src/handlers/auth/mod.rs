@@ -2,7 +2,7 @@ use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{Mutate, UpdateUser, User},
+    entities::{UpdateUser, User},
     error::Error,
     id::Id,
     util,

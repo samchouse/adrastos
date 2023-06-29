@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     config::{self, Config},
-    entities::{Mutate, RefreshTokenTree, User},
+    entities::{RefreshTokenTree, User},
     error::Error,
     id::Id,
 };
