@@ -25,40 +25,6 @@ pub trait Identity {
     fn error_identifier() -> String;
 }
 
-pub trait Join {
-    fn join(expr: SimpleExpr) -> sea_query::SelectStatement;
-}
-
-enum JoinKeys {
-    Connection,
-    RefreshTokenTree,
-}
-
-impl JoinKeys {
-    fn plural(&self) -> String {
-        format!("{}s", self.to_string())
-    }
-
-    fn from_identity<T: Identity>() -> Self {
-        match T::table().to_string() {
-            con if con == Connection::table().to_string() => JoinKeys::Connection,
-            tree if tree == RefreshTokenTree::table().to_string() => JoinKeys::RefreshTokenTree,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl fmt::Display for JoinKeys {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            JoinKeys::Connection => "connection",
-            JoinKeys::RefreshTokenTree => "refresh_token_tree",
-        };
-
-        write!(f, "{name}")
-    }
-}
-
 #[derive(Debug, Clone)]
 enum Update {
     Skip,

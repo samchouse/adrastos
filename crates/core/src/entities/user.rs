@@ -9,7 +9,7 @@ use validator::Validate;
 
 use crate::{auth, error::Error};
 
-use super::{Connection, Identity, Join, JoinKeys, RefreshTokenTree, Update};
+use super::{Connection, Identity, RefreshTokenTree, Update};
 
 fn validate_password(password: String) -> Result<String, Error> {
     auth::hash_password(&password).map_err(|err| {
@@ -50,10 +50,10 @@ pub struct User {
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 
-    #[adrastos(skip)]
+    #[adrastos(join)]
     #[serde(skip_serializing)]
     pub connections: Option<Vec<Connection>>,
-    #[adrastos(skip)]
+    #[adrastos(join)]
     #[serde(skip_serializing)]
     pub refresh_token_trees: Option<Vec<RefreshTokenTree>>,
 }
@@ -74,24 +74,6 @@ pub struct UpdateUser {
     pub banned: Option<bool>,
     pub mfa_secret: Option<Option<String>>,
     pub mfa_backup_codes: Option<Option<Vec<String>>>,
-}
-
-impl UserSelectBuilder {
-    pub fn join<T: Join + Identity>(&mut self, alias: Alias) -> &mut Self {
-        self.query_builder.expr(Expr::cust(
-            format!(
-                "(SELECT json_agg({}) FROM ({}) {}) as {}",
-                JoinKeys::from_identity::<T>(),
-                T::join(Expr::col(alias).equals((User::table(), UserIden::Id)))
-                    .to_string(PostgresQueryBuilder),
-                JoinKeys::from_identity::<T>(),
-                JoinKeys::from_identity::<T>().plural()
-            )
-            .as_str(),
-        ));
-
-        self
-    }
 }
 
 impl User {

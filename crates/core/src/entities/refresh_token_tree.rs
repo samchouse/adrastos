@@ -10,7 +10,7 @@ use utoipa::ToSchema;
 
 use crate::error::Error;
 
-use super::{Identity, Join, Update, User, UserIden};
+use super::{Identity, Update, User, UserIden};
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbCommon, DbSelect, DbQuery)]
@@ -63,11 +63,5 @@ impl RefreshTokenTree {
             })?;
 
         Ok(())
-    }
-}
-
-impl Join for RefreshTokenTree {
-    fn join(expr: sea_query::SimpleExpr) -> sea_query::SelectStatement {
-        Self::find().and_where(vec![expr]).query_builder.clone()
     }
 }

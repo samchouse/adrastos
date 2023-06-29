@@ -1,3 +1,4 @@
+use heck::{AsUpperCamelCase, AsSnakeCase};
 use proc_macro::TokenStream;
 use proc_macro2::TokenTree;
 use quote::{format_ident, quote};
@@ -23,7 +24,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
                 list_meta.path.segments.first().unwrap().ident == "adrastos"
                     && list_meta.tokens.clone().into_iter().any(|it| {
                         if let TokenTree::Ident(ident) = it {
-                            ident == "skip"
+                            ident == "join"
                         } else {
                             false
                         }
@@ -39,6 +40,8 @@ pub fn derive(item: TokenStream) -> TokenStream {
 
         Some(quote! { Alias::new(#str_ident) })
     });
+    let alias_2 = aliases.clone();
+
     let impls = fields.iter().filter_map(|it| {
         let Field {
             ident, attrs, ty, ..
@@ -80,7 +83,218 @@ pub fn derive(item: TokenStream) -> TokenStream {
         None
     });
 
+    let join_ident = format_ident!("{}Join", ident);
+
+    let enum_variants = fields.iter().filter(|it| {
+        let Field { attrs, .. } = it;
+
+        let has_join_attr = attrs.iter().any(|it| {
+            if let Meta::List(list_meta) = &it.meta {
+                list_meta.path.segments.first().unwrap().ident == "adrastos"
+                    && list_meta.tokens.clone().into_iter().any(|it| {
+                        if let TokenTree::Ident(ident) = it {
+                            ident == "join"
+                        } else {
+                            false
+                        }
+                    })
+            } else {
+                false
+            }
+        });
+
+        has_join_attr
+    });
+
+    let e = enum_variants.clone().map(|it| {
+        let Field { ident, .. } = it;
+
+        let variant_ident = format_ident!(
+            "{}",
+            AsUpperCamelCase(ident.clone().unwrap().to_string()).to_string()
+        );
+
+        Some(quote! { #variant_ident })
+    });
+
+    let ea = enum_variants.clone().filter_map(|it| {
+        let Field { ident, ty, .. } = it;
+
+        let str_ident = ident.clone().unwrap().to_string();
+        let variant_ident = format_ident!(
+            "{}",
+            AsUpperCamelCase(ident.clone().unwrap().to_string()).to_string()
+        );
+
+        if let Type::Path(ty) = ty {
+            let name = ty.path.segments.first();
+            if let Some(name) = name {
+                match name.ident.to_string().as_str() {
+                    "Vec" => {
+                        if let syn::PathArguments::AngleBracketed(name) = &name.arguments {
+                            let second_name = name.args.first();
+                            if let Some(syn::GenericArgument::Type(Type::Path(ty))) = second_name {
+                                let second_name = ty.path.segments.first();
+                                if let Some(second_name) = second_name {
+                                    let ident = second_name.ident.to_string();
+                                    return Some(quote! { #join_ident::#variant_ident => #ident::find().and_where(vec![sea_query::Expr::col(sea_query::Alias::new(#str_ident)).equals((#ident::table(), sea_query::Alias::new("id")))]).to_string() });
+                                }
+                            }
+                        }
+                    }
+                    "Option" => {
+                        if let syn::PathArguments::AngleBracketed(name) = &name.arguments {
+                            let second_name = name.args.first();
+                            if let Some(syn::GenericArgument::Type(Type::Path(ty))) = second_name {
+                                let second_name = ty.path.segments.first();
+                                if let Some(second_name) = second_name {
+                                    if second_name.ident.to_string().as_str() == "Vec" {
+                                        if let syn::PathArguments::AngleBracketed(name) =
+                                            &second_name.arguments
+                                        {
+                                            let third_name = name.args.first();
+                                            if let Some(syn::GenericArgument::Type(
+                                                Type::Path(ty),
+                                            )) = third_name
+                                            {
+                                                let third_name = ty.path.segments.first();
+                                                if let Some(third_name) = third_name {
+                                                    let ident = &third_name.ident;
+                                                    return Some(quote! {
+                                                        #join_ident::#variant_ident => #ident::find().and_where(vec![sea_query::Expr::col(sea_query::Alias::new(#str_ident)).equals((#ident::table(), sea_query::Alias::new("id")))]).to_string()
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _ => {
+                        let ident = &name.ident;
+                        return Some(quote! { #join_ident::#variant_ident => #ident::find().and_where(vec![sea_query::Expr::col(sea_query::Alias::new(#str_ident)).equals((#ident::table(), sea_query::Alias::new("id")))]).to_string() });
+                    }
+                }
+            }
+        }
+
+        return None;
+    });
+
+    let eaa = enum_variants.clone().flat_map(|it| {
+        let Field { ident, ty, .. } = it;
+        
+        let variant_ident = format_ident!(
+            "{}",
+            AsUpperCamelCase(ident.clone().unwrap().to_string()).to_string()
+        );
+
+        if let Type::Path(ty) = ty {
+            let name = ty.path.segments.first();
+            if let Some(name) = name {
+                match name.ident.to_string().as_str() {
+                    "Vec" => {
+                        if let syn::PathArguments::AngleBracketed(name) = &name.arguments {
+                            let second_name = name.args.first();
+                            if let Some(syn::GenericArgument::Type(Type::Path(ty))) = second_name {
+                                let second_name = ty.path.segments.first();
+                                if let Some(second_name) = second_name {
+                                    let ident = AsSnakeCase(second_name.ident.to_string()).to_string();
+                                    return Some(quote! { #join_ident::#variant_ident => #ident });
+                                }
+                            }
+                        }
+                    }
+                    "Option" => {
+                        if let syn::PathArguments::AngleBracketed(name) = &name.arguments {
+                            let second_name = name.args.first();
+                            if let Some(syn::GenericArgument::Type(Type::Path(ty))) = second_name {
+                                let second_name = ty.path.segments.first();
+                                if let Some(second_name) = second_name {
+                                    if second_name.ident.to_string().as_str() == "Vec" {
+                                        if let syn::PathArguments::AngleBracketed(name) =
+                                            &second_name.arguments
+                                        {
+                                            let third_name = name.args.first();
+                                            if let Some(syn::GenericArgument::Type(
+                                                Type::Path(ty),
+                                            )) = third_name
+                                            {
+                                                let third_name = ty.path.segments.first();
+                                                if let Some(third_name) = third_name {
+                                                    let ident = AsSnakeCase(third_name.ident.to_string()).to_string();
+                                                    return Some(quote! { #join_ident::#variant_ident => #ident });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _ => {
+                        let ident = AsSnakeCase(name.ident.to_string()).to_string();
+                        return Some(quote! { #join_ident::#variant_ident => #ident });
+                    }
+                }
+            }
+        }
+
+        None
+    });
+
+    let ev_2 = enum_variants.clone();
+    let ev_3 = enum_variants.clone();
+
+    let other_ident = ident.to_string().to_lowercase();
+    let oath = format!("{}s", other_ident);
+
+    let aasdfadf = if enum_variants.clone().collect::<Vec<_>>().len() > 0 {
+        quote! {
+            pub enum #join_ident {
+                #(#e),*
+            }
+    
+            impl #join_ident {
+                fn to_string(&self) -> String {
+                    match self {
+                        #(#eaa.to_string()),*
+                    }
+                }
+            }
+        }
+    } else {
+        quote! {}
+    };
+
+    let ass = if enum_variants.collect::<Vec<_>>().len() > 0 {
+        quote! {
+            pub fn join(&mut self, join: #join_ident) -> &mut Self {
+                let query = match join {
+                    #(#ea),*
+                };
+
+                self.query_builder.expr(sea_query::Expr::cust(
+                    format!(
+                        "(SELECT json_agg({}) FROM ({query}) {}) as {}",
+                        join.to_string(),
+                        join.to_string(),
+                        format!("{}s", join.to_string())
+                    )
+                    .as_str(),
+                ));
+
+                self
+            }
+        }
+    } else {
+        quote! {}
+    };
+
     quote! {
+        #aasdfadf
+
         #[derive(Debug, Clone)]
         pub struct #builder_ident {
             query_builder: sea_query::SelectStatement,
@@ -98,7 +312,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
                     .get()
                     .await
                     .unwrap()
-                    .query(self.query_builder.to_string(sea_query::PostgresQueryBuilder).as_str(), &[])
+                    .query(self.to_string().as_str(), &[])
                     .await
                     .map_err(|e| {
                         let error = format!(
@@ -127,6 +341,8 @@ pub fn derive(item: TokenStream) -> TokenStream {
                 self
             }
 
+            #ass
+
             pub async fn one(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<#ident, crate::error::Error> {
                 self.query_builder.reset_limit().limit(1);
 
@@ -137,6 +353,10 @@ pub fn derive(item: TokenStream) -> TokenStream {
                 self.query_builder.reset_limit();
 
                 self.finish(db_pool).await
+            }
+
+            pub fn to_string(&self) -> String {
+                self.query_builder.to_string(sea_query::PostgresQueryBuilder)
             }
         }
 

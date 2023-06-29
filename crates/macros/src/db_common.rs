@@ -83,7 +83,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
                 list_meta.path.segments.first().unwrap().ident == "adrastos"
                     && list_meta.tokens.clone().into_iter().any(|it| {
                         if let TokenTree::Ident(ident) = it {
-                            ident == "skip"
+                            ident == "join"
                         } else {
                             false
                         }

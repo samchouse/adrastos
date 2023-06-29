@@ -7,7 +7,7 @@ use tracing_unwrap::ResultExt;
 use utoipa::ToSchema;
 
 use crate::{
-    entities::{Identity, Join, Update},
+    entities::{Identity, Update},
     error::Error,
 };
 
@@ -171,11 +171,5 @@ impl CustomTableSchema {
             })?;
 
         Ok(())
-    }
-}
-
-impl Join for CustomTableSchema {
-    fn join(expr: sea_query::SimpleExpr) -> sea_query::SelectStatement {
-        Self::find().and_where(vec![expr]).query_builder.clone()
     }
 }
