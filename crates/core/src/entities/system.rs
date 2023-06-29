@@ -1,11 +1,11 @@
-use adrastos_macros::{DbDeserialize, DbIdentity, DbSchema};
+use adrastos_macros::{DbCommon};
 use sea_query::{enum_def, Expr, PostgresQueryBuilder, Query};
 use serde::{Deserialize, Serialize};
 
 use super::{Identity};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, DbDeserialize, DbIdentity, DbSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, DbCommon)]
 pub struct System {
     pub id: String,
     pub current_version: String,

@@ -1,6 +1,6 @@
 // TODO(@Xenfo): support many browser tabs being open at the same time, currently it'll invalidate the other tabs
 
-use adrastos_macros::{DbDeserialize, DbIdentity, DbSchema, DbSelect};
+use adrastos_macros::{DbCommon, DbSelect};
 use chrono::{DateTime, Duration, Utc};
 use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
@@ -13,9 +13,7 @@ use crate::error::Error;
 use super::{Identity, Join, Query, Update, User, UserIden};
 
 #[enum_def]
-#[derive(
-    Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect, DbIdentity, DbSchema,
-)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbCommon, DbSelect)]
 pub struct RefreshTokenTree {
     pub id: String,
     #[adrastos(relation = User)]

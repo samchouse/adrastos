@@ -1,4 +1,4 @@
-use adrastos_macros::{DbDeserialize, DbIdentity, DbSchema, DbSelect};
+use adrastos_macros::{DbCommon, DbSelect};
 use chrono::{DateTime, Utc};
 use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
@@ -17,9 +17,7 @@ use super::fields::{
 };
 
 #[enum_def]
-#[derive(
-    Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect, DbIdentity, DbSchema,
-)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbSelect, DbCommon)]
 #[adrastos(rename = "custom_table")]
 pub struct CustomTableSchema {
     pub id: String,

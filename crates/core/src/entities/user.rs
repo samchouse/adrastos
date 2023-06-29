@@ -1,4 +1,4 @@
-use adrastos_macros::{DbDeserialize, DbIdentity, DbSchema, DbSelect};
+use adrastos_macros::{DbSelect, DbCommon};
 use chrono::{DateTime, Utc};
 use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
@@ -19,10 +19,8 @@ use super::{Connection, Identity, Join, JoinKeys, Query, RefreshTokenTree, Updat
     Deserialize,
     Clone,
     ToSchema,
-    DbDeserialize,
+    DbCommon,
     DbSelect,
-    DbIdentity,
-    DbSchema,
 )]
 #[serde(rename_all = "camelCase")]
 pub struct User {

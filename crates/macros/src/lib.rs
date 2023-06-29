@@ -1,23 +1,23 @@
 use proc_macro::TokenStream;
+use quote::quote;
 
 mod db_identity;
 mod db_schema;
 mod db_select;
 mod db_serialize;
 
-#[proc_macro_derive(DbIdentity, attributes(adrastos))]
-pub fn derive_db_identity(item: TokenStream) -> TokenStream {
-    db_identity::derive(item)
-}
+#[proc_macro_derive(DbCommon, attributes(adrastos))]
+pub fn derive_db_common(item: TokenStream) -> TokenStream {
+    let identity: proc_macro2::TokenStream = db_identity::derive(item.clone()).into();
+    let schema: proc_macro2::TokenStream = db_schema::derive(item.clone()).into();
+    let serialize: proc_macro2::TokenStream = db_serialize::derive(item).into();
 
-#[proc_macro_derive(DbSchema, attributes(adrastos))]
-pub fn derive_db_schema(item: TokenStream) -> TokenStream {
-    db_schema::derive(item)
-}
-
-#[proc_macro_derive(DbDeserialize)]
-pub fn derive_db_serialize(item: TokenStream) -> TokenStream {
-    db_serialize::derive(item)
+    quote! {
+        #identity
+        #schema
+        #serialize
+    }
+    .into()
 }
 
 #[proc_macro_derive(DbSelect, attributes(adrastos))]

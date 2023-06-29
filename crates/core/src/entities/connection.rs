@@ -1,4 +1,4 @@
-use adrastos_macros::{DbDeserialize, DbIdentity, DbSchema, DbSelect};
+use adrastos_macros::{DbSelect, DbCommon};
 use chrono::{DateTime, Utc};
 use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ use super::{Identity, Join, Query, User};
 
 #[enum_def]
 #[derive(
-    Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect, DbIdentity, DbSchema,
+    Debug, Serialize, Deserialize, Clone, ToSchema, DbSelect, DbCommon,
 )]
 pub struct Connection {
     pub id: String,
