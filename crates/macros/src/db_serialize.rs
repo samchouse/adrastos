@@ -60,7 +60,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
         quote! { #ident: serde_json::from_str(row.get(#str_ident)).unwrap() }
     });
 
-    let expanded = quote! {
+    quote! {
         impl From<deadpool_postgres::tokio_postgres::Row> for #ident {
             fn from(row: deadpool_postgres::tokio_postgres::Row) -> Self {
                 #ident {
@@ -68,7 +68,6 @@ pub fn derive(item: TokenStream) -> TokenStream {
                 }
             }
         }
-    };
-
-    expanded.into()
+    }
+    .into()
 }

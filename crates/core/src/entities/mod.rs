@@ -21,10 +21,6 @@ pub mod refresh_token_tree;
 pub mod system;
 pub mod user;
 
-trait Init {
-    fn init() -> String;
-}
-
 pub trait Identity {
     fn table() -> Alias;
     fn error_identifier() -> String;

@@ -1,8 +1,6 @@
-use adrastos_macros::{DbDeserialize, DbIdentity, DbSelect};
+use adrastos_macros::{DbDeserialize, DbIdentity, DbSchema, DbSelect};
 use chrono::{DateTime, Utc};
-use sea_query::{
-    enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, Table,
-};
+use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use tracing_unwrap::ResultExt;
@@ -11,25 +9,34 @@ use validator::Validate;
 
 use crate::{auth, error::Error};
 
-use super::{Connection, Identity, Init, Join, JoinKeys, Query, RefreshTokenTree, Update};
+use super::{Connection, Identity, Join, JoinKeys, Query, RefreshTokenTree, Update};
 
 #[enum_def]
 #[derive(
-    Debug, Validate, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect, DbIdentity,
+    Debug,
+    Validate,
+    Serialize,
+    Deserialize,
+    Clone,
+    ToSchema,
+    DbDeserialize,
+    DbSelect,
+    DbIdentity,
+    DbSchema,
 )]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: String,
-    #[select(find)]
+    #[adrastos(find)]
     #[validate(length(max = 50))]
     pub first_name: String,
-    #[select(find)]
+    #[adrastos(find)]
     #[validate(length(max = 50))]
     pub last_name: String,
-    #[select(find)]
+    #[adrastos(find, unique)]
     #[validate(email)]
     pub email: String,
-    #[select(find)]
+    #[adrastos(find, unique)]
     #[validate(length(min = 5, max = 64))]
     pub username: String,
     #[serde(skip_serializing)]
@@ -44,10 +51,10 @@ pub struct User {
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 
-    #[select(skip)]
+    #[adrastos(skip)]
     #[serde(skip_serializing)]
     pub connections: Option<Vec<Connection>>,
-    #[select(skip)]
+    #[adrastos(skip)]
     #[serde(skip_serializing)]
     pub refresh_token_trees: Option<Vec<RefreshTokenTree>>,
 }
@@ -134,57 +141,6 @@ impl User {
             })?;
 
         Ok(())
-    }
-}
-
-impl Init for User {
-    fn init() -> String {
-        Table::create()
-            .table(Self::table())
-            .if_not_exists()
-            .col(
-                ColumnDef::new(UserIden::Id)
-                    .string()
-                    .not_null()
-                    .primary_key(),
-            )
-            .col(ColumnDef::new(UserIden::FirstName).string().not_null())
-            .col(ColumnDef::new(UserIden::LastName).string().not_null())
-            .col(
-                ColumnDef::new(UserIden::Email)
-                    .string()
-                    .not_null()
-                    .unique_key(),
-            )
-            .col(
-                ColumnDef::new(UserIden::Username)
-                    .string()
-                    .not_null()
-                    .unique_key(),
-            )
-            .col(ColumnDef::new(UserIden::Password).string().not_null())
-            .col(
-                ColumnDef::new(UserIden::Verified)
-                    .boolean()
-                    .not_null()
-                    .default(false),
-            )
-            .col(
-                ColumnDef::new(UserIden::Banned)
-                    .boolean()
-                    .not_null()
-                    .default(false),
-            )
-            .col(ColumnDef::new(UserIden::MfaSecret).string())
-            .col(ColumnDef::new(UserIden::MfaBackupCodes).array(ColumnType::String(None)))
-            .col(
-                ColumnDef::new(UserIden::CreatedAt)
-                    .timestamp_with_time_zone()
-                    .not_null()
-                    .default(Keyword::CurrentTimestamp),
-            )
-            .col(ColumnDef::new(UserIden::UpdatedAt).timestamp_with_time_zone())
-            .to_string(PostgresQueryBuilder)
     }
 }
 

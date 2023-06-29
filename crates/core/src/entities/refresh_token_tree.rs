@@ -1,11 +1,8 @@
 // TODO(@Xenfo): support many browser tabs being open at the same time, currently it'll invalidate the other tabs
 
-use adrastos_macros::{DbDeserialize, DbIdentity, DbSelect};
+use adrastos_macros::{DbDeserialize, DbIdentity, DbSchema, DbSelect};
 use chrono::{DateTime, Duration, Utc};
-use sea_query::{
-    enum_def, Alias, ColumnDef, ColumnType, Expr, ForeignKey, ForeignKeyAction, Keyword,
-    PostgresQueryBuilder, Table,
-};
+use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use tracing_unwrap::ResultExt;
@@ -13,12 +10,15 @@ use utoipa::ToSchema;
 
 use crate::error::Error;
 
-use super::{Identity, Init, Join, Query, Update, User, UserIden};
+use super::{Identity, Join, Query, Update, User, UserIden};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect, DbIdentity)]
+#[derive(
+    Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect, DbIdentity, DbSchema,
+)]
 pub struct RefreshTokenTree {
     pub id: String,
+    #[adrastos(relation = User)]
     pub user_id: String,
     pub inactive_at: DateTime<Utc>,
     pub expires_at: DateTime<Utc>,
@@ -65,56 +65,6 @@ impl RefreshTokenTree {
             })?;
 
         Ok(())
-    }
-}
-
-impl Init for RefreshTokenTree {
-    fn init() -> String {
-        Table::create()
-            .table(Self::table())
-            .if_not_exists()
-            .col(
-                ColumnDef::new(RefreshTokenTreeIden::Id)
-                    .string()
-                    .not_null()
-                    .primary_key(),
-            )
-            .col(
-                ColumnDef::new(RefreshTokenTreeIden::UserId)
-                    .string()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(RefreshTokenTreeIden::InactiveAt)
-                    .timestamp_with_time_zone()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(RefreshTokenTreeIden::ExpiresAt)
-                    .timestamp_with_time_zone()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(RefreshTokenTreeIden::Tokens)
-                    .array(ColumnType::String(None))
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(RefreshTokenTreeIden::CreatedAt)
-                    .timestamp_with_time_zone()
-                    .not_null()
-                    .default(Keyword::CurrentTimestamp),
-            )
-            .col(ColumnDef::new(RefreshTokenTreeIden::UpdatedAt).timestamp_with_time_zone())
-            .foreign_key(
-                ForeignKey::create()
-                    .name("FK_refresh_token_tree_user_id")
-                    .from(RefreshTokenTree::table(), RefreshTokenTreeIden::UserId)
-                    .to(User::table(), UserIden::Id)
-                    .on_update(ForeignKeyAction::Cascade)
-                    .on_delete(ForeignKeyAction::Cascade),
-            )
-            .to_string(PostgresQueryBuilder)
     }
 }
 

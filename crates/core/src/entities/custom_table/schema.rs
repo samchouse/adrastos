@@ -1,15 +1,13 @@
-use adrastos_macros::{DbDeserialize, DbSelect, DbIdentity};
+use adrastos_macros::{DbDeserialize, DbIdentity, DbSchema, DbSelect};
 use chrono::{DateTime, Utc};
-use sea_query::{
-    enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, Table,
-};
+use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use tracing_unwrap::ResultExt;
 use utoipa::ToSchema;
 
 use crate::{
-    entities::{Identity, Init, Join, Query, Update},
+    entities::{Identity, Join, Query, Update},
     error::Error,
 };
 
@@ -19,11 +17,13 @@ use super::fields::{
 };
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect, DbIdentity)]
-#[identity(rename = "custom_table")]
+#[derive(
+    Debug, Serialize, Deserialize, Clone, ToSchema, DbDeserialize, DbSelect, DbIdentity, DbSchema,
+)]
+#[adrastos(rename = "custom_table")]
 pub struct CustomTableSchema {
     pub id: String,
-    #[select(find)]
+    #[adrastos(find, unique)]
     pub name: String,
     pub string_fields: Vec<StringField>,
     pub number_fields: Vec<NumberField>,
@@ -173,82 +173,6 @@ impl CustomTableSchema {
             })?;
 
         Ok(())
-    }
-}
-
-impl Init for CustomTableSchema {
-    fn init() -> String {
-        Table::create()
-            .table(Self::table())
-            .if_not_exists()
-            .col(
-                ColumnDef::new(CustomTableSchemaIden::Id)
-                    .string()
-                    .not_null()
-                    .primary_key(),
-            )
-            .col(
-                ColumnDef::new(CustomTableSchemaIden::Name)
-                    .string()
-                    .not_null()
-                    .unique_key(),
-            )
-            .col(
-                ColumnDef::new(CustomTableSchemaIden::StringFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(CustomTableSchemaIden::NumberFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(CustomTableSchemaIden::BooleanFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(CustomTableSchemaIden::DateFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(CustomTableSchemaIden::EmailFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(CustomTableSchemaIden::UrlFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(CustomTableSchemaIden::SelectFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(CustomTableSchemaIden::RelationFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(CustomTableSchemaIden::CreatedAt)
-                    .timestamp_with_time_zone()
-                    .not_null()
-                    .default(Keyword::CurrentTimestamp),
-            )
-            .col(ColumnDef::new(CustomTableSchemaIden::UpdatedAt).timestamp_with_time_zone())
-            .to_string(PostgresQueryBuilder)
     }
 }
 

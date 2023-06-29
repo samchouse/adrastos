@@ -16,7 +16,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
         .iter()
         .find(|it| {
             if let Meta::List(list_meta) = &it.meta {
-                return list_meta.path.segments.first().unwrap().ident == "identity";
+                return list_meta.path.segments.first().unwrap().ident == "adrastos";
             }
 
             false
@@ -73,7 +73,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
         quote! { Self::#branch_ident => #ident }
     });
 
-    let expanded = quote! {
+    quote! {
         impl Identity for #ident {
             fn table() -> sea_query::Alias {
                 sea_query::Alias::new(#iden_ident::Table.to_string())
@@ -94,7 +94,6 @@ pub fn derive(item: TokenStream) -> TokenStream {
                 write!(f, "{name}")
             }
         }
-    };
-
-    expanded.into()
+    }
+    .into()
 }

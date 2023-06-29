@@ -1,11 +1,11 @@
-use adrastos_macros::{DbDeserialize, DbIdentity};
-use sea_query::{enum_def, ColumnDef, Expr, PostgresQueryBuilder, Query, Table};
+use adrastos_macros::{DbDeserialize, DbIdentity, DbSchema};
+use sea_query::{enum_def, Expr, PostgresQueryBuilder, Query};
 use serde::{Deserialize, Serialize};
 
-use super::{Identity, Init};
+use super::{Identity};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, DbDeserialize, DbIdentity)]
+#[derive(Debug, Serialize, Deserialize, Clone, DbDeserialize, DbIdentity, DbSchema)]
 pub struct System {
     pub id: String,
     pub current_version: String,
@@ -112,37 +112,6 @@ impl System {
                         .into(),
                 ),
             ])
-            .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl Init for System {
-    fn init() -> String {
-        Table::create()
-            .table(Self::table())
-            .if_not_exists()
-            .col(
-                ColumnDef::new(SystemIden::Id)
-                    .string()
-                    .not_null()
-                    .primary_key(),
-            )
-            .col(
-                ColumnDef::new(SystemIden::CurrentVersion)
-                    .string()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(SystemIden::PreviousVersion)
-                    .string()
-                    .not_null(),
-            )
-            .col(ColumnDef::new(SystemIden::SmtpConfig).string())
-            .col(ColumnDef::new(SystemIden::GoogleConfig).string())
-            .col(ColumnDef::new(SystemIden::FacebookConfig).string())
-            .col(ColumnDef::new(SystemIden::GithubConfig).string())
-            .col(ColumnDef::new(SystemIden::TwitterConfig).string())
-            .col(ColumnDef::new(SystemIden::DiscordConfig).string())
             .to_string(PostgresQueryBuilder)
     }
 }

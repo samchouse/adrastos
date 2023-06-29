@@ -20,7 +20,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
         let str_ident = ident.clone().unwrap().to_string();
         let has_skip_attr = attrs.iter().any(|it| {
             if let Meta::List(list_meta) = &it.meta {
-                list_meta.path.segments.first().unwrap().ident == "select"
+                list_meta.path.segments.first().unwrap().ident == "adrastos"
                     && list_meta.tokens.clone().into_iter().any(|it| {
                         if let TokenTree::Ident(ident) = it {
                             ident == "skip"
@@ -48,7 +48,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
         let str_ident = ident.clone().unwrap().to_string();
         let has_find_attr = attrs.iter().any(|it| {
             if let Meta::List(list_meta) = &it.meta {
-                list_meta.path.segments.first().unwrap().ident == "select"
+                list_meta.path.segments.first().unwrap().ident == "adrastos"
                     && list_meta.tokens.clone().into_iter().any(|it| {
                         if let TokenTree::Ident(ident) = it {
                             ident == "find"
@@ -80,7 +80,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
         None
     });
 
-    let expanded = quote! {
+    quote! {
         #[derive(Debug, Clone)]
         pub struct #builder_ident {
             query_builder: sea_query::SelectStatement,
@@ -157,7 +157,5 @@ pub fn derive(item: TokenStream) -> TokenStream {
                 builder.by_id(id).to_owned()
             }
         }
-    };
-
-    expanded.into()
+    }.into()
 }
