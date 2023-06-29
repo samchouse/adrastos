@@ -1,4 +1,4 @@
-use adrastos_macros::{DbSelect, DbCommon};
+use adrastos_macros::{DbCommon, DbSelect};
 use chrono::{DateTime, Utc};
 use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
@@ -12,16 +12,7 @@ use crate::{auth, error::Error};
 use super::{Connection, Identity, Join, JoinKeys, Query, RefreshTokenTree, Update};
 
 #[enum_def]
-#[derive(
-    Debug,
-    Validate,
-    Serialize,
-    Deserialize,
-    Clone,
-    ToSchema,
-    DbCommon,
-    DbSelect,
-)]
+#[derive(Debug, Validate, Serialize, Deserialize, Clone, ToSchema, DbCommon, DbSelect)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: String,

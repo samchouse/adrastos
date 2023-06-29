@@ -1,8 +1,8 @@
-use adrastos_macros::{DbCommon};
+use adrastos_macros::DbCommon;
 use sea_query::{enum_def, Expr, PostgresQueryBuilder, Query};
 use serde::{Deserialize, Serialize};
 
-use super::{Identity};
+use super::Identity;
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, DbCommon)]

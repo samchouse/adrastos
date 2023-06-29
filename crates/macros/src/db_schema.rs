@@ -86,7 +86,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
                     _ => quote! {},
                 };
 
-                return Some(quote! { 
+                return Some(quote! {
                     .col(
                         sea_query::ColumnDef::new(sea_query::Alias::new(#str_ident))
                         #props
