@@ -10,7 +10,6 @@ WORKDIR /work
 FROM chef AS planner
 
 COPY ["Cargo.toml", "Cargo.lock", "./"]
-COPY ./.cargo ./.cargo
 COPY ./crates ./crates
 
 RUN cargo chef prepare --recipe-path recipe.json
@@ -23,7 +22,6 @@ RUN apk add libressl-dev
 RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY ["Cargo.toml", "Cargo.lock", "./"]
-COPY ./.cargo ./.cargo
 COPY ./crates ./crates
 
 WORKDIR /work/crates/app
