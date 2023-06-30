@@ -11,8 +11,9 @@ use crate::{
 pub fn db_select(item: TokenStream) -> TokenStream {
     let ItemStruct { ident, fields, .. } = parse_macro_input!(item as ItemStruct);
 
-    let builder_ident = format_ident!("{}SelectBuilder", ident);
     let iden_ident = format_ident!("{}Iden", ident);
+    let join_ident = format_ident!("{}Join", ident);
+    let builder_ident = format_ident!("{}SelectBuilder", ident);
 
     let fields = match fields {
         Fields::Named(fields) => fields.named,
@@ -53,36 +54,30 @@ pub fn db_select(item: TokenStream) -> TokenStream {
         })
     });
 
-    let join_ident = format_ident!("{}Join", ident);
-
-    let enum_variants = fields.iter().filter(|it| {
-        let Field { attrs, .. } = it;
+    let enum_variants = fields.iter().filter_map(|it| {
+        let Field { attrs, ident, .. } = it;
         let attrs = AttributeTokens::from(attrs.clone());
 
-        attrs.get(TokenName::Join).is_some()
+        attrs.get(TokenName::Join)?;
+
+        Some((
+            it,
+            format_ident!(
+                "{}",
+                AsUpperCamelCase(ident.clone().unwrap().to_string()).to_string()
+            ),
+        ))
     });
 
-    let variant_ident = enum_variants.clone().map(|it| {
-        let Field { ident, .. } = it;
+    let variant_ident = enum_variants
+        .clone()
+        .map(|(_, variant_ident)| quote! { #variant_ident });
 
-        let variant_ident = format_ident!(
-            "{}",
-            AsUpperCamelCase(ident.clone().unwrap().to_string()).to_string()
-        );
-
-        Some(quote! { #variant_ident })
-    });
-
-    let query_branches = enum_variants.clone().map(|it| {
-        let Field { ident: inner_ident, ty, .. } = it;
+    let query_branches = enum_variants.clone().map(|(it, variant_ident)| {
+        let Field { ty, .. } = it;
         let ty = Type::from(ty.clone());
 
         let str_ident = format!("{}_id", ident.clone().to_string());
-        let variant_ident = format_ident!(
-            "{}",
-            AsUpperCamelCase(inner_ident.clone().unwrap().to_string()).to_string()
-        );
-
         let ident = match ty {
             Type::Vec(generic) => generic.into_ident(),
             Type::Option(generic) => match *generic {
@@ -95,14 +90,9 @@ pub fn db_select(item: TokenStream) -> TokenStream {
         quote! { #join_ident::#variant_ident => #ident::find().and_where(vec![sea_query::Expr::col(sea_query::Alias::new(#str_ident)).equals((#ident::table(), sea_query::Alias::new("id")))]).to_string() }
     });
 
-    let string_branches = enum_variants.clone().flat_map(|it| {
-        let Field { ident, ty, .. } = it;
+    let string_branches = enum_variants.clone().flat_map(|(it, variant_ident)| {
+        let Field { ty, .. } = it;
         let ty = Type::from(ty.clone());
-
-        let variant_ident = format_ident!(
-            "{}",
-            AsUpperCamelCase(ident.clone().unwrap().to_string()).to_string()
-        );
 
         let ident = AsSnakeCase(
             match ty {
@@ -116,11 +106,6 @@ pub fn db_select(item: TokenStream) -> TokenStream {
             .to_string(),
         )
         .to_string();
-
-        println!(
-            "{:#?}",
-            quote! { #join_ident::#variant_ident => #ident.to_string() }
-        );
 
         quote! { #join_ident::#variant_ident => #ident.to_string(), }
     });

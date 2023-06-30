@@ -30,7 +30,6 @@ pub fn db_common(item: TokenStream) -> TokenStream {
 
     let iden_ident = format_ident!("{}Iden", ident);
     let table_identifier = format!("{}s", table_name);
-    let lowercase_ident = ident.to_string().to_lowercase();
     let error_identifier = table_name.replace('_', " ");
 
     let fields = match fields {
@@ -83,11 +82,15 @@ pub fn db_common(item: TokenStream) -> TokenStream {
     });
 
     let foreign_keys = fields.iter().filter_map(|it| {
-        let Field { ident, attrs, .. } = it;
+        let Field {
+            ident: inner_ident,
+            attrs,
+            ..
+        } = it;
         let attrs = AttributeTokens::from(attrs.clone());
 
-        let str_ident = ident.clone().unwrap().to_string();
-        let fk_name = format!("FK_{}_{}", lowercase_ident, str_ident);
+        let str_ident = inner_ident.clone().unwrap().to_string();
+        let fk_name = format!("FK_{}_{}", ident.to_string().to_lowercase(), str_ident);
 
         let relation = attrs.get(TokenName::Relation).map(|t| {
             if let Token::Relation(ident) = t {
