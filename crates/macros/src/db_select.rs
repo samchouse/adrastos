@@ -19,7 +19,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
         let Field { ident, attrs, .. } = it;
 
         let str_ident = ident.clone().unwrap().to_string();
-        let has_skip_attr = attrs.iter().any(|it| {
+        let has_join_attr = attrs.iter().any(|it| {
             if let Meta::List(list_meta) = &it.meta {
                 list_meta.path.segments.first().unwrap().ident == "adrastos"
                     && list_meta.tokens.clone().into_iter().any(|it| {
@@ -34,7 +34,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
             }
         });
 
-        if has_skip_attr {
+        if has_join_attr {
             return None;
         }
 
