@@ -77,7 +77,7 @@ pub fn db_select(item: TokenStream) -> TokenStream {
         let Field { ty, .. } = it;
         let ty = Type::from(ty.clone());
 
-        let str_ident = format!("{}_id", ident.clone().to_string());
+        let str_ident = format!("{}_id", ident.clone().to_string().to_lowercase());
         let ident = match ty {
             Type::Vec(generic) => generic.into_ident(),
             Type::Option(generic) => match *generic {
