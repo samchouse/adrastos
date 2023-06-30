@@ -210,53 +210,53 @@ pub fn derive(item: TokenStream) -> TokenStream {
     });
 
     quote! {
-		impl #ident {
-			pub async fn create(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), crate::error::Error> {
-				#(#create_validator)*
+        impl #ident {
+            pub async fn create(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), crate::error::Error> {
+                #(#create_validator)*
 
-				let query = sea_query::Query::insert()
-					.into_table(Self::table())
-					.columns([
-						#(#create_columns),*
-					])
-					.values_panic([
-						#(#create_values),*
-					])
-					.to_string(sea_query::PostgresQueryBuilder);
+                let query = sea_query::Query::insert()
+                    .into_table(Self::table())
+                    .columns([
+                        #(#create_columns),*
+                    ])
+                    .values_panic([
+                        #(#create_values),*
+                    ])
+                    .to_string(sea_query::PostgresQueryBuilder);
 
-				db_pool
-					.get()
-					.await
-					.unwrap()
-					.execute(&query, &[])
-					.await
-					.map_err(|e| {
-						tracing::error!(error = ?e);
-						crate::error::Error::InternalServerError(format!("Failed to create {}", Self::error_identifier()))
-					})?;
+                db_pool
+                    .get()
+                    .await
+                    .unwrap()
+                    .execute(&query, &[])
+                    .await
+                    .map_err(|e| {
+                        tracing::error!(error = ?e);
+                        crate::error::Error::InternalServerError(format!("Failed to create {}", Self::error_identifier()))
+                    })?;
 
-				Ok(())
-			}
+                Ok(())
+            }
 
-			pub async fn delete(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), crate::error::Error> {
-				let query = sea_query::Query::delete()
-					.from_table(Self::table())
-					.and_where(sea_query::Expr::col(sea_query::Alias::new("id")).eq(self.id.clone()))
-					.to_string(sea_query::PostgresQueryBuilder);
+            pub async fn delete(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), crate::error::Error> {
+                let query = sea_query::Query::delete()
+                    .from_table(Self::table())
+                    .and_where(sea_query::Expr::col(sea_query::Alias::new("id")).eq(self.id.clone()))
+                    .to_string(sea_query::PostgresQueryBuilder);
 
-				db_pool
-					.get()
-					.await
-					.unwrap()
-					.execute(&query, &[])
-					.await
-					.map_err(|e| {
-						tracing::error!(error = ?e);
-						crate::error::Error::InternalServerError(format!("Failed to delete {}", Self::error_identifier()))
-					})?;
+                db_pool
+                    .get()
+                    .await
+                    .unwrap()
+                    .execute(&query, &[])
+                    .await
+                    .map_err(|e| {
+                        tracing::error!(error = ?e);
+                        crate::error::Error::InternalServerError(format!("Failed to delete {}", Self::error_identifier()))
+                    })?;
 
-				Ok(())
-			}
-		}
-	}.into()
+                Ok(())
+            }
+        }
+    }.into()
 }

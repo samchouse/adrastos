@@ -105,7 +105,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
         has_join_attr
     });
 
-    let e = enum_variants.clone().map(|it| {
+    let variant_ident = enum_variants.clone().map(|it| {
         let Field { ident, .. } = it;
 
         let variant_ident = format_ident!(
@@ -116,7 +116,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
         Some(quote! { #variant_ident })
     });
 
-    let ea = enum_variants.clone().filter_map(|it| {
+    let query_branches = enum_variants.clone().filter_map(|it| {
         let Field { ident: inner_ident, ty, .. } = it;
 
         let str_ident = format!("{}_id", ident.clone().to_string());
@@ -181,7 +181,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
         None
     });
 
-    let eaa = enum_variants.clone().flat_map(|it| {
+    let string_branches = enum_variants.clone().flat_map(|it| {
         let Field { ident, ty, .. } = it;
 
         let variant_ident = format_ident!(
@@ -243,16 +243,16 @@ pub fn derive(item: TokenStream) -> TokenStream {
         None
     });
 
-    let aasdfadf = if !enum_variants.clone().collect::<Vec<_>>().is_empty() {
+    let join_enum = if !enum_variants.clone().collect::<Vec<_>>().is_empty() {
         quote! {
             pub enum #join_ident {
-                #(#e),*
+                #(#variant_ident),*
             }
 
             impl #join_ident {
                 fn to_string(&self) -> String {
                     match self {
-                        #(#eaa.to_string()),*
+                        #(#string_branches.to_string()),*
                     }
                 }
             }
@@ -261,11 +261,11 @@ pub fn derive(item: TokenStream) -> TokenStream {
         quote! {}
     };
 
-    let ass = if !enum_variants.clone().collect::<Vec<_>>().is_empty() {
+    let join_fn = if !enum_variants.clone().collect::<Vec<_>>().is_empty() {
         quote! {
             pub fn join(&mut self, join: #join_ident) -> &mut Self {
                 let query = match join {
-                    #(#ea),*
+                    #(#query_branches),*
                 };
 
                 self.query_builder.expr(sea_query::Expr::cust(
@@ -286,7 +286,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
     };
 
     quote! {
-        #aasdfadf
+        #join_enum
 
         #[derive(Debug, Clone)]
         pub struct #builder_ident {
@@ -334,7 +334,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
                 self
             }
 
-            #ass
+            #join_fn
 
             pub async fn one(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<#ident, crate::error::Error> {
                 self.query_builder.reset_limit().limit(1);

@@ -5,7 +5,7 @@ use actix_web::{
 use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{UserJoin, User},
+    entities::{User, UserJoin},
     error::Error,
     util,
 };
