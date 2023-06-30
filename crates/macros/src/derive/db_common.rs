@@ -21,7 +21,6 @@ pub fn db_common(item: TokenStream) -> TokenStream {
         .get(TokenName::Rename)
         .map(|t| {
             if let Token::Rename(name) = t {
-                println!("name: {}", name);
                 return name.clone();
             }
 
