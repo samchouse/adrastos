@@ -4,7 +4,7 @@ use sea_query::{enum_def, Alias, Expr};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use super::{Identity, User};
+use super::User;
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbSelect, DbCommon, DbQuery)]

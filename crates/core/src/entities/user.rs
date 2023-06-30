@@ -9,7 +9,7 @@ use validator::Validate;
 
 use crate::{auth, error::Error};
 
-use super::{Connection, Identity, RefreshTokenTree, Update};
+use super::{Connection, RefreshTokenTree, Update};
 
 fn validate_password(password: String) -> Result<String, Error> {
     auth::hash_password(&password).map_err(|err| {
@@ -38,8 +38,8 @@ pub struct User {
     #[validate(length(min = 5, max = 64))]
     pub username: String,
     #[serde(skip_serializing)]
-    #[adrastos(transform = validate_password)]
     #[validate(length(min = 8, max = 64))]
+    #[adrastos(transform = validate_password)]
     pub password: String,
     pub verified: bool,
     pub banned: bool,

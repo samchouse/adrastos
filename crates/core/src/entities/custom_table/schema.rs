@@ -6,10 +6,7 @@ use tracing::error;
 use tracing_unwrap::ResultExt;
 use utoipa::ToSchema;
 
-use crate::{
-    entities::{Identity, Update},
-    error::Error,
-};
+use crate::{entities::Update, error::Error};
 
 use super::fields::{
     BooleanField, DateField, EmailField, NumberField, RelationField, SelectField, StringField,

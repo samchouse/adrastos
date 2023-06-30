@@ -281,6 +281,14 @@ pub fn derive(item: TokenStream) -> TokenStream {
 
     quote! {
         impl #ident {
+            pub fn table() -> sea_query::Alias {
+                sea_query::Alias::new(#iden_ident::Table.to_string())
+            }
+
+            pub fn error_identifier() -> String {
+                #error_identifier.to_string()
+            }
+
             pub fn init() -> String {
                 sea_query::Table::create()
                     .table(Self::table())
@@ -294,16 +302,6 @@ pub fn derive(item: TokenStream) -> TokenStream {
                     #(#columns)*
                     #(#foreign_keys)*
                     .to_string(sea_query::PostgresQueryBuilder)
-            }
-        }
-
-        impl Identity for #ident {
-            fn table() -> sea_query::Alias {
-                sea_query::Alias::new(#iden_ident::Table.to_string())
-            }
-
-            fn error_identifier() -> String {
-                #error_identifier.to_string()
             }
         }
 

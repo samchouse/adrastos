@@ -1,4 +1,4 @@
-use heck::{AsUpperCamelCase, AsSnakeCase};
+use heck::{AsSnakeCase, AsUpperCamelCase};
 use proc_macro::TokenStream;
 use proc_macro2::TokenTree;
 use quote::{format_ident, quote};
@@ -40,7 +40,6 @@ pub fn derive(item: TokenStream) -> TokenStream {
 
         Some(quote! { Alias::new(#str_ident) })
     });
-    let alias_2 = aliases.clone();
 
     let impls = fields.iter().filter_map(|it| {
         let Field {
@@ -118,12 +117,12 @@ pub fn derive(item: TokenStream) -> TokenStream {
     });
 
     let ea = enum_variants.clone().filter_map(|it| {
-        let Field { ident, ty, .. } = it;
+        let Field { ident: inner_ident, ty, .. } = it;
 
-        let str_ident = ident.clone().unwrap().to_string();
+        let str_ident = format!("{}_id", ident.clone().to_string());
         let variant_ident = format_ident!(
             "{}",
-            AsUpperCamelCase(ident.clone().unwrap().to_string()).to_string()
+            AsUpperCamelCase(inner_ident.clone().unwrap().to_string()).to_string()
         );
 
         if let Type::Path(ty) = ty {
@@ -179,12 +178,12 @@ pub fn derive(item: TokenStream) -> TokenStream {
             }
         }
 
-        return None;
+        None
     });
 
     let eaa = enum_variants.clone().flat_map(|it| {
         let Field { ident, ty, .. } = it;
-        
+
         let variant_ident = format_ident!(
             "{}",
             AsUpperCamelCase(ident.clone().unwrap().to_string()).to_string()
@@ -244,18 +243,12 @@ pub fn derive(item: TokenStream) -> TokenStream {
         None
     });
 
-    let ev_2 = enum_variants.clone();
-    let ev_3 = enum_variants.clone();
-
-    let other_ident = ident.to_string().to_lowercase();
-    let oath = format!("{}s", other_ident);
-
-    let aasdfadf = if enum_variants.clone().collect::<Vec<_>>().len() > 0 {
+    let aasdfadf = if !enum_variants.clone().collect::<Vec<_>>().is_empty() {
         quote! {
             pub enum #join_ident {
                 #(#e),*
             }
-    
+
             impl #join_ident {
                 fn to_string(&self) -> String {
                     match self {
@@ -268,7 +261,7 @@ pub fn derive(item: TokenStream) -> TokenStream {
         quote! {}
     };
 
-    let ass = if enum_variants.collect::<Vec<_>>().len() > 0 {
+    let ass = if !enum_variants.clone().collect::<Vec<_>>().is_empty() {
         quote! {
             pub fn join(&mut self, join: #join_ident) -> &mut Self {
                 let query = match join {

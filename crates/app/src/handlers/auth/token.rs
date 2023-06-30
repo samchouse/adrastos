@@ -5,12 +5,11 @@ use actix_web::{
 use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{RefreshTokenTree, RefreshTokenTreeIden, User},
+    entities::{UserJoin, User},
     error::Error,
     util,
 };
 use chrono::Utc;
-use sea_query::Alias;
 use serde_json::json;
 use tokio::sync::Mutex;
 
@@ -37,7 +36,7 @@ pub async fn refresh(
     }
 
     let user = User::find_by_id(&refresh_token.claims.sub)
-        .join::<RefreshTokenTree>(Alias::new(RefreshTokenTreeIden::UserId.to_string()))
+        .join(UserJoin::RefreshTokenTrees)
         .one(&db_pool)
         .await?;
 

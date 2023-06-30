@@ -10,7 +10,7 @@ use utoipa::ToSchema;
 
 use crate::error::Error;
 
-use super::{Identity, Update, User, UserIden};
+use super::{Update, User, UserIden};
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbCommon, DbSelect, DbQuery)]

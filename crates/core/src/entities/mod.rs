@@ -1,8 +1,6 @@
 // TODO(@Xenfo): use `*Iden::Table` instead of Alias::new() once https://github.com/SeaQL/sea-query/issues/533 is fixed
 
-use std::fmt;
-
-use sea_query::{Alias, Iden, IntoIden, PostgresQueryBuilder, SimpleExpr};
+use sea_query::{IntoIden, PostgresQueryBuilder, SimpleExpr};
 use secrecy::ExposeSecret;
 
 use crate::config::Config;
@@ -19,11 +17,6 @@ pub mod custom_table;
 pub mod refresh_token_tree;
 pub mod system;
 pub mod user;
-
-pub trait Identity {
-    fn table() -> Alias;
-    fn error_identifier() -> String;
-}
 
 #[derive(Debug, Clone)]
 enum Update {
