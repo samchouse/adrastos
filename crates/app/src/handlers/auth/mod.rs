@@ -1,15 +1,12 @@
-use std::collections::HashMap;
-
 use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{Identity, Mutate, User, UserIden},
+    entities::{UpdateUser, User},
     error::Error,
     id::Id,
     util,
 };
-use sea_query::Expr;
 use tokio::sync::Mutex;
 
 use actix_web::{cookie::Cookie, get, post, web, HttpRequest, HttpResponse, Responder};
@@ -20,7 +17,7 @@ use lettre::{
     message::header::ContentType, AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::json;
 use utoipa::ToSchema;
 
 use crate::{middleware::user::RequiredUser, openapi, session::SessionKey};
@@ -76,22 +73,20 @@ pub async fn signup(
         return Err(Error::BadRequest("Invalid email".into()));
     }
 
-    if User::find(
-        &db_pool,
-        vec![Expr::col(<User as Identity>::Iden::Email).eq(body.email.clone())],
-    )
-    .await
-    .is_ok()
+    if User::find()
+        .by_email(body.email.clone())
+        .one(&db_pool)
+        .await
+        .is_ok()
     {
         return Err(Error::BadRequest("Email already in use".into()));
     }
 
-    if User::find(
-        &db_pool,
-        vec![Expr::col(<User as Identity>::Iden::Username).eq(body.username.clone())],
-    )
-    .await
-    .is_ok()
+    if User::find()
+        .by_username(body.username.clone())
+        .one(&db_pool)
+        .await
+        .is_ok()
     {
         return Err(Error::BadRequest("Username already in use".into()));
     }
@@ -197,9 +192,9 @@ pub async fn login(
     config: web::Data<Mutex<config::Config>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let user = User::select()
-        .by_email(&body.email)
-        .finish(&db_pool)
+    let user = User::find()
+        .by_email(body.email.clone())
+        .one(&db_pool)
         .await?;
 
     let is_valid = auth::verify_password(body.password.as_str(), &user.password)
@@ -308,7 +303,10 @@ pub async fn verify(
 
     user.update(
         &db_pool,
-        &HashMap::from([(UserIden::Verified.to_string(), Value::from(true))]),
+        UpdateUser {
+            verified: Some(true),
+            ..Default::default()
+        },
     )
     .await
     .map_err(|_| Error::InternalServerError("Unable to update user".to_string()))?;

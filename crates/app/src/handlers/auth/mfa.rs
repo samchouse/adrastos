@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use actix_session::Session;
 use actix_web::{get, post, web, HttpResponse, Responder};
 use adrastos_core::{
@@ -8,13 +6,13 @@ use adrastos_core::{
         mfa::{Mfa, VerificationMethod},
     },
     config::Config,
-    entities::{Mutate, User, UserIden},
+    entities::{UpdateUser, User},
     error::Error,
 };
 use chrono::Duration;
 use deadpool_redis::redis;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::json;
 use tokio::sync::Mutex;
 
 use crate::{middleware::user, session::SessionKey};
@@ -89,16 +87,11 @@ pub async fn confirm(
 
     user.update(
         &db_pool,
-        &HashMap::from([
-            (
-                UserIden::MfaSecret.to_string(),
-                Value::from(mfa.get_secret()),
-            ),
-            (
-                UserIden::MfaBackupCodes.to_string(),
-                Value::from(Some(backup_codes.hashed_codes)),
-            ),
-        ]),
+        UpdateUser {
+            mfa_secret: Some(Some(mfa.get_secret())),
+            mfa_backup_codes: Some(Some(backup_codes.hashed_codes)),
+            ..Default::default()
+        },
     )
     .await
     .map_err(|_| Error::InternalServerError("Error updating user".into()))?;
@@ -141,7 +134,7 @@ pub async fn verify(
         return Err(Error::BadRequest("You have not started the login process".into()));
     };
 
-    let user = User::select().by_id(&user_id).finish(&db_pool).await?;
+    let user = User::find_by_id(&user_id).one(&db_pool).await?;
     let Some(mfa_secret) = user.mfa_secret.clone() else {
         return Err(Error::BadRequest("MFA is disabled".into()));
     };
@@ -185,13 +178,11 @@ pub async fn disable(
 
     user.update(
         &db_pool,
-        &HashMap::from([
-            (UserIden::MfaSecret.to_string(), Value::from(None::<String>)),
-            (
-                UserIden::MfaBackupCodes.to_string(),
-                Value::from(None::<Vec<String>>),
-            ),
-        ]),
+        UpdateUser {
+            mfa_secret: Some(None),
+            mfa_backup_codes: Some(None),
+            ..Default::default()
+        },
     )
     .await
     .map_err(|_| Error::InternalServerError("Error updating user".into()))?;
@@ -217,10 +208,10 @@ pub async fn regenerate(
 
     user.update(
         &db_pool,
-        &HashMap::from([(
-            UserIden::MfaBackupCodes.to_string(),
-            Value::from(Some(backup_codes.hashed_codes)),
-        )]),
+        UpdateUser {
+            mfa_backup_codes: Some(Some(backup_codes.hashed_codes)),
+            ..Default::default()
+        },
     )
     .await
     .map_err(|_| Error::InternalServerError("Error updating user".into()))?;

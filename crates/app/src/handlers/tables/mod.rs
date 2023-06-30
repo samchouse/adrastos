@@ -1,18 +1,13 @@
-use std::collections::HashMap;
-
 use actix_web::{delete, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
     db::postgres,
-    entities::{
-        custom_table::{
-            fields::{
-                BooleanField, DateField, EmailField, NumberField, RelationField, SelectField,
-                StringField, UrlField,
-            },
-            mm_relation::ManyToManyRelationTable,
-            schema::{CustomTableSchema, CustomTableSchemaIden},
+    entities::custom_table::{
+        fields::{
+            BooleanField, DateField, EmailField, NumberField, RelationField, SelectField,
+            StringField, UrlField,
         },
-        Mutate,
+        mm_relation::ManyToManyRelationTable,
+        schema::{CustomTableSchema, UpdateCustomTableSchema},
     },
     error::Error,
     id::Id,
@@ -22,7 +17,7 @@ use heck::AsSnakeCase;
 use regex::Regex;
 use sea_query::{Alias, PostgresQueryBuilder, Table, TableCreateStatement};
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::json;
 use utoipa::ToSchema;
 
 use crate::middleware::user::RequiredUser;
@@ -167,9 +162,9 @@ pub async fn create(
         updated_at: None,
     };
 
-    let found_table = CustomTableSchema::select()
-        .by_name(&custom_table.name)
-        .finish(&db_pool)
+    let found_table = CustomTableSchema::find()
+        .by_name(custom_table.name.clone())
+        .one(&db_pool)
         .await;
     if found_table.is_ok() {
         return Err(Error::BadRequest(
@@ -243,20 +238,22 @@ pub async fn update(
 ) -> actix_web::Result<impl Responder, Error> {
     let body = body.into_inner();
 
-    let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
-        .finish(&db_pool)
+    let custom_table = CustomTableSchema::find()
+        .by_name(path.clone())
+        .one(&db_pool)
         .await?;
 
     let mut table_name = custom_table.name.clone();
-    let mut updated_table = HashMap::new();
     let mut alter_query = Table::alter();
+    let mut update = UpdateCustomTableSchema {
+        ..Default::default()
+    };
 
     if let Some(name) = body.name {
         if name != custom_table.name {
-            let found_table = CustomTableSchema::select()
-                .by_name(&name)
-                .finish(&db_pool)
+            let found_table = CustomTableSchema::find()
+                .by_name(name.clone())
+                .one(&db_pool)
                 .await;
             if found_table.is_ok() {
                 return Err(Error::BadRequest(
@@ -264,7 +261,7 @@ pub async fn update(
                 ));
             }
 
-            updated_table.insert(CustomTableSchemaIden::Name.to_string(), Value::from(name));
+            update.name = Some(name);
         }
     }
     if let Some(string_fields) = body.string_fields {
@@ -302,29 +299,19 @@ pub async fn update(
             }
         });
 
-        updated_table.insert(
-            CustomTableSchemaIden::StringFields.to_string(),
-            Value::from(
-                updated_string_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>(),
-            ),
-        );
+        update.string_fields = Some(updated_string_fields);
     }
 
-    custom_table.update(&db_pool, &updated_table).await?;
+    custom_table.update(&db_pool, update.clone()).await?;
 
-    if let Some(updated_name) = updated_table.get(&CustomTableSchemaIden::Name.to_string()) {
-        let updated_name = updated_name.as_str().unwrap();
-
+    if let Some(updated_name) = update.name {
         db_pool
             .get()
             .await
             .unwrap()
             .execute(
                 Table::rename()
-                    .table(Alias::new(&table_name), Alias::new(updated_name))
+                    .table(Alias::new(&table_name), Alias::new(updated_name.clone()))
                     .to_string(PostgresQueryBuilder)
                     .as_str(),
                 &[],
@@ -332,7 +319,7 @@ pub async fn update(
             .await
             .unwrap();
 
-        table_name = updated_name.to_string();
+        table_name = updated_name;
     }
 
     db_pool
@@ -372,9 +359,9 @@ pub async fn delete(
     path: web::Path<String>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
-        .finish(&db_pool)
+    let custom_table = CustomTableSchema::find()
+        .by_name(path.clone())
+        .one(&db_pool)
         .await?;
 
     custom_table.delete(&db_pool).await?;

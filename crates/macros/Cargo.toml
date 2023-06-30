@@ -1,0 +1,15 @@
+[package]
+name = "adrastos_macros"
+version = "0.1.0"
+authors = ["Samuel Corsi-House <chouse.samuel@gmail.com>"]
+license = "AGPL-3.0-or-later"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+heck = "0.4.1"
+proc-macro2 = "1.0.63"
+quote = "1.0.28"
+syn = "2.0.22"

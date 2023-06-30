@@ -9,7 +9,7 @@ export const env = createEnv({
   client: {},
   server: {
     SERVER_URL: z.string().optional(),
-    DRAGONFLY_URL: z.string()
+    REDIS_URL: z.string()
   },
   runtimeEnv: process.env
 });

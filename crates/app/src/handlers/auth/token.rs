@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use actix_web::{
     cookie::{time::OffsetDateTime, Cookie, Expiration},
     get, web, HttpRequest, HttpResponse, Responder,
@@ -7,13 +5,12 @@ use actix_web::{
 use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{Mutate, RefreshTokenTree, RefreshTokenTreeIden, User},
+    entities::{User, UserJoin},
     error::Error,
     util,
 };
 use chrono::Utc;
-use sea_query::Alias;
-use serde_json::{json, Value};
+use serde_json::json;
 use tokio::sync::Mutex;
 
 #[utoipa::path(
@@ -38,10 +35,9 @@ pub async fn refresh(
         return Err(Error::Forbidden("Not a refresh token".into()));
     }
 
-    let user = User::select()
-        .by_id(&refresh_token.claims.sub)
-        .join::<RefreshTokenTree>(Alias::new(RefreshTokenTreeIden::UserId.to_string()))
-        .finish(&db_pool)
+    let user = User::find_by_id(&refresh_token.claims.sub)
+        .join(UserJoin::RefreshTokenTrees)
+        .one(&db_pool)
         .await?;
 
     let refresh_token_tree = &user
@@ -78,15 +74,7 @@ pub async fn refresh(
     let mut tokens = refresh_token_tree.tokens.clone();
     tokens.push(refresh_token.claims.jti.clone());
 
-    refresh_token_tree
-        .update(
-            &db_pool,
-            &HashMap::from([(
-                RefreshTokenTreeIden::Tokens.to_string(),
-                Value::from(tokens),
-            )]),
-        )
-        .await?;
+    refresh_token_tree.update(&db_pool, tokens).await?;
 
     Ok(HttpResponse::Ok()
         .cookie(

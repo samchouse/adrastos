@@ -277,13 +277,11 @@ dependencies = [
  "actix-web-httpauth",
  "adrastos_core",
  "argon2",
- "async-trait",
  "chrono",
  "clap",
  "deadpool-postgres",
  "deadpool-redis",
  "dotenvy",
- "fancy-regex",
  "futures-util",
  "heck 0.4.1",
  "json-patch",
@@ -303,7 +301,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "tokio-postgres",
  "tracing",
  "tracing-actix-web",
  "tracing-axiom",
@@ -320,8 +317,8 @@ name = "adrastos_core"
 version = "0.1.0"
 dependencies = [
  "actix-web",
+ "adrastos_macros",
  "argon2",
- "async-trait",
  "chrono",
  "deadpool-postgres",
  "deadpool-redis",
@@ -349,6 +346,16 @@ dependencies = [
  "tracing-unwrap",
  "utoipa",
  "validator",
+]
+
+[[package]]
+name = "adrastos_macros"
+version = "0.1.0"
+dependencies = [
+ "heck 0.4.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.22",
 ]
 
 [[package]]
@@ -2386,9 +2393,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.62"
+version = "1.0.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe8df9bd9fe9d1742a9e17f8129712801b428f6d4c6059d79bacea58f0b0142d"
+checksum = "7b368fba921b0dce7e60f5e04ec15e565b3303972b42bcfde1d0713b881959eb"
 dependencies = [
  "unicode-ident",
 ]

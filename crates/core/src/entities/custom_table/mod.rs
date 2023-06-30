@@ -1,6 +1,5 @@
 // TODO(@Xenfo): implement relations
 
-use actix_web::web;
 use chrono::{DateTime, Utc};
 use sea_query::{
     Alias, ColumnDef, ColumnType, Expr, ForeignKey, ForeignKeyAction, Keyword,
@@ -133,7 +132,7 @@ impl CustomTableSelectBuilder {
 
     pub async fn finish(
         &mut self,
-        db_pool: &web::Data<deadpool_postgres::Pool>,
+        db_pool: &deadpool_postgres::Pool,
     ) -> Result<serde_json::Value, Error> {
         let row = db_pool
             .get()

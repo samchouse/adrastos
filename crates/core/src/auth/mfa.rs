@@ -1,4 +1,4 @@
-use std::{collections::HashMap, vec};
+use std::vec;
 
 use actix_web::web;
 use argon2::{
@@ -6,11 +6,10 @@ use argon2::{
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
 };
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use serde_json::Value;
 use totp_rs::{Algorithm, Secret, TOTP};
 
 use crate::{
-    entities::{Mutate, User, UserIden},
+    entities::{UpdateUser, User},
     error::Error,
 };
 
@@ -132,10 +131,10 @@ impl Mfa {
 
                     user.update(
                         &db_pool,
-                        &HashMap::from([(
-                            UserIden::MfaBackupCodes.to_string(),
-                            Value::from(Some(backup_codes)),
-                        )]),
+                        UpdateUser {
+                            mfa_backup_codes: Some(Some(backup_codes)),
+                            ..Default::default()
+                        },
                     )
                     .await
                     .map_err(|_| {

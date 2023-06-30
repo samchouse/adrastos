@@ -14,10 +14,9 @@ use actix_web_httpauth::headers::authorization::{Authorization, Bearer};
 use adrastos_core::{
     auth::TokenType,
     config,
-    entities::{self, Connection, ConnectionIden, RefreshTokenTree, RefreshTokenTreeIden},
+    entities::{self, UserJoin},
 };
 use futures_util::future::LocalBoxFuture;
-use sea_query::Alias;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
@@ -88,13 +87,10 @@ where
 
             if let Some(token) = authorization {
                 if let Ok(access_token) = TokenType::verify(&config, token) {
-                    let user = entities::User::select()
-                        .by_id(&access_token.claims.sub)
-                        .join::<Connection>(Alias::new(ConnectionIden::UserId.to_string()))
-                        .join::<RefreshTokenTree>(Alias::new(
-                            RefreshTokenTreeIden::UserId.to_string(),
-                        ))
-                        .finish(&db_pool)
+                    let user = entities::User::find_by_id(&access_token.claims.sub)
+                        .join(UserJoin::Connections)
+                        .join(UserJoin::RefreshTokenTrees)
+                        .one(&db_pool)
                         .await;
                     if let Ok(user) = user {
                         req.extensions_mut().insert::<entities::User>(user);

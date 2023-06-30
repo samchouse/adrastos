@@ -1,10 +1,22 @@
-use std::fmt;
-
-use sea_query::{enum_def, Alias, ColumnDef, Expr, PostgresQueryBuilder, Query, Table};
+use adrastos_macros::DbCommon;
+use sea_query::{enum_def, Expr, PostgresQueryBuilder, Query};
 use serde::{Deserialize, Serialize};
-use tokio_postgres::Row;
 
-use super::{Identity, Init};
+#[enum_def]
+#[derive(Debug, Serialize, Deserialize, Clone, DbCommon)]
+pub struct System {
+    pub id: String,
+    pub current_version: String,
+    pub previous_version: String,
+
+    pub smtp_config: Option<SmtpConfig>,
+
+    pub google_config: Option<OAuth2Config>,
+    pub facebook_config: Option<OAuth2Config>,
+    pub github_config: Option<OAuth2Config>,
+    pub twitter_config: Option<OAuth2Config>,
+    pub discord_config: Option<OAuth2Config>,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -24,38 +36,22 @@ pub struct OAuth2Config {
     pub client_secret: String,
 }
 
-#[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct System {
-    pub id: String,
-    pub current_version: String,
-    pub previous_version: String,
-
-    pub smtp_config: Option<SmtpConfig>,
-
-    pub google_config: Option<OAuth2Config>,
-    pub facebook_config: Option<OAuth2Config>,
-    pub github_config: Option<OAuth2Config>,
-    pub twitter_config: Option<OAuth2Config>,
-    pub discord_config: Option<OAuth2Config>,
-}
-
 impl System {
     pub fn get() -> String {
         Query::select()
             .from(Self::table())
             .columns([
-                <Self as Identity>::Iden::Id,
-                <Self as Identity>::Iden::CurrentVersion,
-                <Self as Identity>::Iden::PreviousVersion,
-                <Self as Identity>::Iden::SmtpConfig,
-                <Self as Identity>::Iden::GoogleConfig,
-                <Self as Identity>::Iden::FacebookConfig,
-                <Self as Identity>::Iden::GithubConfig,
-                <Self as Identity>::Iden::TwitterConfig,
-                <Self as Identity>::Iden::DiscordConfig,
+                SystemIden::Id,
+                SystemIden::CurrentVersion,
+                SystemIden::PreviousVersion,
+                SystemIden::SmtpConfig,
+                SystemIden::GoogleConfig,
+                SystemIden::FacebookConfig,
+                SystemIden::GithubConfig,
+                SystemIden::TwitterConfig,
+                SystemIden::DiscordConfig,
             ])
-            .and_where(Expr::col(<Self as Identity>::Iden::Id).eq("system"))
+            .and_where(Expr::col(SystemIden::Id).eq("system"))
             .to_string(PostgresQueryBuilder)
     }
 
@@ -64,50 +60,50 @@ impl System {
             .table(System::table())
             .values([
                 (
-                    <System as Identity>::Iden::CurrentVersion,
+                    SystemIden::CurrentVersion,
                     self.current_version.clone().into(),
                 ),
                 (
-                    <System as Identity>::Iden::PreviousVersion,
+                    SystemIden::PreviousVersion,
                     self.previous_version.clone().into(),
                 ),
                 (
-                    <System as Identity>::Iden::SmtpConfig,
+                    SystemIden::SmtpConfig,
                     self.smtp_config
                         .as_ref()
                         .and_then(|v| serde_json::to_string(v).ok())
                         .into(),
                 ),
                 (
-                    <System as Identity>::Iden::GoogleConfig,
+                    SystemIden::GoogleConfig,
                     self.google_config
                         .as_ref()
                         .and_then(|v| serde_json::to_string(v).ok())
                         .into(),
                 ),
                 (
-                    <System as Identity>::Iden::FacebookConfig,
+                    SystemIden::FacebookConfig,
                     self.facebook_config
                         .as_ref()
                         .and_then(|v| serde_json::to_string(v).ok())
                         .into(),
                 ),
                 (
-                    <System as Identity>::Iden::GithubConfig,
+                    SystemIden::GithubConfig,
                     self.github_config
                         .as_ref()
                         .and_then(|v| serde_json::to_string(v).ok())
                         .into(),
                 ),
                 (
-                    <System as Identity>::Iden::TwitterConfig,
+                    SystemIden::TwitterConfig,
                     self.twitter_config
                         .as_ref()
                         .and_then(|v| serde_json::to_string(v).ok())
                         .into(),
                 ),
                 (
-                    <System as Identity>::Iden::DiscordConfig,
+                    SystemIden::DiscordConfig,
                     self.discord_config
                         .as_ref()
                         .and_then(|v| serde_json::to_string(v).ok())
@@ -115,116 +111,5 @@ impl System {
                 ),
             ])
             .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl Identity for System {
-    type Iden = SystemIden;
-
-    fn table() -> Alias {
-        Alias::new(<Self as Identity>::Iden::Table.to_string())
-    }
-
-    fn error_identifier() -> String {
-        "system".into()
-    }
-}
-
-impl Init for System {
-    fn init() -> String {
-        Table::create()
-            .table(Self::table())
-            .if_not_exists()
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::Id)
-                    .string()
-                    .not_null()
-                    .primary_key(),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::CurrentVersion)
-                    .string()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::PreviousVersion)
-                    .string()
-                    .not_null(),
-            )
-            .col(ColumnDef::new(<Self as Identity>::Iden::SmtpConfig).string())
-            .col(ColumnDef::new(<Self as Identity>::Iden::GoogleConfig).string())
-            .col(ColumnDef::new(<Self as Identity>::Iden::FacebookConfig).string())
-            .col(ColumnDef::new(<Self as Identity>::Iden::GithubConfig).string())
-            .col(ColumnDef::new(<Self as Identity>::Iden::TwitterConfig).string())
-            .col(ColumnDef::new(<Self as Identity>::Iden::DiscordConfig).string())
-            .to_string(PostgresQueryBuilder)
-    }
-}
-
-impl From<Row> for System {
-    // TODO(@Xenfo): automate this trait
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),
-            current_version: row.get(
-                <Self as Identity>::Iden::CurrentVersion
-                    .to_string()
-                    .as_str(),
-            ),
-            previous_version: row.get(
-                <Self as Identity>::Iden::PreviousVersion
-                    .to_string()
-                    .as_str(),
-            ),
-            smtp_config: row
-                .get::<_, Option<String>>(<Self as Identity>::Iden::SmtpConfig.to_string().as_str())
-                .map(|v| serde_json::from_str(&v).unwrap()),
-            google_config: row
-                .get::<_, Option<String>>(
-                    <Self as Identity>::Iden::GoogleConfig.to_string().as_str(),
-                )
-                .map(|v| serde_json::from_str(&v).unwrap()),
-            facebook_config: row
-                .get::<_, Option<String>>(
-                    <Self as Identity>::Iden::FacebookConfig
-                        .to_string()
-                        .as_str(),
-                )
-                .map(|v| serde_json::from_str(&v).unwrap()),
-            github_config: row
-                .get::<_, Option<String>>(
-                    <Self as Identity>::Iden::GithubConfig.to_string().as_str(),
-                )
-                .map(|v| serde_json::from_str(&v).unwrap()),
-            twitter_config: row
-                .get::<_, Option<String>>(
-                    <Self as Identity>::Iden::TwitterConfig.to_string().as_str(),
-                )
-                .map(|v| serde_json::from_str(&v).unwrap()),
-            discord_config: row
-                .get::<_, Option<String>>(
-                    <Self as Identity>::Iden::DiscordConfig.to_string().as_str(),
-                )
-                .map(|v| serde_json::from_str(&v).unwrap()),
-        }
-    }
-}
-
-impl fmt::Display for SystemIden {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            Self::Table => "system",
-            Self::Id => "id",
-            Self::CurrentVersion => "current_version",
-            Self::PreviousVersion => "previous_version",
-            Self::SmtpConfig => "smtp_config",
-            Self::GoogleConfig => "google_config",
-            Self::FacebookConfig => "facebook_config",
-            Self::GithubConfig => "github_config",
-            Self::TwitterConfig => "twitter_config",
-            Self::DiscordConfig => "discord_config",
-        };
-
-        write!(f, "{name}")
     }
 }

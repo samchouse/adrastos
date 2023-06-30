@@ -1,32 +1,24 @@
-use std::{collections::HashMap, fmt};
-
-use actix_web::web;
+use adrastos_macros::{DbCommon, DbQuery, DbSelect};
 use chrono::{DateTime, Utc};
-use sea_query::{
-    enum_def, Alias, ColumnDef, ColumnType, Expr, Keyword, PostgresQueryBuilder, SimpleExpr, Table,
-};
+use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
-use tokio_postgres::Row;
+use tracing::error;
+use tracing_unwrap::ResultExt;
 use utoipa::ToSchema;
 
-use crate::{
-    entities::{Identity, Init, Query},
-    error::Error,
-};
+use crate::{entities::Update, error::Error};
 
 use super::fields::{
     BooleanField, DateField, EmailField, NumberField, RelationField, SelectField, StringField,
     UrlField,
 };
 
-pub struct CustomTableSchemaSelectBuilder {
-    query_builder: sea_query::SelectStatement,
-}
-
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbSelect, DbCommon, DbQuery)]
+#[adrastos(rename = "custom_table")]
 pub struct CustomTableSchema {
     pub id: String,
+    #[adrastos(find, unique)]
     pub name: String,
     pub string_fields: Vec<StringField>,
     pub number_fields: Vec<NumberField>,
@@ -40,381 +32,141 @@ pub struct CustomTableSchema {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-impl CustomTableSchemaSelectBuilder {
-    pub fn by_id(&mut self, id: &str) -> &mut Self {
-        self.query_builder
-            .and_where(Expr::col(<CustomTableSchema as Identity>::Iden::Id).eq(id));
-
-        self
-    }
-
-    pub fn by_name(&mut self, name: &str) -> &mut Self {
-        self.query_builder
-            .and_where(Expr::col(<CustomTableSchema as Identity>::Iden::Name).eq(name));
-
-        self
-    }
-
-    pub fn and_where(&mut self, expressions: Vec<SimpleExpr>) -> &mut Self {
-        for expression in expressions {
-            self.query_builder.and_where(expression);
-        }
-
-        self
-    }
-
-    pub async fn finish(
-        &mut self,
-        db_pool: &web::Data<deadpool_postgres::Pool>,
-    ) -> Result<CustomTableSchema, Error> {
-        let row = db_pool
-            .get()
-            .await
-            .unwrap()
-            .query(
-                self.query_builder.to_string(PostgresQueryBuilder).as_str(),
-                &[],
-            )
-            .await
-            .map_err(|e| {
-                let error = format!(
-                    "An error occurred while fetching the {}: {e}",
-                    CustomTableSchema::error_identifier(),
-                );
-                Error::InternalServerError(error)
-            })?
-            .into_iter()
-            .next()
-            .ok_or_else(|| {
-                let message = format!("No {} was found", CustomTableSchema::error_identifier());
-                Error::BadRequest(message)
-            })?;
-
-        Ok(row.into())
-    }
-}
-
-impl Identity for CustomTableSchema {
-    type Iden = CustomTableSchemaIden;
-
-    fn table() -> Alias {
-        Alias::new(<Self as Identity>::Iden::Table.to_string())
-    }
-
-    fn error_identifier() -> String {
-        "custom table".to_string()
-    }
-}
-
-impl Init for CustomTableSchema {
-    fn init() -> String {
-        Table::create()
-            .table(Self::table())
-            .if_not_exists()
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::Id)
-                    .string()
-                    .not_null()
-                    .primary_key(),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::Name)
-                    .string()
-                    .not_null()
-                    .unique_key(),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::StringFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::NumberFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::BooleanFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::DateFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::EmailFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::UrlFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::SelectFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::RelationFields)
-                    .array(ColumnType::String(None))
-                    .not_null()
-                    .default(vec![] as Vec<String>),
-            )
-            .col(
-                ColumnDef::new(<Self as Identity>::Iden::CreatedAt)
-                    .timestamp_with_time_zone()
-                    .not_null()
-                    .default(Keyword::CurrentTimestamp),
-            )
-            .col(ColumnDef::new(<Self as Identity>::Iden::UpdatedAt).timestamp_with_time_zone())
-            .to_string(PostgresQueryBuilder)
-    }
+#[derive(Debug, Clone, Default)]
+pub struct UpdateCustomTableSchema {
+    pub name: Option<String>,
+    pub string_fields: Option<Vec<StringField>>,
+    pub number_fields: Option<Vec<NumberField>>,
+    pub boolean_fields: Option<Vec<BooleanField>>,
+    pub date_fields: Option<Vec<DateField>>,
+    pub email_fields: Option<Vec<EmailField>>,
+    pub url_fields: Option<Vec<UrlField>>,
+    pub select_fields: Option<Vec<SelectField>>,
+    pub relation_fields: Option<Vec<RelationField>>,
 }
 
 impl CustomTableSchema {
-    pub fn select() -> CustomTableSchemaSelectBuilder {
-        CustomTableSchemaSelectBuilder {
-            query_builder: sea_query::Query::select()
-                .from(Self::table())
-                .columns([
-                    <Self as Identity>::Iden::Id,
-                    <Self as Identity>::Iden::Name,
-                    <Self as Identity>::Iden::StringFields,
-                    <Self as Identity>::Iden::NumberFields,
-                    <Self as Identity>::Iden::BooleanFields,
-                    <Self as Identity>::Iden::DateFields,
-                    <Self as Identity>::Iden::EmailFields,
-                    <Self as Identity>::Iden::UrlFields,
-                    <Self as Identity>::Iden::SelectFields,
-                    <Self as Identity>::Iden::RelationFields,
-                    <Self as Identity>::Iden::CreatedAt,
-                    <Self as Identity>::Iden::UpdatedAt,
-                ])
-                .limit(1)
-                .to_owned(),
-        }
-    }
-}
-
-impl Query for CustomTableSchema {
-    fn query_select(expressions: Vec<sea_query::SimpleExpr>) -> sea_query::SelectStatement {
-        let mut query = sea_query::Query::select();
-
-        for expression in expressions {
-            query.and_where(expression);
-        }
-
-        query
-            .from(Self::table())
-            .columns([
-                <Self as Identity>::Iden::Id,
-                <Self as Identity>::Iden::Name,
-                <Self as Identity>::Iden::StringFields,
-                <Self as Identity>::Iden::NumberFields,
-                <Self as Identity>::Iden::BooleanFields,
-                <Self as Identity>::Iden::DateFields,
-                <Self as Identity>::Iden::EmailFields,
-                <Self as Identity>::Iden::UrlFields,
-                <Self as Identity>::Iden::SelectFields,
-                <Self as Identity>::Iden::RelationFields,
-                <Self as Identity>::Iden::CreatedAt,
-                <Self as Identity>::Iden::UpdatedAt,
-            ])
-            .to_owned()
-    }
-
-    fn query_insert(&self) -> Result<String, Error> {
-        Ok(sea_query::Query::insert()
-            .into_table(Self::table())
-            .columns([
-                <Self as Identity>::Iden::Id,
-                <Self as Identity>::Iden::Name,
-                <Self as Identity>::Iden::StringFields,
-                <Self as Identity>::Iden::NumberFields,
-                <Self as Identity>::Iden::BooleanFields,
-                <Self as Identity>::Iden::DateFields,
-                <Self as Identity>::Iden::EmailFields,
-                <Self as Identity>::Iden::UrlFields,
-                <Self as Identity>::Iden::SelectFields,
-                <Self as Identity>::Iden::RelationFields,
-                <Self as Identity>::Iden::CreatedAt,
-                <Self as Identity>::Iden::UpdatedAt,
-            ])
-            .values_panic([
-                self.id.clone().into(),
-                self.name.clone().into(),
-                self.string_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.number_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.boolean_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.date_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.email_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.url_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.select_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.relation_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-                self.created_at.into(),
-                self.updated_at.into(),
-            ])
-            .to_string(PostgresQueryBuilder))
-    }
-
-    fn query_update(&self, updated: &HashMap<String, serde_json::Value>) -> Result<String, Error> {
-        let mut query = sea_query::Query::update();
-
-        if let Some(name) = updated.get(<Self as Identity>::Iden::Name.to_string().as_str()) {
-            if let Some(name) = name.as_str() {
-                query.values([(<Self as Identity>::Iden::Name, name.into())]);
-            }
-        }
-        if let Some(string_fields) =
-            updated.get(<Self as Identity>::Iden::StringFields.to_string().as_str())
-        {
-            let string_fields = string_fields
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|f| serde_json::from_str::<StringField>(f.as_str().unwrap()).unwrap())
-                .collect::<Vec<_>>();
-
-            query.values([(
-                <Self as Identity>::Iden::StringFields,
-                string_fields
-                    .iter()
-                    .filter_map(|f| serde_json::to_string(f).ok())
-                    .collect::<Vec<String>>()
-                    .into(),
-            )]);
-        }
-
-        Ok(query
+    pub async fn update(
+        &self,
+        db_pool: &deadpool_postgres::Pool,
+        update: UpdateCustomTableSchema,
+    ) -> Result<(), Error> {
+        let query = sea_query::Query::update()
             .table(Self::table())
-            .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
-            .to_string(PostgresQueryBuilder))
-    }
+            .values(Update::create([
+                (CustomTableSchemaIden::Name, update.name.into()),
+                (
+                    CustomTableSchemaIden::StringFields,
+                    update
+                        .string_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::NumberFields,
+                    update
+                        .number_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::BooleanFields,
+                    update
+                        .boolean_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::DateFields,
+                    update
+                        .date_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::EmailFields,
+                    update
+                        .email_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::UrlFields,
+                    update
+                        .url_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::SelectFields,
+                    update
+                        .select_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::RelationFields,
+                    update
+                        .relation_fields
+                        .clone()
+                        .map(|v| {
+                            v.into_iter()
+                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
+                                .collect::<Vec<_>>()
+                        })
+                        .into(),
+                ),
+                (CustomTableSchemaIden::UpdatedAt, Some(Utc::now()).into()),
+            ]))
+            .and_where(Expr::col(CustomTableSchemaIden::Id).eq(self.id.clone()))
+            .to_string(PostgresQueryBuilder);
 
-    fn query_delete(&self) -> String {
-        sea_query::Query::delete()
-            .from_table(Self::table())
-            .and_where(Expr::col(<Self as Identity>::Iden::Id).eq(self.id.clone()))
-            .to_string(PostgresQueryBuilder)
-    }
-}
+        db_pool
+            .get()
+            .await
+            .unwrap_or_log()
+            .execute(&query, &[])
+            .await
+            .map_err(|e| {
+                error!(error = ?e);
+                Error::InternalServerError("Failed to update custom table schema".into())
+            })?;
 
-impl From<Row> for CustomTableSchema {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get(<Self as Identity>::Iden::Id.to_string().as_str()),
-            name: row.get(<Self as Identity>::Iden::Name.to_string().as_str()),
-            string_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::StringFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<StringField>>(),
-            number_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::NumberFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<NumberField>>(),
-            boolean_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::BooleanFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<BooleanField>>(),
-            date_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::DateFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<DateField>>(),
-            email_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::EmailFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<EmailField>>(),
-            url_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::UrlFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<UrlField>>(),
-            select_fields: row
-                .get::<_, Vec<String>>(<Self as Identity>::Iden::SelectFields.to_string().as_str())
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<SelectField>>(),
-            relation_fields: row
-                .get::<_, Vec<String>>(
-                    <Self as Identity>::Iden::RelationFields
-                        .to_string()
-                        .as_str(),
-                )
-                .iter()
-                .map(|s| serde_json::from_str(s).unwrap())
-                .collect::<Vec<RelationField>>(),
-            created_at: row.get(<Self as Identity>::Iden::CreatedAt.to_string().as_str()),
-            updated_at: row.get(<Self as Identity>::Iden::UpdatedAt.to_string().as_str()),
-        }
-    }
-}
-
-impl fmt::Display for CustomTableSchemaIden {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            Self::Table => "custom_tables",
-            Self::Id => "id",
-            Self::Name => "name",
-            Self::StringFields => "string_fields",
-            Self::NumberFields => "number_fields",
-            Self::BooleanFields => "boolean_fields",
-            Self::DateFields => "date_fields",
-            Self::EmailFields => "email_fields",
-            Self::UrlFields => "url_fields",
-            Self::SelectFields => "select_fields",
-            Self::RelationFields => "relation_fields",
-            Self::CreatedAt => "created_at",
-            Self::UpdatedAt => "updated_at",
-        };
-
-        write!(f, "{name}")
+        Ok(())
     }
 }

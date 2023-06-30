@@ -6,7 +6,7 @@ use adrastos_core::{
         oauth2::{providers::OAuth2Provider, OAuth2, OAuth2LoginInfo},
     },
     config,
-    entities::{Connection, ConnectionIden, Mutate, User},
+    entities::{Connection, User},
     error::Error,
     id::Id,
 };
@@ -14,7 +14,6 @@ use adrastos_core::{
 use actix_session::Session;
 use actix_web::{cookie::Cookie, get, http::header, web, HttpResponse, Responder};
 use chrono::Utc;
-use sea_query::Expr;
 use serde::Deserialize;
 use tracing::error;
 
@@ -45,7 +44,7 @@ pub async fn login(
         .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;
 
     let (auth_url, csrf_token) = oauth2
-        .initialize_login(provider, redis_pool)
+        .initialize_login(provider, &redis_pool)
         .await
         .map_err(|_| Error::InternalServerError("Unable to initialize the OAuth login".into()))?;
 
@@ -101,7 +100,7 @@ pub async fn callback(
         .confirm_login(
             provider.clone(),
             &config,
-            redis_pool,
+            &redis_pool,
             OAuth2LoginInfo {
                 session_csrf_token,
                 params_csrf_token: params.state.to_string(),
@@ -116,17 +115,14 @@ pub async fn callback(
         Error::InternalServerError("Unable to fetch the user from the OAuth provider".into())
     })?;
 
-    let connection = Connection::find(
-        &db_pool,
-        vec![
-            Expr::col(ConnectionIden::Provider).eq(&provider.to_string()),
-            Expr::col(ConnectionIden::ProviderId).eq(&oauth2_user.id),
-        ],
-    )
-    .await;
+    let connection = Connection::find()
+        .by_provider(provider.to_string())
+        .by_provider_id(oauth2_user.id.clone())
+        .one(&db_pool)
+        .await;
 
     let user = match connection {
-        Ok(conn) => Ok(User::select().by_id(&conn.user_id).finish(&db_pool).await?),
+        Ok(conn) => Ok(User::find_by_id(&conn.user_id).one(&db_pool).await?),
         Err(..) => {
             if let Ok(Some(user_id)) = session.get::<String>(&SessionKey::UserId.to_string()) {
                 let conn = Connection {
@@ -140,7 +136,7 @@ pub async fn callback(
 
                 conn.create(&db_pool).await?;
 
-                Ok(User::select().by_id(&conn.user_id).finish(&db_pool).await?)
+                Ok(User::find_by_id(&conn.user_id).one(&db_pool).await?)
             } else {
                 Err(Error::Unauthorized)
             }

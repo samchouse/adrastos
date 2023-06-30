@@ -28,9 +28,9 @@ pub async fn rows(
     web::Query(query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
-        .finish(&db_pool)
+    let custom_table = CustomTableSchema::find()
+        .by_name(path.clone())
+        .one(&db_pool)
         .await?;
 
     let rows = CustomTableSelectBuilder::from(&custom_table)
@@ -58,9 +58,9 @@ pub async fn row(
     web::Query(query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
-        .finish(&db_pool)
+    let custom_table = CustomTableSchema::find()
+        .by_name(path.clone())
+        .one(&db_pool)
         .await?;
 
     let row = CustomTableSelectBuilder::from(&custom_table)
@@ -94,9 +94,9 @@ pub async fn create(
     )
     .map_err(|err| Error::BadRequest(err.to_string()))?;
 
-    let custom_table = CustomTableSchema::select()
-        .by_name(&AsSnakeCase(path.into_inner()).to_string())
-        .finish(&db_pool)
+    let custom_table = CustomTableSchema::find()
+        .by_name(AsSnakeCase(path.into_inner()).to_string())
+        .one(&db_pool)
         .await?;
 
     let id = Id::new().to_string();
@@ -531,9 +531,9 @@ pub async fn update(
     web::Query(query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
-        .finish(&db_pool)
+    let custom_table = CustomTableSchema::find()
+        .by_name(path.clone())
+        .one(&db_pool)
         .await?;
 
     let mut db_query = sea_query::Query::update();
@@ -569,9 +569,9 @@ pub async fn delete(
     web::Query(query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let custom_table = CustomTableSchema::select()
-        .by_name(&path.into_inner())
-        .finish(&db_pool)
+    let custom_table = CustomTableSchema::find()
+        .by_name(path.clone())
+        .one(&db_pool)
         .await?;
 
     let mut db_query = sea_query::Query::delete();
