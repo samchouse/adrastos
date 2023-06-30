@@ -15,7 +15,7 @@ use super::fields::{
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbSelect, DbCommon, DbQuery)]
-#[adrastos(rename = "custom_table")]
+#[adrastos(rename = "custom_tables")]
 pub struct CustomTableSchema {
     pub id: String,
     #[adrastos(find, unique)]

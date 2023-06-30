@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, DbCommon)]
+#[adrastos(rename = "system")]
 pub struct System {
     pub id: String,
     pub current_version: String,
