@@ -1,3 +1,5 @@
+use std::time;
+
 use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
@@ -7,7 +9,7 @@ use adrastos_core::{
     id::Id,
     util,
 };
-use tokio::sync::Mutex;
+use tokio::{sync::Mutex, time::timeout};
 
 use actix_web::{cookie::Cookie, get, post, web, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
@@ -18,6 +20,7 @@ use lettre::{
 };
 use serde::Deserialize;
 use serde_json::json;
+use tracing::warn;
 use utoipa::ToSchema;
 
 use crate::{middleware::user::RequiredUser, openapi, session::SessionKey};
@@ -98,15 +101,8 @@ pub async fn signup(
         username: body.username.clone(),
         email: body.email.clone(),
         password: body.password.clone(),
-        verified: false,
-        banned: false,
-        mfa_secret: None,
-        mfa_backup_codes: None,
         created_at: Utc::now(),
-        updated_at: None,
-
-        connections: None,
-        refresh_token_trees: None,
+        ..Default::default()
     };
 
     user.create(&db_pool).await?;
@@ -138,36 +134,38 @@ pub async fn signup(
 
         let mut pubsub = conn.into_pubsub();
         pubsub.subscribe("html").await.map_err(|_| {
-            // TODO(@Xenfo): set a timeout
             Error::InternalServerError("An error occurred while subscribing to Redis".into())
         })?;
 
         let mut stream = pubsub.on_message();
-        let Some(msg) = stream.next().await else {
-            return Err(Error::InternalServerError(
-                "An error occurred while receiving Redis message".into(),
-            ));
+        if let Ok(Some(msg)) = timeout(time::Duration::from_secs(3), stream.next()).await {
+            drop(stream);
+            pubsub.unsubscribe("html").await.map_err(|_| {
+                Error::InternalServerError(
+                    "An error occurred while unsubscribing from Redis".into(),
+                )
+            })?;
+
+            let html = msg.get_payload::<String>().unwrap();
+            let message = Message::builder()
+                .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
+                .to(format!("<{}>", body.email).parse().unwrap())
+                .subject("Verify Your Email")
+                .header(ContentType::TEXT_HTML)
+                .body(html)
+                .unwrap();
+
+            mailer.send(message).await.map_err(|_| {
+                Error::InternalServerError(
+                    "An error occurred while sending the verification email".into(),
+                )
+            })?;
+        } else {
+            warn!(
+                user.id,
+                "Redis timed out while waiting for verification email"
+            );
         };
-
-        drop(stream);
-        pubsub.unsubscribe("html").await.map_err(|_| {
-            Error::InternalServerError("An error occurred while unsubscribing from Redis".into())
-        })?;
-
-        let html = msg.get_payload::<String>().unwrap();
-        let message = Message::builder()
-            .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
-            .to(format!("<{}>", body.email).parse().unwrap())
-            .subject("Verify Your Email")
-            .header(ContentType::TEXT_HTML)
-            .body(html)
-            .unwrap();
-
-        mailer.send(message).await.map_err(|_| {
-            Error::InternalServerError(
-                "An error occurred while sending the verification email".into(),
-            )
-        })?;
     }
 
     Ok(HttpResponse::Ok().json(json!({
