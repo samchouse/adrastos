@@ -18,7 +18,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder
 
 COPY --from=planner /work/recipe.json recipe.json
-RUN apk add libressl-dev
+RUN apk add libressl-dev protobuf-dev
 RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY ["Cargo.toml", "Cargo.lock", "./"]
