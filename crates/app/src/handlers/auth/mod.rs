@@ -360,45 +360,36 @@ pub async fn resend_verification(
     })?;
 
     let mut stream = pubsub.on_message();
-    let Some(msg) = stream.next().await else {
-        return Err(Error::InternalServerError("An error occurred while subscribing to Redis".into()));
+    if let Some(msg) = stream.next().await {
+        drop(stream);
+        pubsub.unsubscribe("html").await.map_err(|_| {
+            Error::InternalServerError("An error occurred while unsubscribing from Redis".into())
+        })?;
+
+        let html = msg.get_payload::<String>().unwrap();
+        let message = Message::builder()
+            .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
+            .to(format!("<{}>", user.email).parse().unwrap())
+            .subject("Verify Your Email")
+            .header(ContentType::TEXT_HTML)
+            .body(html)
+            .unwrap();
+
+        mailer.send(message).await.map_err(|_| {
+            Error::InternalServerError(
+                "An error occurred while sending the verification email".into(),
+            )
+        })?;
+    } else {
+        error!(
+            user.id,
+            "Redis timed out while waiting for verification email"
+        );
+
+        return Err(Error::InternalServerError(
+            "An error occurred while sending the verification email".into(),
+        ));
     };
-
-    println!("{:#?}", msg);
-    // if let Some(msg) = stream.next().await {
-    //     println!("{:#?}", msg);
-
-    //     drop(stream);
-    //     pubsub.unsubscribe("html").await.map_err(|_| {
-    //         Error::InternalServerError("An error occurred while unsubscribing from Redis".into())
-    //     })?;
-
-    //     let html = msg.get_payload::<String>().unwrap();
-    //     let message = Message::builder()
-    //         .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
-    //         .to(format!("<{}>", user.email).parse().unwrap())
-    //         .subject("Verify Your Email")
-    //         .header(ContentType::TEXT_HTML)
-    //         .body(html)
-    //         .unwrap();
-
-    //     println!("{:#?}", message);
-
-    //     mailer.send(message).await.map_err(|_| {
-    //         Error::InternalServerError(
-    //             "An error occurred while sending the verification email".into(),
-    //         )
-    //     })?;
-    // } else {
-    //     error!(
-    //         user.id,
-    //         "Redis timed out while waiting for verification email"
-    //     );
-
-    //     return Err(Error::InternalServerError(
-    //         "An error occurred while sending the verification email".into(),
-    //     ));
-    // };
 
     Ok(HttpResponse::Ok().json(json!({
         "success": true,

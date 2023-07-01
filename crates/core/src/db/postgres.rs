@@ -49,8 +49,12 @@ pub fn create_pool(config: &config::Config) -> Pool {
     let mgr = match pg_config.get_ssl_mode() {
         SslMode::Disable => Manager::from_config(pg_config, NoTls, manager_config),
         _ => {
+            let Some(certs_path) = &config.certs_path else {
+                panic!("Certs path not set")
+            };
+
             let ca_cert = &mut BufReader::new(
-                File::open(format!("{}/cockroach.crt", config.certs_path)).unwrap(),
+                File::open(format!("{}/cockroach.crt", certs_path)).unwrap(),
             );
             let ca_cert = Certificate(certs(ca_cert).unwrap()[0].clone());
 
