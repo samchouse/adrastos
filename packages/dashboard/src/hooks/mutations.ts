@@ -6,6 +6,7 @@ import {
   postConfigOAuth2,
   postConfigSmtp,
   postLogin,
+  postResendVerification,
   postSignup
 } from '~/lib';
 
@@ -66,5 +67,15 @@ export const useConfigOAuth2Mutation = () => {
     mutationFn: async (data: Parameters<typeof postConfigOAuth2>[0]) =>
       await postConfigOAuth2(data),
     onSuccess: () => queryClient.refetchQueries(queryKeys.configDetails)
+  });
+};
+
+export const useResendVerificationMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ['auth', 'resendVerification'],
+    mutationFn: async () => await postResendVerification(),
+    onSuccess: () => queryClient.refetchQueries(queryKeys.me)
   });
 };

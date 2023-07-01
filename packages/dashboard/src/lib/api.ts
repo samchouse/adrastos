@@ -161,3 +161,8 @@ export const postConfigOAuth2 = async (data: ConfigOAuth2Data) => {
   const res = await client.post('/config/oauth2', data);
   return res.data;
 };
+
+export const postResendVerification = async () => {
+  const res = await client.post('/auth/resend-verification');
+  return res.data;
+};

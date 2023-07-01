@@ -20,7 +20,7 @@ use lettre::{
 };
 use serde::Deserialize;
 use serde_json::json;
-use tracing::warn;
+use tracing::{warn, error};
 use utoipa::ToSchema;
 
 use crate::{middleware::user::RequiredUser, openapi, session::SessionKey};
@@ -312,5 +312,93 @@ pub async fn verify(
     Ok(HttpResponse::Ok().json(json!({
         "success": true,
         "message": "Email was successfully verified"
+    })))
+}
+
+#[post("/resend-verification")]
+pub async fn resend_verification(
+    user: RequiredUser,
+    config: web::Data<Mutex<config::Config>>,
+    redis_pool: web::Data<deadpool_redis::Pool>,
+    mailer: web::Data<Option<AsyncSmtpTransport<Tokio1Executor>>>,
+) -> actix_web::Result<impl Responder, Error> {
+    if user.verified {
+        return Err(Error::BadRequest("User is already verified".into()));
+    }
+
+    let Some(mailer) = mailer.get_ref() else {
+        return Err(Error::InternalServerError("Mailer is not configured".into()));
+    };
+
+    let verification_token = Id::new().to_string();
+
+    let mut conn = redis_pool.get().await.unwrap();
+    redis::cmd("SETEX")
+        .arg(format!("verification:{}", verification_token))
+        .arg(Duration::hours(1).num_seconds())
+        .arg(user.id.clone())
+        .query_async(&mut conn)
+        .await
+        .map_err(|_| {
+            Error::InternalServerError(
+                "An error ocurred while saving verification token to Redis".into(),
+            )
+        })?;
+
+    let mut conn = redis::Client::open(config.lock().await.redis_url.clone())
+        .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
+        .get_async_connection()
+        .await
+        .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?;
+    conn.publish::<_, _, ()>("emails", verification_token)
+        .await
+        .unwrap();
+
+    let mut pubsub = conn.into_pubsub();
+    pubsub.subscribe("html").await.map_err(|_| {
+        Error::InternalServerError("An error occurred while subscribing to Redis".into())
+    })?;
+
+    println!("yay");
+
+    let mut stream = pubsub.on_message();
+    if let Some(msg) = stream.next().await {
+        println!("{:#?}", msg);
+
+        drop(stream);
+        pubsub.unsubscribe("html").await.map_err(|_| {
+            Error::InternalServerError("An error occurred while unsubscribing from Redis".into())
+        })?;
+
+        let html = msg.get_payload::<String>().unwrap();
+        let message = Message::builder()
+            .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
+            .to(format!("<{}>", user.email).parse().unwrap())
+            .subject("Verify Your Email")
+            .header(ContentType::TEXT_HTML)
+            .body(html)
+            .unwrap();
+
+        println!("{:#?}", message);
+
+        mailer.send(message).await.map_err(|_| {
+            Error::InternalServerError(
+                "An error occurred while sending the verification email".into(),
+            )
+        })?;
+    } else {
+        error!(
+            user.id,
+            "Redis timed out while waiting for verification email"
+        );
+
+        return Err(Error::InternalServerError(
+            "An error occurred while sending the verification email".into(),
+        ));
+    };
+
+    Ok(HttpResponse::Ok().json(json!({
+        "success": true,
+        "message": "Resent verification email"
     })))
 }
