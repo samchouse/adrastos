@@ -6,19 +6,20 @@ import {
   postConfigOAuth2,
   postConfigSmtp,
   postLogin,
+  postResendVerification,
   postSignup
 } from '~/lib';
 
 import { queryKeys } from './queries';
 
 export const useSignupMutation = () => {
-  const { mutate } = useLoginMutation();
+  const { mutateAsync } = useLoginMutation();
 
   return useMutation({
     mutationKey: ['auth', 'signup'],
     mutationFn: async (data: Parameters<typeof postSignup>[0]) =>
       await postSignup(data),
-    onSuccess: (_, vars) => mutate(vars)
+    onSuccess: async (_, vars) => mutateAsync(vars)
   });
 };
 
@@ -40,7 +41,7 @@ export const useLogoutMutation = () => {
     mutationKey: ['auth', 'logout'],
     mutationFn: async () => await getLogout(),
     onSuccess: () => {
-      client.defaults.headers.Authorization = '';
+      client.defaults.headers.common.Authorization = undefined;
       queryClient.resetQueries(queryKeys.tokenRefresh);
       queryClient.resetQueries(queryKeys.me);
     }
@@ -66,5 +67,15 @@ export const useConfigOAuth2Mutation = () => {
     mutationFn: async (data: Parameters<typeof postConfigOAuth2>[0]) =>
       await postConfigOAuth2(data),
     onSuccess: () => queryClient.refetchQueries(queryKeys.configDetails)
+  });
+};
+
+export const useResendVerificationMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ['auth', 'resendVerification'],
+    mutationFn: async () => await postResendVerification(),
+    onSuccess: () => queryClient.refetchQueries(queryKeys.me)
   });
 };

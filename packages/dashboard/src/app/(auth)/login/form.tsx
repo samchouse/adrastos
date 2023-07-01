@@ -28,8 +28,7 @@ import {
   Input,
   useToast
 } from '~/components';
-import { useTokenRefreshQuery } from '~/hooks';
-import { useLoginMutation } from '~/hooks/mutations';
+import { useLoginMutation } from '~/hooks';
 import { getOauth2LoginUrl, providers } from '~/lib';
 
 const providerIcons = {
@@ -57,7 +56,6 @@ export const LoginForm: React.FC = () => {
   const { toast } = useToast();
   const searchParams = useSearchParams();
 
-  const { data } = useTokenRefreshQuery();
   const { mutateAsync, isLoading, isError, error } = useLoginMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -141,7 +139,11 @@ export const LoginForm: React.FC = () => {
                   variant="outline"
                   className="w-full"
                 >
-                  <Link href={getOauth2LoginUrl(provider, data?.accessToken)}>
+                  <Link
+                    href={getOauth2LoginUrl(provider, {
+                      to: searchParams.get('to') ?? undefined
+                    })}
+                  >
                     {providerIcons[provider]}
                   </Link>
                 </Button>

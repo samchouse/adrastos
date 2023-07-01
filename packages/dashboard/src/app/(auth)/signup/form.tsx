@@ -4,7 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
@@ -21,7 +20,7 @@ import {
   FormMessage,
   Input
 } from '~/components';
-import { useSignupMutation, useTokenRefreshQuery } from '~/hooks';
+import { useSignupMutation } from '~/hooks';
 
 const formSchema = z
   .object({
@@ -63,8 +62,7 @@ const formSchema = z
 
 export const SignupForm: React.FC = () => {
   const router = useRouter();
-  const { mutate } = useSignupMutation();
-  const { isFetching, isSuccess } = useTokenRefreshQuery();
+  const { mutateAsync, isLoading } = useSignupMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -78,13 +76,14 @@ export const SignupForm: React.FC = () => {
     }
   });
 
-  useEffect(() => {
-    if (isSuccess) router.push('/');
-  }, [isSuccess, router]);
-
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit((values) => mutate(values))}>
+      <form
+        onSubmit={form.handleSubmit(async (values) => {
+          await mutateAsync(values);
+          router.push('/dashboard');
+        })}
+      >
         <CardContent>
           <div className="flex flex-col gap-1">
             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -205,8 +204,8 @@ export const SignupForm: React.FC = () => {
 
         <CardFooter>
           <div className="w-full">
-            <Button type="submit" className="w-full">
-              {isFetching && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign Up
             </Button>
 

@@ -131,7 +131,7 @@ pub fn db_common(item: TokenStream) -> TokenStream {
                 Type::Vec(generic) => {
                     match *generic {
                         Type::String | Type::Bool | Type::DateTime => quote! { #ident: row.get(#str_ident) },
-                        _ => quote!{ #ident: row.try_get::<_, Option<Vec<String>>>(#str_ident).ok().flatten().map(|v| v.iter().map(|s| serde_json::from_str(&s).unwrap()).collect::<Vec<_>>()) },
+                        _ => quote!{ #ident: row.try_get::<_, serde_json::Value>(#str_ident).ok().map(|s| serde_json::from_value(s).unwrap()) },
                     }
                 },
                 _ => quote! { #ident: row.try_get(#str_ident).ok().map(|v| serde_json::from_str(v).unwrap()) },

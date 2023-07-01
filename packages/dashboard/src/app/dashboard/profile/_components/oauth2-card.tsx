@@ -45,7 +45,10 @@ export const OAuth2Card: React.FC = () => {
           {providers.map((provider) => (
             <Button key={provider} asChild variant="outline" className="w-full">
               <Link
-                href={getOauth2LoginUrl(provider, data?.accessToken, pathname)}
+                href={getOauth2LoginUrl(provider, {
+                  auth: data?.accessToken,
+                  to: pathname
+                })}
               >
                 {providerIcons[provider]}
               </Link>

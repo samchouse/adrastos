@@ -76,7 +76,7 @@ pub struct Config {
     pub sentry_dsn: Option<String>,
 
     pub use_tls: bool,
-    pub certs_path: String,
+    pub certs_path: Option<String>,
 
     pub client_url: String,
     pub server_url: String,
@@ -124,7 +124,7 @@ impl Config {
                 .unwrap_or("false".to_string())
                 .parse()
                 .unwrap_or_log(),
-            certs_path: env::var(ConfigKey::CertsPath.to_string()).unwrap_or_log(),
+            certs_path: env::var(ConfigKey::CertsPath.to_string()).ok(),
             client_url: env::var(ConfigKey::ClientUrl.to_string())
                 .unwrap_or("http://127.0.0.1:3000".into()),
             server_url: env::var(ConfigKey::ServerUrl.to_string())

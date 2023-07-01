@@ -152,6 +152,7 @@ async fn main() -> std::io::Result<()> {
                         handlers::auth::login,
                         handlers::auth::logout,
                         handlers::auth::verify,
+                        handlers::auth::resend_verification,
                         handlers::auth::token::refresh,
                     ))
                     .service(web::scope("/oauth2").service((
@@ -189,6 +190,11 @@ async fn main() -> std::io::Result<()> {
     });
 
     let server = if use_tls {
+        let Some(certs_path) = certs_path else {
+            error!("TLS is enabled but no certs path is provided");
+            process::exit(1);
+        };
+
         let rustls_config = ServerConfig::builder()
             .with_safe_defaults()
             .with_no_client_auth();

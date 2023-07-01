@@ -1,16 +1,19 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
+
 import { Alert, AlertDescription, AlertTitle, Button } from '~/components';
-import { useMeQuery } from '~/hooks';
+import { useMeQuery, useResendVerificationMutation } from '~/hooks';
 
 import { OAuth2Card } from './_components';
 
 const Page: React.FC = () => {
   const { data } = useMeQuery();
+  const { mutate, isLoading } = useResendVerificationMutation();
 
   return (
     <div className="flex flex-col gap-y-5">
-      {data?.user && (
+      {!data?.user.verified && (
         <Alert
           variant="default"
           className="flex flex-row items-center justify-between"
@@ -22,7 +25,14 @@ const Page: React.FC = () => {
             </AlertDescription>
           </div>
 
-          <Button variant="outline">Resend verification</Button>
+          <Button
+            variant="outline"
+            onClick={() => mutate()}
+            disabled={isLoading}
+          >
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Resend verification
+          </Button>
         </Alert>
       )}
 

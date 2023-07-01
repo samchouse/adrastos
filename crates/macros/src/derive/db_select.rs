@@ -87,7 +87,7 @@ pub fn db_select(item: TokenStream) -> TokenStream {
             _ => ty.into()
         };
 
-        quote! { #join_ident::#variant_ident => #ident::find().and_where(vec![sea_query::Expr::col(sea_query::Alias::new(#str_ident)).equals((#ident::table(), sea_query::Alias::new("id")))]).to_string() }
+        quote! { #join_ident::#variant_ident => #ident::find().and_where(vec![sea_query::Expr::col(sea_query::Alias::new(#str_ident)).equals((#ident::table(), sea_query::Alias::new(#str_ident)))]).to_string() }
     });
 
     let string_branches = enum_variants.clone().flat_map(|(it, variant_ident)| {
