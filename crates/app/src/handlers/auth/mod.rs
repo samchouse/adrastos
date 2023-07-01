@@ -20,7 +20,7 @@ use lettre::{
 };
 use serde::Deserialize;
 use serde_json::json;
-use tracing::{warn, error};
+use tracing::{error, warn};
 use utoipa::ToSchema;
 
 use crate::{middleware::user::RequiredUser, openapi, session::SessionKey};
@@ -275,11 +275,25 @@ pub async fn logout(
 
 #[get("/verify")]
 pub async fn verify(
-    user: RequiredUser,
+    req: HttpRequest,
     params: web::Query<VerifyParams>,
+    config: web::Data<Mutex<config::Config>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
     redis_pool: web::Data<deadpool_redis::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
+    // TODO(@Xenfo): make this middleware
+    let refresh_token = auth::TokenType::verify(
+        &config.lock().await.clone(),
+        util::get_auth_cookies(&req)?.refresh_token.value().into(),
+    )?;
+    if refresh_token.token_type != TokenType::Refresh {
+        return Err(Error::Forbidden("Not a refresh token".into()));
+    }
+
+    let user = User::find_by_id(&refresh_token.claims.sub)
+        .one(&db_pool)
+        .await?;
+
     if user.verified {
         return Err(Error::BadRequest("User is already verified".into()));
     }

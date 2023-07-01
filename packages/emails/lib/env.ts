@@ -8,7 +8,7 @@ export const env = createEnv({
   clientPrefix: '',
   client: {},
   server: {
-    SERVER_URL: z.string().optional(),
+    CLIENT_URL: z.string().optional(),
     REDIS_URL: z.string()
   },
   runtimeEnv: process.env

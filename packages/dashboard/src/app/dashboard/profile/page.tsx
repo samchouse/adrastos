@@ -13,7 +13,7 @@ const Page: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-y-5">
-      {data?.user && (
+      {!data?.user.verified && (
         <Alert
           variant="default"
           className="flex flex-row items-center justify-between"

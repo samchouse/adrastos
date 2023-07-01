@@ -4,7 +4,7 @@ export interface User {
   lastName: string;
   email: string;
   username: string;
-  version: boolean;
+  verified: boolean;
   banned: boolean;
   createdAt: Date;
   updatedAt: Date;

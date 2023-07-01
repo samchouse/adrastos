@@ -21,7 +21,7 @@ const worker = async () => {
       render(
         <VerificationEmail
           token={token}
-          baseUrl={`https://${env.SERVER_URL ?? 'localhost:8000'}`}
+          baseUrl={`${env.CLIENT_URL ?? 'http://localhost:3000'}/api`}
         />
       )
     );
