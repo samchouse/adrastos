@@ -10,6 +10,9 @@ export const client = axios.create({
   }
 });
 
+export const hasAccessToken = () =>
+  client.defaults.headers.common.Authorization !== undefined;
+
 client.interceptors.response.use(
   (res: AxiosResponse) => Promise.resolve(res),
   (
@@ -77,12 +80,11 @@ export const providers = [
 
 export const getOauth2LoginUrl = (
   provider: (typeof providers)[number],
-  auth?: string,
-  to?: string
+  options?: { to?: string; auth?: string }
 ) =>
   `${env.NEXT_PUBLIC_BACKEND_URL}/auth/oauth2/login?provider=${provider}${
-    auth ? `&auth=${auth}` : ''
-  }${to ? `&to=${to}` : ''}`;
+    options?.to ? `&to=${options.to}` : ''
+  }${options?.auth ? `&auth=${options.auth}` : ''}`;
 
 export const getConfigDetails = async () => {
   const res = await client.get<{

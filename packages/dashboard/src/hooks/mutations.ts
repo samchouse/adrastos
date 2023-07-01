@@ -13,13 +13,13 @@ import {
 import { queryKeys } from './queries';
 
 export const useSignupMutation = () => {
-  const { mutate } = useLoginMutation();
+  const { mutateAsync } = useLoginMutation();
 
   return useMutation({
     mutationKey: ['auth', 'signup'],
     mutationFn: async (data: Parameters<typeof postSignup>[0]) =>
       await postSignup(data),
-    onSuccess: (_, vars) => mutate(vars)
+    onSuccess: async (_, vars) => mutateAsync(vars)
   });
 };
 
@@ -41,7 +41,7 @@ export const useLogoutMutation = () => {
     mutationKey: ['auth', 'logout'],
     mutationFn: async () => await getLogout(),
     onSuccess: () => {
-      client.defaults.headers.Authorization = '';
+      client.defaults.headers.common.Authorization = undefined;
       queryClient.resetQueries(queryKeys.tokenRefresh);
       queryClient.resetQueries(queryKeys.me);
     }
