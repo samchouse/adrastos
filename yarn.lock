@@ -38,7 +38,7 @@ __metadata:
     class-variance-authority: ^0.7.0
     clsx: ^2.0.0
     jotai: ^2.3.1
-    lucide-react: ^0.265.0
+    lucide-react: ^0.263.1
     next: ^13.4.13
     postcss: ^8.4.27
     react: ^18.2.0
@@ -5634,12 +5634,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lucide-react@npm:^0.265.0":
-  version: 0.265.0
-  resolution: "lucide-react@npm:0.265.0"
+"lucide-react@npm:^0.263.1":
+  version: 0.263.1
+  resolution: "lucide-react@npm:0.263.1"
   peerDependencies:
     react: ^16.5.1 || ^17.0.0 || ^18.0.0
-  checksum: c5c7838f4cb54b91678ab248403df279e0aba53938e383c65d7df594e517d9f9a4714c90568efa535ba58ec341e2cf1238de55a99668b1a342d1e44ae6f16d85
+  checksum: 0648569855ddbf8b3f281857820f5838015f1713104d37a8ee7dbb4f0e6d9044f9edf215c742cb8f4f22ec2e42893cc48a62bd37af28455b67a6467d7f4d74ca
   languageName: node
   linkType: hard
 
