@@ -34,10 +34,10 @@ export const Font: React.FC<FontProps> = ({
 
           * {
               font-family: ${fonts.map((font) => font.family)}, ${
-        Array.isArray(fallbackFontFamily)
-          ? fallbackFontFamily.join(', ')
-          : fallbackFontFamily
-      }, sans-serif;
+                Array.isArray(fallbackFontFamily)
+                  ? fallbackFontFamily.join(', ')
+                  : fallbackFontFamily
+              }, sans-serif;
           }
       `}
     </style>
