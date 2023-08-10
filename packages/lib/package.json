@@ -1,5 +1,29 @@
 {
   "name": "@adrastos/lib",
-  "version": "0.1.0",
-  "private": true
+  "version": "0.0.2",
+  "description": "A killer Backend-as-a-Service (BaaS) written in Rust",
+  "author": "Samuel Corsi-House <chouse.samuel@gmail.com>",
+  "main": "out/index.js",
+  "types": "out/index.d.ts",
+  "files": [
+    "out",
+    "./LICENSE",
+    "./README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Xenfo/adrastos.git",
+    "directory": "packages/lib"
+  },
+  "scripts": {
+    "prepack": "cp ../../LICENSE .",
+    "postpack": "rm LICENSE",
+    "build": "tsup"
+  },
+  "devDependencies": {
+    "tsup": "^7.2.0"
+  }
 }
