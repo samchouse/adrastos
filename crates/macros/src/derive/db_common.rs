@@ -26,7 +26,7 @@ pub fn db_common(item: TokenStream) -> TokenStream {
 
             panic!("Expected rename token")
         })
-        .unwrap_or(format!("{}s", AsSnakeCase(ident.to_string()).to_string()));
+        .unwrap_or(format!("{}s", AsSnakeCase(ident.to_string())));
 
     let iden_ident = format_ident!("{}Iden", ident);
     let error_identifier = table_name.replace('_', " ");

@@ -30,7 +30,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "src/reset.d.ts"
+    "src/reset.d.ts",
+    "postcss.config.js"
   ],
   "exclude": ["node_modules"]
 }

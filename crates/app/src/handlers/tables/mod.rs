@@ -47,7 +47,7 @@ enum Action {
 }
 
 #[derive(Deserialize, ToSchema, Debug)]
-struct UpdateComponent<T> {
+struct UpdateField<T> {
     name: String,
     action: Action,
     field: T,
@@ -57,14 +57,14 @@ struct UpdateComponent<T> {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateBody {
     name: Option<String>,
-    string_fields: Option<Vec<UpdateComponent<StringField>>>,
-    // number_fields: Option<Vec<UpdateComponent<NumberField>>>,
-    // boolean_fields: Option<Vec<UpdateComponent<BooleanField>>>,
-    // date_fields: Option<Vec<UpdateComponent<DateField>>>,
-    // email_fields: Option<Vec<UpdateComponent<EmailField>>>,
-    // url_fields: Option<Vec<UpdateComponent<UrlField>>>,
-    // select_fields: Option<Vec<UpdateComponent<SelectField>>>,
-    // relation_fields: Option<Vec<UpdateComponent<RelationField>>>,
+    string_fields: Option<Vec<UpdateField<StringField>>>,
+    // number_fields: Option<Vec<UpdateField<NumberField>>>,
+    // boolean_fields: Option<Vec<UpdateField<BooleanField>>>,
+    // date_fields: Option<Vec<UpdateField<DateField>>>,
+    // email_fields: Option<Vec<UpdateField<EmailField>>>,
+    // url_fields: Option<Vec<UpdateField<UrlField>>>,
+    // select_fields: Option<Vec<UpdateField<SelectField>>>,
+    // relation_fields: Option<Vec<UpdateField<RelationField>>>,
 }
 
 #[utoipa::path(
@@ -88,7 +88,7 @@ pub async fn create(
         name: AsSnakeCase(body.name).to_string(),
         string_fields: body
             .string_fields
-            .unwrap_or(vec![])
+            .unwrap_or_default()
             .into_iter()
             .map(|mut f| {
                 f.name = AsSnakeCase(f.name).to_string();
@@ -97,7 +97,7 @@ pub async fn create(
             .collect(),
         number_fields: body
             .number_fields
-            .unwrap_or(vec![])
+            .unwrap_or_default()
             .into_iter()
             .map(|mut f| {
                 f.name = AsSnakeCase(f.name).to_string();
@@ -106,7 +106,7 @@ pub async fn create(
             .collect(),
         boolean_fields: body
             .boolean_fields
-            .unwrap_or(vec![])
+            .unwrap_or_default()
             .into_iter()
             .map(|mut f| {
                 f.name = AsSnakeCase(f.name).to_string();
@@ -115,7 +115,7 @@ pub async fn create(
             .collect(),
         date_fields: body
             .date_fields
-            .unwrap_or(vec![])
+            .unwrap_or_default()
             .into_iter()
             .map(|mut f| {
                 f.name = AsSnakeCase(f.name).to_string();
@@ -124,7 +124,7 @@ pub async fn create(
             .collect(),
         email_fields: body
             .email_fields
-            .unwrap_or(vec![])
+            .unwrap_or_default()
             .into_iter()
             .map(|mut f| {
                 f.name = AsSnakeCase(f.name).to_string();
@@ -133,7 +133,7 @@ pub async fn create(
             .collect(),
         url_fields: body
             .url_fields
-            .unwrap_or(vec![])
+            .unwrap_or_default()
             .into_iter()
             .map(|mut f| {
                 f.name = AsSnakeCase(f.name).to_string();
@@ -142,7 +142,7 @@ pub async fn create(
             .collect(),
         select_fields: body
             .select_fields
-            .unwrap_or(vec![])
+            .unwrap_or_default()
             .into_iter()
             .map(|mut f| {
                 f.name = AsSnakeCase(f.name).to_string();
@@ -151,7 +151,7 @@ pub async fn create(
             .collect(),
         relation_fields: body
             .relation_fields
-            .unwrap_or(vec![])
+            .unwrap_or_default()
             .into_iter()
             .map(|mut f| {
                 f.name = AsSnakeCase(f.name).to_string();

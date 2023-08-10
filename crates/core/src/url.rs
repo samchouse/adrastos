@@ -20,7 +20,7 @@ impl Url {
                     self.subdomains.len() - pattern_url.subdomains.len()
                 };
 
-                let checks = vec![
+                let checks = [
                     self.subdomains.len() >= pattern_url.subdomains.len(),
                     self.subdomains
                         .drain(0..subdomain_diff)
