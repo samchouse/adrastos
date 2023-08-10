@@ -16,6 +16,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@adrastos/dashboard@workspace:packages/dashboard"
   dependencies:
+    "@adrastos/lib": "workspace:^"
     "@hookform/resolvers": ^3.2.0
     "@icons-pack/react-simple-icons": ^8.0.1
     "@radix-ui/react-avatar": ^1.0.3
@@ -65,7 +66,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@adrastos/lib@workspace:packages/lib":
+"@adrastos/lib@workspace:^, @adrastos/lib@workspace:packages/lib":
   version: 0.0.0-use.local
   resolution: "@adrastos/lib@workspace:packages/lib"
   dependencies:
