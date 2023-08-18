@@ -2,7 +2,10 @@ use actix_web::{delete, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
     db::postgres,
     entities::custom_table::{
-        fields::{Field, StringField},
+        fields::{
+            BooleanField, DateField, EmailField, Field, NumberField, RelationField, SelectField,
+            StringField, UrlField,
+        },
         mm_relation::ManyToManyRelationTable,
         schema::{CustomTableSchema, UpdateCustomTableSchema},
     },
@@ -47,14 +50,7 @@ struct UpdateField<T> {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateBody {
     name: Option<String>,
-    string_fields: Option<Vec<UpdateField<StringField>>>,
-    // number_fields: Option<Vec<UpdateField<NumberField>>>,
-    // boolean_fields: Option<Vec<UpdateField<BooleanField>>>,
-    // date_fields: Option<Vec<UpdateField<DateField>>>,
-    // email_fields: Option<Vec<UpdateField<EmailField>>>,
-    // url_fields: Option<Vec<UpdateField<UrlField>>>,
-    // select_fields: Option<Vec<UpdateField<SelectField>>>,
-    // relation_fields: Option<Vec<UpdateField<RelationField>>>,
+    fields: Option<Vec<UpdateField<Field>>>,
 }
 
 #[utoipa::path(
@@ -76,76 +72,41 @@ pub async fn create(
     let custom_table = CustomTableSchema {
         id: Id::new().to_string(),
         name: AsSnakeCase(body.name).to_string(),
-        string_fields: body
+        fields: body
             .fields
-            .unwrap_or_default()
             .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        number_fields: body
-            .number_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        boolean_fields: body
-            .boolean_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        date_fields: body
-            .date_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        email_fields: body
-            .email_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        url_fields: body
-            .url_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        select_fields: body
-            .select_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        relation_fields: body
-            .relation_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
+            .map(|f| match f {
+                Field::String(f) => Field::String(StringField {
+                    name: AsSnakeCase(f.name).to_string(),
+                    ..f
+                }),
+                Field::Number(f) => Field::Number(NumberField {
+                    name: AsSnakeCase(f.name).to_string(),
+                    ..f
+                }),
+                Field::Boolean(f) => Field::Boolean(BooleanField {
+                    name: AsSnakeCase(f.name).to_string(),
+                }),
+                Field::Date(f) => Field::Date(DateField {
+                    name: AsSnakeCase(f.name).to_string(),
+                    ..f
+                }),
+                Field::Email(f) => Field::Email(EmailField {
+                    name: AsSnakeCase(f.name).to_string(),
+                    ..f
+                }),
+                Field::Url(f) => Field::Url(UrlField {
+                    name: AsSnakeCase(f.name).to_string(),
+                    ..f
+                }),
+                Field::Select(f) => Field::Select(SelectField {
+                    name: AsSnakeCase(f.name).to_string(),
+                    ..f
+                }),
+                Field::Relation(f) => Field::Relation(RelationField {
+                    name: AsSnakeCase(f.name).to_string(),
+                    ..f
+                }),
             })
             .collect(),
         created_at: Utc::now(),
@@ -254,42 +215,57 @@ pub async fn update(
             update.name = Some(name);
         }
     }
-    if let Some(string_fields) = body.string_fields {
-        let mut updated_string_fields = custom_table.string_fields.clone();
+    if let Some(fields) = body.fields {
+        let mut updated_fields = custom_table.fields.clone();
 
-        string_fields.iter().for_each(|comp| match comp.action {
+        fields.iter().for_each(|update| match update.action {
             Action::Create => {
-                updated_string_fields.push(comp.field.clone());
+                updated_fields.push(update.field.clone());
             }
-            Action::Update => {
-                updated_string_fields = updated_string_fields
-                    .clone()
-                    .into_iter()
-                    .map(|f| {
-                        if f.name == comp.name {
-                            return comp.field.clone();
-                        }
+            Action::Update => match &update.field {
+                Field::String(field) => {
+                    updated_fields = updated_fields
+                        .clone()
+                        .into_iter()
+                        .map(|f| {
+                            let Field::String(f) = f else {
+                                return f;
+                            };
 
-                        f
-                    })
-                    .collect();
+                            if f.name == update.name {
+                                return Field::String(field.clone());
+                            }
 
-                if comp.name != comp.field.name {
-                    alter_query.rename_column(Alias::new(&comp.name), Alias::new(&comp.field.name));
+                            Field::String(f)
+                        })
+                        .collect();
+
+                    if update.name != field.name {
+                        alter_query
+                            .rename_column(Alias::new(&update.name), Alias::new(&field.name));
+                    }
                 }
+                _ => todo!(),
+            },
+            Action::Delete => match &update.field {
+                Field::String(field) => {
+                    updated_fields = updated_fields
+                        .clone()
+                        .into_iter()
+                        .filter(|f| {
+                            let Field::String(f) = f else {
+                                return true;
+                            };
 
-                alter_query.modify_column(&mut comp.field.column());
-            }
-            Action::Delete => {
-                updated_string_fields = updated_string_fields
-                    .clone()
-                    .into_iter()
-                    .filter(|f| f.name != comp.field.name)
-                    .collect();
-            }
+                            f.name != field.name
+                        })
+                        .collect();
+                }
+                _ => todo!(),
+            },
         });
 
-        update.string_fields = Some(updated_string_fields);
+        update.fields = Some(updated_fields);
     }
 
     custom_table.update(&db_pool, update.clone()).await?;
