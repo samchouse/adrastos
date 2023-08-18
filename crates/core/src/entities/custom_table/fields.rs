@@ -9,6 +9,19 @@ use validator::ValidationError;
 
 use crate::util;
 
+#[derive(Deserialize, Debug, Serialize, Clone)]
+#[serde(tag = "type", content = "data", rename_all = "camelCase")]
+pub enum Field {
+    String(StringField),
+    Number(NumberField),
+    Boolean(BooleanField),
+    Date(DateField),
+    Email(EmailField),
+    Url(UrlField),
+    Select(SelectField),
+    Relation(RelationField),
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum RelationType {

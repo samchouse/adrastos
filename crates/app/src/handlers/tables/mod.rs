@@ -2,10 +2,7 @@ use actix_web::{delete, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
     db::postgres,
     entities::custom_table::{
-        fields::{
-            BooleanField, DateField, EmailField, NumberField, RelationField, SelectField,
-            StringField, UrlField,
-        },
+        fields::{Field, StringField},
         mm_relation::ManyToManyRelationTable,
         schema::{CustomTableSchema, UpdateCustomTableSchema},
     },
@@ -28,14 +25,7 @@ pub mod custom;
 #[serde(rename_all = "camelCase")]
 pub struct CreateBody {
     name: String,
-    string_fields: Option<Vec<StringField>>,
-    number_fields: Option<Vec<NumberField>>,
-    boolean_fields: Option<Vec<BooleanField>>,
-    date_fields: Option<Vec<DateField>>,
-    email_fields: Option<Vec<EmailField>>,
-    url_fields: Option<Vec<UrlField>>,
-    select_fields: Option<Vec<SelectField>>,
-    relation_fields: Option<Vec<RelationField>>,
+    fields: Vec<Field>,
 }
 
 #[derive(Deserialize, ToSchema, Debug)]
@@ -87,7 +77,7 @@ pub async fn create(
         id: Id::new().to_string(),
         name: AsSnakeCase(body.name).to_string(),
         string_fields: body
-            .string_fields
+            .fields
             .unwrap_or_default()
             .into_iter()
             .map(|mut f| {
@@ -185,13 +175,13 @@ pub async fn create(
         .await
         .map_err(|error| {
             let Some(db_error) = error.as_db_error() else {
-                return Error::InternalServerError("Unable to convert error".to_string())
+                return Error::InternalServerError("Unable to convert error".to_string());
             };
             let Some(routine) = db_error.routine() else {
-                return Error::InternalServerError("Unable to get error info".to_string())
+                return Error::InternalServerError("Unable to get error info".to_string());
             };
             let Some(error) = postgres::Error::try_from(routine).ok() else {
-                return Error::InternalServerError("Unsupported database error code".to_string())
+                return Error::InternalServerError("Unsupported database error code".to_string());
             };
 
             match error {
@@ -199,7 +189,7 @@ pub async fn create(
                     let pre = Regex::new(r#"".+""#).unwrap();
 
                     let Some(matched) = pre.find(db_error.message()) else {
-                        return Error::InternalServerError("Invalid error details".to_string())
+                        return Error::InternalServerError("Invalid error details".to_string());
                     };
 
                     let table_name = matched.as_str().replace('\"', "");

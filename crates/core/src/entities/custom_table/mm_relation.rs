@@ -6,7 +6,7 @@ use sea_query::{
 use crate::id::Id;
 
 use super::{
-    fields::{RelationField, RelationType},
+    fields::{Field, RelationField, RelationType},
     schema::CustomTableSchema,
 };
 
@@ -19,9 +19,13 @@ impl ManyToManyRelationTable {
 
     pub fn create_queries(schema: &CustomTableSchema) -> Vec<TableCreateStatement> {
         schema
-            .relation_fields
+            .fields
             .iter()
             .filter_map(|field| {
+                let Field::Relation(field) = field else {
+                    return None;
+                };
+
                 if field.relation_type == RelationType::Many {
                     let name = Self::table_name(schema, field);
 

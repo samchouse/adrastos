@@ -9,7 +9,11 @@ use serde_json::{json, Map};
 
 use crate::error::Error;
 
-use self::{fields::RelationType, mm_relation::ManyToManyRelationTable, schema::CustomTableSchema};
+use self::{
+    fields::{Field, RelationType},
+    mm_relation::ManyToManyRelationTable,
+    schema::CustomTableSchema,
+};
 
 pub mod fields;
 pub mod mm_relation;
@@ -97,35 +101,45 @@ impl CustomTableSelectBuilder {
     }
 
     pub fn join(&mut self) -> &mut Self {
-        self.schema.relation_fields.iter().for_each(|f| {
-            let json_func = if f.relation_type == RelationType::Single {
-                "row_to_json"
-            } else {
-                "json_agg"
-            };
+        self.schema
+            .fields
+            .iter()
+            .filter_map(|f| {
+                if let Field::Relation(f) = f {
+                    return Some(f);
+                }
 
-            let where_clause = match f.relation_type {
-                RelationType::Single => format!("= {}.{}", self.schema.name, f.name),
-                RelationType::Many => format!(
-                    "IN (SELECT {} FROM {} WHERE {} = {}.id)",
-                    format_args!("{}_id", f.table),
-                    ManyToManyRelationTable::table_name(&self.schema, f),
-                    format_args!("{}_id", self.schema.name),
-                    self.schema.name,
-                ),
-            };
+                None
+            })
+            .for_each(|f| {
+                let json_func = if f.relation_type == RelationType::Single {
+                    "row_to_json"
+                } else {
+                    "json_agg"
+                };
 
-            self.query_builder.expr(Expr::cust(
-                format!(
+                let where_clause = match f.relation_type {
+                    RelationType::Single => format!("= {}.{}", self.schema.name, f.name),
+                    RelationType::Many => format!(
+                        "IN (SELECT {} FROM {} WHERE {} = {}.id)",
+                        format_args!("{}_id", f.table),
+                        ManyToManyRelationTable::table_name(&self.schema, f),
+                        format_args!("{}_id", self.schema.name),
+                        self.schema.name,
+                    ),
+                };
+
+                self.query_builder.expr(Expr::cust(
+                    format!(
                     "(SELECT {}({table}) FROM (SELECT * FROM {table} WHERE id {}) {table}) as {}",
                     json_func,
                     where_clause,
                     format_args!("{}_relation_key", f.name),
                     table = f.table
                 )
-                .as_str(),
-            ));
-        });
+                    .as_str(),
+                ));
+            });
 
         self
     }
@@ -170,39 +184,18 @@ impl CustomTableSelectBuilder {
             ("updated_at", ColType::OptionalDate),
         ];
 
-        self.schema
-            .string_fields
-            .iter()
-            .for_each(|f| columns.push((&f.name, ColType::String)));
-        self.schema
-            .number_fields
-            .iter()
-            .for_each(|f| columns.push((&f.name, ColType::Number)));
-        self.schema
-            .boolean_fields
-            .iter()
-            .for_each(|f| columns.push((&f.name, ColType::Boolean)));
-        self.schema
-            .date_fields
-            .iter()
-            .for_each(|f| columns.push((&f.name, ColType::Date)));
-        self.schema
-            .email_fields
-            .iter()
-            .for_each(|f| columns.push((&f.name, ColType::String)));
-        self.schema
-            .url_fields
-            .iter()
-            .for_each(|f| columns.push((&f.name, ColType::String)));
-        self.schema
-            .select_fields
-            .iter()
-            .for_each(|f| columns.push((&f.name, ColType::Array(Box::new(ColType::String)))));
-        self.schema.relation_fields.iter().for_each(|f| {
-            columns.push((
+        self.schema.fields.iter().for_each(|f| match f {
+            Field::String(f) => columns.push((&f.name, ColType::String)),
+            Field::Number(f) => columns.push((&f.name, ColType::Number)),
+            Field::Boolean(f) => columns.push((&f.name, ColType::Boolean)),
+            Field::Date(f) => columns.push((&f.name, ColType::Date)),
+            Field::Email(f) => columns.push((&f.name, ColType::String)),
+            Field::Url(f) => columns.push((&f.name, ColType::String)),
+            Field::Select(f) => columns.push((&f.name, ColType::Array(Box::new(ColType::String)))),
+            Field::Relation(f) => columns.push((
                 &f.name,
                 ColType::Relation(format!("{}_relation_key", f.name)),
-            ))
+            )),
         });
 
         let data = serde_json::from_value::<Vec<Map<String, serde_json::Value>>>(
@@ -234,30 +227,18 @@ impl From<&CustomTableSchema> for CustomTableSelectBuilder {
             Alias::new("updated_at"),
         ];
 
-        schema.string_fields.iter().for_each(|field| {
-            columns.push(Alias::new(&field.name));
-        });
-        schema.number_fields.iter().for_each(|field| {
-            columns.push(Alias::new(&field.name));
-        });
-        schema.boolean_fields.iter().for_each(|field| {
-            columns.push(Alias::new(&field.name));
-        });
-        schema.date_fields.iter().for_each(|field| {
-            columns.push(Alias::new(&field.name));
-        });
-        schema.email_fields.iter().for_each(|field| {
-            columns.push(Alias::new(&field.name));
-        });
-        schema.url_fields.iter().for_each(|field| {
-            columns.push(Alias::new(&field.name));
-        });
-        schema.select_fields.iter().for_each(|field| {
-            columns.push(Alias::new(&field.name));
-        });
-        schema.relation_fields.iter().for_each(|field| {
-            if field.relation_type == RelationType::Single {
-                columns.push(Alias::new(&field.name));
+        schema.fields.iter().for_each(|field| match field {
+            Field::String(field) => columns.push(Alias::new(&field.name)),
+            Field::Number(field) => columns.push(Alias::new(&field.name)),
+            Field::Boolean(field) => columns.push(Alias::new(&field.name)),
+            Field::Date(field) => columns.push(Alias::new(&field.name)),
+            Field::Email(field) => columns.push(Alias::new(&field.name)),
+            Field::Url(field) => columns.push(Alias::new(&field.name)),
+            Field::Select(field) => columns.push(Alias::new(&field.name)),
+            Field::Relation(field) => {
+                if field.relation_type == RelationType::Single {
+                    columns.push(Alias::new(&field.name));
+                }
             }
         });
 
@@ -295,98 +276,100 @@ impl From<&CustomTableSchema> for TableCreateStatement {
 
         let mut columns = vec![];
 
-        schema.string_fields.iter().for_each(|field| {
-            columns.push(field.column());
-        });
-        schema.number_fields.iter().for_each(|field| {
-            let mut column = ColumnDef::new(Alias::new(&field.name));
-
-            if field.is_required {
-                column.not_null();
-            }
-            if field.is_unique {
-                column.unique_key();
-            }
-
-            columns.push(column.integer().to_owned());
-        });
-        schema.boolean_fields.iter().for_each(|field| {
-            columns.push(ColumnDef::new(Alias::new(&field.name)).boolean().to_owned());
-        });
-        schema.date_fields.iter().for_each(|field| {
-            let mut column = ColumnDef::new(Alias::new(&field.name));
-
-            if field.is_required {
-                column.not_null();
-            }
-            if field.is_unique {
-                column.unique_key();
-            }
-
-            columns.push(column.timestamp_with_time_zone().to_owned());
-        });
-        schema.email_fields.iter().for_each(|field| {
-            let mut column = ColumnDef::new(Alias::new(&field.name));
-
-            if field.is_required {
-                column.not_null();
-            }
-            if field.is_unique {
-                column.unique_key();
-            }
-
-            columns.push(column.string().to_owned());
-        });
-        schema.url_fields.iter().for_each(|field| {
-            let mut column = ColumnDef::new(Alias::new(&field.name));
-
-            if field.is_required {
-                column.not_null();
-            }
-            if field.is_unique {
-                column.unique_key();
-            }
-
-            columns.push(column.string().to_owned());
-        });
-        schema.select_fields.iter().for_each(|field| {
-            let mut column = ColumnDef::new(Alias::new(&field.name));
-
-            if field.is_required {
-                column.not_null();
-            }
-            if field.is_unique {
-                column.unique_key();
-            }
-
-            columns.push(column.array(ColumnType::String(None)).to_owned());
-        });
-        schema.relation_fields.iter().for_each(|field| {
-            if field.relation_type == RelationType::Single {
-                let mut column = ColumnDef::new(Alias::new(&field.name));
-                let mut foreign_key = ForeignKey::create();
-
-                if field.is_required {
-                    column.not_null();
+        schema.fields.iter().for_each(|field| {
+            match field {
+                Field::String(field) => columns.push(field.column()),
+                Field::Number(field) => {
+                    let mut column = ColumnDef::new(Alias::new(&field.name));
+        
+                    if field.is_required {
+                        column.not_null();
+                    }
+                    if field.is_unique {
+                        column.unique_key();
+                    }
+        
+                    columns.push(column.integer().to_owned());
+                },
+                Field::Boolean(field) => {
+                    columns.push(ColumnDef::new(Alias::new(&field.name)).boolean().to_owned());
+                },
+                Field::Date(field) => {
+                    let mut column = ColumnDef::new(Alias::new(&field.name));
+        
+                    if field.is_required {
+                        column.not_null();
+                    }
+                    if field.is_unique {
+                        column.unique_key();
+                    }
+        
+                    columns.push(column.timestamp_with_time_zone().to_owned());
+                },
+                Field::Email(field) => {
+                    let mut column = ColumnDef::new(Alias::new(&field.name));
+        
+                    if field.is_required {
+                        column.not_null();
+                    }
+                    if field.is_unique {
+                        column.unique_key();
+                    }
+        
+                    columns.push(column.string().to_owned());
+                },
+                Field::Url(field) => {
+                    let mut column = ColumnDef::new(Alias::new(&field.name));
+        
+                    if field.is_required {
+                        column.not_null();
+                    }
+                    if field.is_unique {
+                        column.unique_key();
+                    }
+        
+                    columns.push(column.string().to_owned());
+                },
+                Field::Select(field) => {
+                    let mut column = ColumnDef::new(Alias::new(&field.name));
+        
+                    if field.is_required {
+                        column.not_null();
+                    }
+                    if field.is_unique {
+                        column.unique_key();
+                    }
+        
+                    columns.push(column.array(ColumnType::String(None)).to_owned());
+                },
+                Field::Relation(field) => {
+                    if field.relation_type == RelationType::Single {
+                        let mut column = ColumnDef::new(Alias::new(&field.name));
+                        let mut foreign_key = ForeignKey::create();
+        
+                        if field.is_required {
+                            column.not_null();
+                        }
+                        if field.is_unique {
+                            column.unique_key();
+                        }
+        
+                        if field.cascade_delete {
+                            foreign_key.on_delete(ForeignKeyAction::Cascade);
+                        }
+        
+                        columns.push(column.string().to_owned());
+        
+                        builder.foreign_key(
+                            foreign_key
+                                .name(format!("FK_{}_{}", schema.name, field.name))
+                                .from(Alias::new(&schema.name), Alias::new(&field.name))
+                                .to(Alias::new(&field.table), Alias::new("id"))
+                                .on_update(ForeignKeyAction::Cascade),
+                        );
+                    };
                 }
-                if field.is_unique {
-                    column.unique_key();
-                }
-
-                if field.cascade_delete {
-                    foreign_key.on_delete(ForeignKeyAction::Cascade);
-                }
-
-                columns.push(column.string().to_owned());
-
-                builder.foreign_key(
-                    foreign_key
-                        .name(format!("FK_{}_{}", schema.name, field.name))
-                        .from(Alias::new(&schema.name), Alias::new(&field.name))
-                        .to(Alias::new(&field.table), Alias::new("id"))
-                        .on_update(ForeignKeyAction::Cascade),
-                );
-            };
+            }
         });
 
         columns.iter_mut().for_each(|column| {
