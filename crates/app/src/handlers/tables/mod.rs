@@ -2,10 +2,7 @@ use actix_web::{delete, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
     db::postgres,
     entities::custom_table::{
-        fields::{
-            BooleanField, DateField, EmailField, Field, NumberField, RelationField, SelectField,
-            StringField, UrlField,
-        },
+        fields::{Field, FieldInfo},
         mm_relation::ManyToManyRelationTable,
         schema::{CustomTableSchema, UpdateCustomTableSchema},
     },
@@ -75,38 +72,9 @@ pub async fn create(
         fields: body
             .fields
             .into_iter()
-            .map(|f| match f {
-                Field::String(f) => Field::String(StringField {
-                    name: AsSnakeCase(f.name).to_string(),
-                    ..f
-                }),
-                Field::Number(f) => Field::Number(NumberField {
-                    name: AsSnakeCase(f.name).to_string(),
-                    ..f
-                }),
-                Field::Boolean(f) => Field::Boolean(BooleanField {
-                    name: AsSnakeCase(f.name).to_string(),
-                }),
-                Field::Date(f) => Field::Date(DateField {
-                    name: AsSnakeCase(f.name).to_string(),
-                    ..f
-                }),
-                Field::Email(f) => Field::Email(EmailField {
-                    name: AsSnakeCase(f.name).to_string(),
-                    ..f
-                }),
-                Field::Url(f) => Field::Url(UrlField {
-                    name: AsSnakeCase(f.name).to_string(),
-                    ..f
-                }),
-                Field::Select(f) => Field::Select(SelectField {
-                    name: AsSnakeCase(f.name).to_string(),
-                    ..f
-                }),
-                Field::Relation(f) => Field::Relation(RelationField {
-                    name: AsSnakeCase(f.name).to_string(),
-                    ..f
-                }),
+            .map(|f| Field {
+                name: AsSnakeCase(f.name).to_string(),
+                info: f.info,
             })
             .collect(),
         created_at: Utc::now(),
@@ -222,47 +190,38 @@ pub async fn update(
             Action::Create => {
                 updated_fields.push(update.field.clone());
             }
-            Action::Update => match &update.field {
-                Field::String(field) => {
+            Action::Update => match &update.field.info {
+                FieldInfo::String { .. } => {
                     updated_fields = updated_fields
                         .clone()
                         .into_iter()
                         .map(|f| {
-                            let Field::String(f) = f else {
-                                return f;
-                            };
-
                             if f.name == update.name {
-                                return Field::String(field.clone());
+                                return update.field.clone();
                             }
 
-                            Field::String(f)
+                            f
                         })
                         .collect();
 
-                    if update.name != field.name {
-                        alter_query
-                            .rename_column(Alias::new(&update.name), Alias::new(&field.name));
+                    if update.name != update.field.name {
+                        alter_query.rename_column(
+                            Alias::new(&update.name),
+                            Alias::new(&update.field.name),
+                        );
                     }
                 }
                 _ => todo!(),
             },
-            Action::Delete => match &update.field {
-                Field::String(field) => {
-                    updated_fields = updated_fields
-                        .clone()
-                        .into_iter()
-                        .filter(|f| {
-                            let Field::String(f) = f else {
-                                return true;
-                            };
-
-                            f.name != field.name
-                        })
-                        .collect();
-                }
-                _ => todo!(),
-            },
+            Action::Delete => {
+                updated_fields = updated_fields
+                    .clone()
+                    .into_iter()
+                    .filter(|f| {
+                        f.name != update.name
+                    })
+                    .collect();
+            }
         });
 
         update.fields = Some(updated_fields);

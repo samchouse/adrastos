@@ -6,28 +6,37 @@ use sea_query::{
 use crate::id::Id;
 
 use super::{
-    fields::{Field, RelationField, RelationType},
+    fields::{Field, FieldInfo, RelationTarget},
     schema::CustomTableSchema,
 };
 
 pub struct ManyToManyRelationTable;
 
 impl ManyToManyRelationTable {
-    pub fn table_name(schema: &CustomTableSchema, field: &RelationField) -> String {
-        format!("{}_{}_to_{}", schema.name, field.name, field.table)
+    pub fn table_name(schema: &CustomTableSchema, field: &Field) -> String {
+        let FieldInfo::Relation { table, .. } = &field.info else {
+            panic!("Field is not a relation");
+        };
+
+        format!("{}_{}_to_{}", schema.name, field.name, table)
     }
 
     pub fn create_queries(schema: &CustomTableSchema) -> Vec<TableCreateStatement> {
         schema
             .fields
             .iter()
-            .filter_map(|field| {
-                let Field::Relation(field) = field else {
+            .filter_map(|f| {
+                let FieldInfo::Relation {
+                    table,
+                    target,
+                    ..
+                } = &f.info
+                else {
                     return None;
                 };
 
-                if field.relation_type == RelationType::Many {
-                    let name = Self::table_name(schema, field);
+                if target == &RelationTarget::Many {
+                    let name = Self::table_name(schema, f);
 
                     return Some(
                         Table::create()
@@ -39,7 +48,7 @@ impl ManyToManyRelationTable {
                                     .not_null(),
                             )
                             .col(
-                                ColumnDef::new(Alias::new(format!("{}_id", field.table)))
+                                ColumnDef::new(Alias::new(format!("{}_id", table)))
                                     .string()
                                     .not_null(),
                             )
@@ -56,12 +65,9 @@ impl ManyToManyRelationTable {
                             )
                             .foreign_key(
                                 ForeignKey::create()
-                                    .name(format!("FK_{}_{}_id", &name, field.table))
-                                    .from(
-                                        Alias::new(&name),
-                                        Alias::new(format!("{}_id", field.table)),
-                                    )
-                                    .to(Alias::new(&field.table), Alias::new("id"))
+                                    .name(format!("FK_{}_{}_id", &name, table))
+                                    .from(Alias::new(&name), Alias::new(format!("{}_id", table)))
+                                    .to(Alias::new(table), Alias::new("id"))
                                     .on_update(ForeignKeyAction::Cascade)
                                     .on_delete(ForeignKeyAction::Cascade),
                             )
@@ -76,12 +82,16 @@ impl ManyToManyRelationTable {
 
     pub fn insert_query(
         schema: &CustomTableSchema,
-        field: &RelationField,
+        f: &Field,
         row_id: String,
         relations: Vec<String>,
     ) -> Vec<InsertStatement> {
-        if field.relation_type == RelationType::Many {
-            let name = Self::table_name(schema, field);
+        let FieldInfo::Relation { table, target, .. } = &f.info else {
+            panic!("Field is not a relation");
+        };
+
+        if target == &RelationTarget::Many {
+            let name = Self::table_name(schema, f);
 
             return relations
                 .into_iter()
@@ -91,7 +101,7 @@ impl ManyToManyRelationTable {
                         .columns(vec![
                             Alias::new("id"),
                             Alias::new(format!("{}_id", schema.name)),
-                            Alias::new(format!("{}_id", field.table)),
+                            Alias::new(format!("{}_id", table)),
                         ])
                         .values_panic([
                             Id::new().to_string().into(),

@@ -4,7 +4,7 @@ use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
     db::postgres,
     entities::custom_table::{
-        fields::{Field, RelationType},
+        fields::{FieldInfo, RelationTarget},
         mm_relation::ManyToManyRelationTable,
         schema::CustomTableSchema,
         CustomTableSelectBuilder,
@@ -109,290 +109,314 @@ pub async fn create(
         ("updated_at", None::<DateTime<Utc>>.into()),
     ];
 
-    custom_table.fields.iter().for_each(|field| match field {
-        Field::String(field) => {
-            let validation_results =
-                field.validate(body.get(&AsLowerCamelCase(field.name.clone()).to_string()));
+    custom_table
+        .fields
+        .iter()
+        .for_each(|field| match &field.info {
+            FieldInfo::String { .. } => {
+                let validation_results =
+                    field.validate(body.get(&AsLowerCamelCase(field.name.clone()).to_string()));
 
-            match validation_results {
-                Ok(value) => {
-                    table_values.push((&field.name, value));
-                }
-                Err(validation_errors) => {
-                    validation_errors.iter().for_each(|error| {
-                        errors.add(
-                            util::string_to_static_str(
-                                AsLowerCamelCase(field.name.clone()).to_string(),
-                            ),
-                            error.clone(),
-                        );
-                    });
+                match validation_results {
+                    Ok(value) => {
+                        table_values.push((&field.name, value));
+                    }
+                    Err(validation_errors) => {
+                        validation_errors.iter().for_each(|error| {
+                            errors.add(
+                                util::string_to_static_str(
+                                    AsLowerCamelCase(field.name.clone()).to_string(),
+                                ),
+                                error.clone(),
+                            );
+                        });
+                    }
                 }
             }
-        }
-        Field::Number(field) => {
-            let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
+            FieldInfo::Number {
+                min,
+                max,
+                is_required,
+                ..
+            } => {
+                let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
 
-            match value {
-                Some(value) => {
-                    let value = value.as_i64().unwrap();
+                match value {
+                    Some(value) => {
+                        let value = value.as_i64().unwrap();
 
-                    let mut value_error = ValidationError::new("value");
+                        let mut value_error = ValidationError::new("value");
 
-                    if let Some(min) = field.min {
-                        if value < min.try_into().unwrap() {
-                            value_error.add_param(Cow::from("min"), &min);
+                        if let Some(min) = min {
+                            if value < (*min).try_into().unwrap() {
+                                value_error.add_param(Cow::from("min"), &min);
+                            }
+                        }
+                        if let Some(max) = max {
+                            if value > (*max).try_into().unwrap() {
+                                value_error.add_param(Cow::from("max"), &max);
+                            }
+                        }
+
+                        if !value_error.params.is_empty() {
+                            errors.add(
+                                util::string_to_static_str(
+                                    AsLowerCamelCase(field.name.clone()).to_string(),
+                                ),
+                                value_error,
+                            )
+                        }
+
+                        table_values.push((&field.name, value.into()));
+                    }
+                    None => {
+                        if *is_required {
+                            errors.add(
+                                util::string_to_static_str(
+                                    AsLowerCamelCase(field.name.clone()).to_string(),
+                                ),
+                                ValidationError::new("required"),
+                            );
                         }
                     }
-                    if let Some(max) = field.max {
-                        if value > max.try_into().unwrap() {
-                            value_error.add_param(Cow::from("max"), &max);
+                }
+            }
+            FieldInfo::Boolean => {
+                let value = match body.get(&AsLowerCamelCase(field.name.clone()).to_string()) {
+                    Some(value) => value.as_bool().unwrap(),
+                    None => false,
+                };
+
+                table_values.push((&field.name, value.into()));
+            }
+            FieldInfo::Date { is_required, .. } => {
+                let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
+
+                match value {
+                    Some(value) => {
+                        table_values.push((
+                            &field.name,
+                            serde_json::from_value::<DateTime<Utc>>(value.to_owned())
+                                .unwrap()
+                                .into(),
+                        ));
+                    }
+                    None => {
+                        if *is_required {
+                            errors.add(
+                                util::string_to_static_str(
+                                    AsLowerCamelCase(field.name.clone()).to_string(),
+                                ),
+                                ValidationError::new("required"),
+                            );
                         }
                     }
-
-                    if !value_error.params.is_empty() {
-                        errors.add(
-                            util::string_to_static_str(
-                                AsLowerCamelCase(field.name.clone()).to_string(),
-                            ),
-                            value_error,
-                        )
-                    }
-
-                    table_values.push((&field.name, value.into()));
-                }
-                None => {
-                    if field.is_required {
-                        errors.add(
-                            util::string_to_static_str(
-                                AsLowerCamelCase(field.name.clone()).to_string(),
-                            ),
-                            ValidationError::new("required"),
-                        );
-                    }
                 }
             }
-        }
-        Field::Boolean(field) => {
-            let value = match body.get(&AsLowerCamelCase(field.name.clone()).to_string()) {
-                Some(value) => value.as_bool().unwrap(),
-                None => false,
-            };
+            FieldInfo::Email {
+                only,
+                except,
+                is_required,
+                ..
+            } => {
+                let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
 
-            table_values.push((&field.name, value.into()));
-        }
-        Field::Date(field) => {
-            let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
+                match value {
+                    Some(value) => {
+                        let value = value.as_str().unwrap();
+                        let mut value_url = Url::from(value.to_owned());
 
-            match value {
-                Some(value) => {
-                    table_values.push((
-                        &field.name,
-                        serde_json::from_value::<DateTime<Utc>>(value.to_owned())
-                            .unwrap()
-                            .into(),
-                    ));
-                }
-                None => {
-                    if field.is_required {
-                        errors.add(
-                            util::string_to_static_str(
-                                AsLowerCamelCase(field.name.clone()).to_string(),
-                            ),
-                            ValidationError::new("required"),
-                        );
-                    }
-                }
-            }
-        }
-        Field::Email(field) => {
-            let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
+                        let mut pattern_error = ValidationError::new("pattern");
 
-            match value {
-                Some(value) => {
-                    let value = value.as_str().unwrap();
-                    let mut value_url = Url::from(value.to_owned());
-
-                    let mut pattern_error = ValidationError::new("pattern");
-
-                    if !field.only.is_empty() {
-                        value_url
-                            .validate_with_patterns(field.only.clone())
-                            .iter()
-                            .for_each(|(c, pattern)| {
-                                if !c {
-                                    pattern_error.add_param(Cow::from("only"), &pattern);
-                                }
-                            });
-                    } else if !field.except.is_empty() {
-                        value_url
-                            .validate_with_patterns(field.except.clone())
-                            .iter()
-                            .for_each(|(c, pattern)| {
-                                if *c {
-                                    pattern_error.add_param(Cow::from("except"), &pattern);
-                                }
-                            });
-                    }
-
-                    if !pattern_error.params.is_empty() {
-                        errors.add(
-                            util::string_to_static_str(
-                                AsLowerCamelCase(field.name.clone()).to_string(),
-                            ),
-                            pattern_error,
-                        )
-                    }
-
-                    table_values.push((&field.name, value.into()));
-                }
-                None => {
-                    if field.is_required {
-                        errors.add(
-                            util::string_to_static_str(
-                                AsLowerCamelCase(field.name.clone()).to_string(),
-                            ),
-                            ValidationError::new("required"),
-                        );
-                    }
-                }
-            }
-        }
-        Field::Url(field) => {
-            let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
-
-            match value {
-                Some(value) => {
-                    let value = value.as_str().unwrap();
-                    let mut value_url = Url::from(value.to_owned());
-
-                    let mut pattern_error = ValidationError::new("pattern");
-
-                    if !field.only.is_empty() {
-                        value_url
-                            .validate_with_patterns(field.only.clone())
-                            .iter()
-                            .for_each(|(c, pattern)| {
-                                if !c {
-                                    pattern_error.add_param(Cow::from("only"), &pattern);
-                                }
-                            });
-                    } else if !field.except.is_empty() {
-                        value_url
-                            .validate_with_patterns(field.except.clone())
-                            .iter()
-                            .for_each(|(c, pattern)| {
-                                if *c {
-                                    pattern_error.add_param(Cow::from("except"), &pattern);
-                                }
-                            });
-                    }
-
-                    if !pattern_error.params.is_empty() {
-                        errors.add(
-                            util::string_to_static_str(
-                                AsLowerCamelCase(field.name.clone()).to_string(),
-                            ),
-                            pattern_error,
-                        )
-                    }
-
-                    table_values.push((&field.name, value.into()));
-                }
-                None => {
-                    if field.is_required {
-                        errors.add(
-                            util::string_to_static_str(
-                                AsLowerCamelCase(field.name.clone()).to_string(),
-                            ),
-                            ValidationError::new("required"),
-                        );
-                    }
-                }
-            }
-        }
-        Field::Select(field) => {
-            let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
-
-            match value {
-                Some(value) => {
-                    let value = value
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .map(|v| v.as_str().unwrap().to_owned())
-                        .collect::<Vec<_>>();
-
-                    let mut selections_error = ValidationError::new("selections");
-
-                    let invalid_selections = value
-                        .iter()
-                        .map(|v| (v.to_owned(), field.options.contains(v)))
-                        .collect::<Vec<_>>();
-
-                    if !invalid_selections.iter().all(|(_, contains)| *contains) {
-                        selections_error.add_param(
-                            Cow::from("invalid"),
-                            &invalid_selections
+                        if !only.is_empty() {
+                            value_url
+                                .validate_with_patterns(only.clone())
                                 .iter()
-                                .filter_map(|(v, contains)| {
-                                    if !contains {
-                                        return Some(v);
+                                .for_each(|(c, pattern)| {
+                                    if !c {
+                                        pattern_error.add_param(Cow::from("only"), &pattern);
                                     }
-
-                                    None
-                                })
-                                .collect::<Vec<_>>(),
-                        );
-                    }
-
-                    if let Some(min_selected) = field.min_selected {
-                        if value.len() < min_selected.try_into().unwrap() {
-                            selections_error.add_param(Cow::from("min"), &min_selected);
+                                });
+                        } else if !except.is_empty() {
+                            value_url
+                                .validate_with_patterns(except.clone())
+                                .iter()
+                                .for_each(|(c, pattern)| {
+                                    if *c {
+                                        pattern_error.add_param(Cow::from("except"), &pattern);
+                                    }
+                                });
                         }
-                    }
-                    if let Some(max_selected) = field.max_selected {
-                        if value.len() > max_selected.try_into().unwrap() {
-                            selections_error.add_param(Cow::from("max"), &max_selected);
+
+                        if !pattern_error.params.is_empty() {
+                            errors.add(
+                                util::string_to_static_str(
+                                    AsLowerCamelCase(field.name.clone()).to_string(),
+                                ),
+                                pattern_error,
+                            )
                         }
-                    }
 
-                    if !selections_error.params.is_empty() {
-                        errors.add(
-                            util::string_to_static_str(
-                                AsLowerCamelCase(field.name.clone()).to_string(),
-                            ),
-                            selections_error,
-                        )
+                        table_values.push((&field.name, value.into()));
                     }
-
-                    table_values.push((&field.name, value.into()));
-                }
-                None => {
-                    if field.is_required {
-                        errors.add(
-                            util::string_to_static_str(
-                                AsLowerCamelCase(field.name.clone()).to_string(),
-                            ),
-                            ValidationError::new("required"),
-                        );
+                    None => {
+                        if *is_required {
+                            errors.add(
+                                util::string_to_static_str(
+                                    AsLowerCamelCase(field.name.clone()).to_string(),
+                                ),
+                                ValidationError::new("required"),
+                            );
+                        }
                     }
                 }
             }
-        }
-        _ => todo!()
-    });
+            FieldInfo::Url {
+                only,
+                except,
+                is_required,
+                ..
+            } => {
+                let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
+
+                match value {
+                    Some(value) => {
+                        let value = value.as_str().unwrap();
+                        let mut value_url = Url::from(value.to_owned());
+
+                        let mut pattern_error = ValidationError::new("pattern");
+
+                        if !only.is_empty() {
+                            value_url
+                                .validate_with_patterns(only.clone())
+                                .iter()
+                                .for_each(|(c, pattern)| {
+                                    if !c {
+                                        pattern_error.add_param(Cow::from("only"), &pattern);
+                                    }
+                                });
+                        } else if !except.is_empty() {
+                            value_url
+                                .validate_with_patterns(except.clone())
+                                .iter()
+                                .for_each(|(c, pattern)| {
+                                    if *c {
+                                        pattern_error.add_param(Cow::from("except"), &pattern);
+                                    }
+                                });
+                        }
+
+                        if !pattern_error.params.is_empty() {
+                            errors.add(
+                                util::string_to_static_str(
+                                    AsLowerCamelCase(field.name.clone()).to_string(),
+                                ),
+                                pattern_error,
+                            )
+                        }
+
+                        table_values.push((&field.name, value.into()));
+                    }
+                    None => {
+                        if *is_required {
+                            errors.add(
+                                util::string_to_static_str(
+                                    AsLowerCamelCase(field.name.clone()).to_string(),
+                                ),
+                                ValidationError::new("required"),
+                            );
+                        }
+                    }
+                }
+            }
+            FieldInfo::Select {
+                options,
+                max_selected,
+                min_selected,
+                is_required,
+                ..
+            } => {
+                let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
+
+                match value {
+                    Some(value) => {
+                        let value = value
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .map(|v| v.as_str().unwrap().to_owned())
+                            .collect::<Vec<_>>();
+
+                        let mut selections_error = ValidationError::new("selections");
+
+                        let invalid_selections = value
+                            .iter()
+                            .map(|v| (v.to_owned(), options.contains(v)))
+                            .collect::<Vec<_>>();
+
+                        if !invalid_selections.iter().all(|(_, contains)| *contains) {
+                            selections_error.add_param(
+                                Cow::from("invalid"),
+                                &invalid_selections
+                                    .iter()
+                                    .filter_map(|(v, contains)| {
+                                        if !contains {
+                                            return Some(v);
+                                        }
+
+                                        None
+                                    })
+                                    .collect::<Vec<_>>(),
+                            );
+                        }
+
+                        if let Some(min_selected) = min_selected {
+                            if value.len() < (*min_selected).try_into().unwrap() {
+                                selections_error.add_param(Cow::from("min"), &min_selected);
+                            }
+                        }
+                        if let Some(max_selected) = max_selected {
+                            if value.len() > (*max_selected).try_into().unwrap() {
+                                selections_error.add_param(Cow::from("max"), &max_selected);
+                            }
+                        }
+
+                        if !selections_error.params.is_empty() {
+                            errors.add(
+                                util::string_to_static_str(
+                                    AsLowerCamelCase(field.name.clone()).to_string(),
+                                ),
+                                selections_error,
+                            )
+                        }
+
+                        table_values.push((&field.name, value.into()));
+                    }
+                    None => {
+                        if *is_required {
+                            errors.add(
+                                util::string_to_static_str(
+                                    AsLowerCamelCase(field.name.clone()).to_string(),
+                                ),
+                                ValidationError::new("required"),
+                            );
+                        }
+                    }
+                }
+            }
+            _ => todo!(),
+        });
 
     let insert_queries = custom_table
         .fields
         .iter()
         .filter_map(|field| {
-            let Field::Relation(field) = field else {
+            let FieldInfo::Relation { target, .. } = &field.info else {
                 return None;
             };
 
-            match field.relation_type {
-                RelationType::Single => {
+            match target {
+                RelationTarget::Single => {
                     let value = body
                         .get(&AsLowerCamelCase(field.name.clone()).to_string())
                         .unwrap()
@@ -403,7 +427,7 @@ pub async fn create(
 
                     None
                 }
-                RelationType::Many => {
+                RelationTarget::Many => {
                     let values = body
                         .get(&AsLowerCamelCase(field.name.clone()).to_string())
                         .unwrap()
