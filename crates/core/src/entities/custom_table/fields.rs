@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use chrono::{DateTime, Utc};
 use regex::Regex;
 use sea_query::{Alias, ColumnDef, ColumnType, SimpleExpr};
 use serde::{Deserialize, Serialize};
@@ -7,7 +8,7 @@ use serde_json::Value;
 use utoipa::ToSchema;
 use validator::ValidationError;
 
-use crate::util;
+use crate::{url::Url, util};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -113,7 +114,7 @@ impl Field {
                     column.unique_key();
                 }
 
-                column.string();
+                column.big_integer();
             }
             FieldInfo::Boolean => {
                 column.boolean();
@@ -248,6 +249,217 @@ impl Field {
                     }
                 };
             }
+            FieldInfo::Number {
+                min,
+                max,
+                is_required,
+                ..
+            } => match value {
+                Some(value) => {
+                    let value = value.as_i64().unwrap();
+
+                    let mut value_error = ValidationError::new("value");
+
+                    if let Some(min) = min {
+                        if value < (*min).try_into().unwrap() {
+                            value_error.add_param(Cow::from("min"), &min);
+                        }
+                    }
+                    if let Some(max) = max {
+                        if value > (*max).try_into().unwrap() {
+                            value_error.add_param(Cow::from("max"), &max);
+                        }
+                    }
+
+                    if !value_error.params.is_empty() {
+                        errors.push(value_error)
+                    }
+
+                    if errors.is_empty() {
+                        return Ok(value.into());
+                    }
+                }
+                None => {
+                    if *is_required {
+                        errors.push(ValidationError::new("required"));
+                    }
+                }
+            },
+            FieldInfo::Boolean => {
+                let value = match value {
+                    Some(value) => value.as_bool().unwrap(),
+                    None => false,
+                };
+
+                return Ok(value.into());
+            }
+            FieldInfo::Date { is_required, .. } => match value {
+                Some(value) => {
+                    return Ok(serde_json::from_value::<DateTime<Utc>>(value.to_owned())
+                        .unwrap()
+                        .into());
+                }
+                None => {
+                    if *is_required {
+                        errors.push(ValidationError::new("required"));
+                    }
+                }
+            },
+            FieldInfo::Email {
+                only,
+                except,
+                is_required,
+                ..
+            } => match value {
+                Some(value) => {
+                    let value = value.as_str().unwrap();
+                    let mut value_url = Url::from(value.to_owned());
+
+                    let mut pattern_error = ValidationError::new("pattern");
+
+                    if !only.is_empty() {
+                        value_url
+                            .validate_with_patterns(only.clone())
+                            .iter()
+                            .for_each(|(c, pattern)| {
+                                if !c {
+                                    pattern_error.add_param(Cow::from("only"), &pattern);
+                                }
+                            });
+                    } else if !except.is_empty() {
+                        value_url
+                            .validate_with_patterns(except.clone())
+                            .iter()
+                            .for_each(|(c, pattern)| {
+                                if *c {
+                                    pattern_error.add_param(Cow::from("except"), &pattern);
+                                }
+                            });
+                    }
+
+                    if !pattern_error.params.is_empty() {
+                        errors.push(pattern_error)
+                    }
+
+                    if errors.is_empty() {
+                        return Ok(value.into());
+                    }
+                }
+                None => {
+                    if *is_required {
+                        errors.push(ValidationError::new("required"));
+                    }
+                }
+            },
+            FieldInfo::Url {
+                only,
+                except,
+                is_required,
+                ..
+            } => match value {
+                Some(value) => {
+                    let value = value.as_str().unwrap();
+                    let mut value_url = Url::from(value.to_owned());
+
+                    let mut pattern_error = ValidationError::new("pattern");
+
+                    if !only.is_empty() {
+                        value_url
+                            .validate_with_patterns(only.clone())
+                            .iter()
+                            .for_each(|(c, pattern)| {
+                                if !c {
+                                    pattern_error.add_param(Cow::from("only"), &pattern);
+                                }
+                            });
+                    } else if !except.is_empty() {
+                        value_url
+                            .validate_with_patterns(except.clone())
+                            .iter()
+                            .for_each(|(c, pattern)| {
+                                if *c {
+                                    pattern_error.add_param(Cow::from("except"), &pattern);
+                                }
+                            });
+                    }
+
+                    if !pattern_error.params.is_empty() {
+                        errors.push(pattern_error)
+                    }
+
+                    if errors.is_empty() {
+                        return Ok(value.into());
+                    }
+                }
+                None => {
+                    if *is_required {
+                        errors.push(ValidationError::new("required"));
+                    }
+                }
+            },
+            FieldInfo::Select {
+                options,
+                max_selected,
+                min_selected,
+                is_required,
+                ..
+            } => match value {
+                Some(value) => {
+                    let value = value
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|v| v.as_str().unwrap().to_owned())
+                        .collect::<Vec<_>>();
+
+                    let mut selections_error = ValidationError::new("selections");
+
+                    let invalid_selections = value
+                        .iter()
+                        .map(|v| (v.to_owned(), options.contains(v)))
+                        .collect::<Vec<_>>();
+
+                    if !invalid_selections.iter().all(|(_, contains)| *contains) {
+                        selections_error.add_param(
+                            Cow::from("invalid"),
+                            &invalid_selections
+                                .iter()
+                                .filter_map(|(v, contains)| {
+                                    if !contains {
+                                        return Some(v);
+                                    }
+
+                                    None
+                                })
+                                .collect::<Vec<_>>(),
+                        );
+                    }
+
+                    if let Some(min_selected) = min_selected {
+                        if value.len() < (*min_selected).try_into().unwrap() {
+                            selections_error.add_param(Cow::from("min"), &min_selected);
+                        }
+                    }
+                    if let Some(max_selected) = max_selected {
+                        if value.len() > (*max_selected).try_into().unwrap() {
+                            selections_error.add_param(Cow::from("max"), &max_selected);
+                        }
+                    }
+
+                    if !selections_error.params.is_empty() {
+                        errors.push(selections_error)
+                    }
+
+                    if errors.is_empty() {
+                        return Ok(value.into());
+                    }
+                }
+                None => {
+                    if *is_required {
+                        errors.push(ValidationError::new("required"));
+                    }
+                }
+            },
             _ => todo!(),
         }
 

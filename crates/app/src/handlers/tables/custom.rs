@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::collections::HashMap;
 
 use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
@@ -11,7 +11,6 @@ use adrastos_core::{
     },
     error::Error,
     id::Id,
-    url::Url,
     util,
 };
 use chrono::{DateTime, Utc};
@@ -19,7 +18,7 @@ use heck::{AsLowerCamelCase, AsSnakeCase};
 use regex::Regex;
 use sea_query::{Alias, Expr, PostgresQueryBuilder, SimpleExpr, Value};
 use serde_json::json;
-use validator::{ValidationError, ValidationErrors};
+use validator::ValidationErrors;
 
 use crate::middleware::user::RequiredUser;
 
@@ -109,303 +108,26 @@ pub async fn create(
         ("updated_at", None::<DateTime<Utc>>.into()),
     ];
 
-    custom_table
-        .fields
-        .iter()
-        .for_each(|field| match &field.info {
-            FieldInfo::String { .. } => {
-                let validation_results =
-                    field.validate(body.get(&AsLowerCamelCase(field.name.clone()).to_string()));
+    custom_table.fields.iter().for_each(|field| {
+        let validation_results =
+            field.validate(body.get(&AsLowerCamelCase(field.name.clone()).to_string()));
 
-                match validation_results {
-                    Ok(value) => {
-                        table_values.push((&field.name, value));
-                    }
-                    Err(validation_errors) => {
-                        validation_errors.iter().for_each(|error| {
-                            errors.add(
-                                util::string_to_static_str(
-                                    AsLowerCamelCase(field.name.clone()).to_string(),
-                                ),
-                                error.clone(),
-                            );
-                        });
-                    }
-                }
+        match validation_results {
+            Ok(value) => {
+                table_values.push((&field.name, value));
             }
-            FieldInfo::Number {
-                min,
-                max,
-                is_required,
-                ..
-            } => {
-                let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
-
-                match value {
-                    Some(value) => {
-                        let value = value.as_i64().unwrap();
-
-                        let mut value_error = ValidationError::new("value");
-
-                        if let Some(min) = min {
-                            if value < (*min).try_into().unwrap() {
-                                value_error.add_param(Cow::from("min"), &min);
-                            }
-                        }
-                        if let Some(max) = max {
-                            if value > (*max).try_into().unwrap() {
-                                value_error.add_param(Cow::from("max"), &max);
-                            }
-                        }
-
-                        if !value_error.params.is_empty() {
-                            errors.add(
-                                util::string_to_static_str(
-                                    AsLowerCamelCase(field.name.clone()).to_string(),
-                                ),
-                                value_error,
-                            )
-                        }
-
-                        table_values.push((&field.name, value.into()));
-                    }
-                    None => {
-                        if *is_required {
-                            errors.add(
-                                util::string_to_static_str(
-                                    AsLowerCamelCase(field.name.clone()).to_string(),
-                                ),
-                                ValidationError::new("required"),
-                            );
-                        }
-                    }
-                }
+            Err(validation_errors) => {
+                validation_errors.iter().for_each(|error| {
+                    errors.add(
+                        util::string_to_static_str(
+                            AsLowerCamelCase(field.name.clone()).to_string(),
+                        ),
+                        error.clone(),
+                    );
+                });
             }
-            FieldInfo::Boolean => {
-                let value = match body.get(&AsLowerCamelCase(field.name.clone()).to_string()) {
-                    Some(value) => value.as_bool().unwrap(),
-                    None => false,
-                };
-
-                table_values.push((&field.name, value.into()));
-            }
-            FieldInfo::Date { is_required, .. } => {
-                let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
-
-                match value {
-                    Some(value) => {
-                        table_values.push((
-                            &field.name,
-                            serde_json::from_value::<DateTime<Utc>>(value.to_owned())
-                                .unwrap()
-                                .into(),
-                        ));
-                    }
-                    None => {
-                        if *is_required {
-                            errors.add(
-                                util::string_to_static_str(
-                                    AsLowerCamelCase(field.name.clone()).to_string(),
-                                ),
-                                ValidationError::new("required"),
-                            );
-                        }
-                    }
-                }
-            }
-            FieldInfo::Email {
-                only,
-                except,
-                is_required,
-                ..
-            } => {
-                let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
-
-                match value {
-                    Some(value) => {
-                        let value = value.as_str().unwrap();
-                        let mut value_url = Url::from(value.to_owned());
-
-                        let mut pattern_error = ValidationError::new("pattern");
-
-                        if !only.is_empty() {
-                            value_url
-                                .validate_with_patterns(only.clone())
-                                .iter()
-                                .for_each(|(c, pattern)| {
-                                    if !c {
-                                        pattern_error.add_param(Cow::from("only"), &pattern);
-                                    }
-                                });
-                        } else if !except.is_empty() {
-                            value_url
-                                .validate_with_patterns(except.clone())
-                                .iter()
-                                .for_each(|(c, pattern)| {
-                                    if *c {
-                                        pattern_error.add_param(Cow::from("except"), &pattern);
-                                    }
-                                });
-                        }
-
-                        if !pattern_error.params.is_empty() {
-                            errors.add(
-                                util::string_to_static_str(
-                                    AsLowerCamelCase(field.name.clone()).to_string(),
-                                ),
-                                pattern_error,
-                            )
-                        }
-
-                        table_values.push((&field.name, value.into()));
-                    }
-                    None => {
-                        if *is_required {
-                            errors.add(
-                                util::string_to_static_str(
-                                    AsLowerCamelCase(field.name.clone()).to_string(),
-                                ),
-                                ValidationError::new("required"),
-                            );
-                        }
-                    }
-                }
-            }
-            FieldInfo::Url {
-                only,
-                except,
-                is_required,
-                ..
-            } => {
-                let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
-
-                match value {
-                    Some(value) => {
-                        let value = value.as_str().unwrap();
-                        let mut value_url = Url::from(value.to_owned());
-
-                        let mut pattern_error = ValidationError::new("pattern");
-
-                        if !only.is_empty() {
-                            value_url
-                                .validate_with_patterns(only.clone())
-                                .iter()
-                                .for_each(|(c, pattern)| {
-                                    if !c {
-                                        pattern_error.add_param(Cow::from("only"), &pattern);
-                                    }
-                                });
-                        } else if !except.is_empty() {
-                            value_url
-                                .validate_with_patterns(except.clone())
-                                .iter()
-                                .for_each(|(c, pattern)| {
-                                    if *c {
-                                        pattern_error.add_param(Cow::from("except"), &pattern);
-                                    }
-                                });
-                        }
-
-                        if !pattern_error.params.is_empty() {
-                            errors.add(
-                                util::string_to_static_str(
-                                    AsLowerCamelCase(field.name.clone()).to_string(),
-                                ),
-                                pattern_error,
-                            )
-                        }
-
-                        table_values.push((&field.name, value.into()));
-                    }
-                    None => {
-                        if *is_required {
-                            errors.add(
-                                util::string_to_static_str(
-                                    AsLowerCamelCase(field.name.clone()).to_string(),
-                                ),
-                                ValidationError::new("required"),
-                            );
-                        }
-                    }
-                }
-            }
-            FieldInfo::Select {
-                options,
-                max_selected,
-                min_selected,
-                is_required,
-                ..
-            } => {
-                let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
-
-                match value {
-                    Some(value) => {
-                        let value = value
-                            .as_array()
-                            .unwrap()
-                            .iter()
-                            .map(|v| v.as_str().unwrap().to_owned())
-                            .collect::<Vec<_>>();
-
-                        let mut selections_error = ValidationError::new("selections");
-
-                        let invalid_selections = value
-                            .iter()
-                            .map(|v| (v.to_owned(), options.contains(v)))
-                            .collect::<Vec<_>>();
-
-                        if !invalid_selections.iter().all(|(_, contains)| *contains) {
-                            selections_error.add_param(
-                                Cow::from("invalid"),
-                                &invalid_selections
-                                    .iter()
-                                    .filter_map(|(v, contains)| {
-                                        if !contains {
-                                            return Some(v);
-                                        }
-
-                                        None
-                                    })
-                                    .collect::<Vec<_>>(),
-                            );
-                        }
-
-                        if let Some(min_selected) = min_selected {
-                            if value.len() < (*min_selected).try_into().unwrap() {
-                                selections_error.add_param(Cow::from("min"), &min_selected);
-                            }
-                        }
-                        if let Some(max_selected) = max_selected {
-                            if value.len() > (*max_selected).try_into().unwrap() {
-                                selections_error.add_param(Cow::from("max"), &max_selected);
-                            }
-                        }
-
-                        if !selections_error.params.is_empty() {
-                            errors.add(
-                                util::string_to_static_str(
-                                    AsLowerCamelCase(field.name.clone()).to_string(),
-                                ),
-                                selections_error,
-                            )
-                        }
-
-                        table_values.push((&field.name, value.into()));
-                    }
-                    None => {
-                        if *is_required {
-                            errors.add(
-                                util::string_to_static_str(
-                                    AsLowerCamelCase(field.name.clone()).to_string(),
-                                ),
-                                ValidationError::new("required"),
-                            );
-                        }
-                    }
-                }
-            }
-            _ => todo!(),
-        });
+        }
+    });
 
     let insert_queries = custom_table
         .fields
@@ -532,7 +254,7 @@ pub async fn create(
             match value {
                 SimpleExpr::Value(value) => match value {
                     Value::String(value) => Some(json!({ camel_case_name: value })),
-                    Value::Int(value) => Some(json!({ camel_case_name: value })),
+                    Value::BigInt(value) => Some(json!({ camel_case_name: value })),
                     Value::Bool(value) => Some(json!({ camel_case_name: value })),
                     Value::ChronoDateTimeUtc(value) => Some(json!({ camel_case_name: value })),
                     Value::Array(_, Some(value)) => {
