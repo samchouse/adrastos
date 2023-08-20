@@ -4,14 +4,13 @@ use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use tracing_unwrap::ResultExt;
-use utoipa::ToSchema;
 
 use crate::{entities::Update, error::Error};
 
 use super::fields::Field;
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbSelect, DbCommon, DbQuery)]
+#[derive(Debug, Serialize, Deserialize, Clone, DbSelect, DbCommon, DbQuery)]
 #[adrastos(rename = "custom_tables")]
 pub struct CustomTableSchema {
     pub id: String,

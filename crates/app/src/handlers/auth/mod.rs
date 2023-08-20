@@ -21,9 +21,8 @@ use lettre::{
 use serde::Deserialize;
 use serde_json::json;
 use tracing::{error, warn};
-use utoipa::ToSchema;
 
-use crate::{middleware::user::RequiredUser, openapi, session::SessionKey};
+use crate::{middleware::user::RequiredUser, session::SessionKey};
 
 pub mod mfa;
 pub mod oauth2;
@@ -34,36 +33,22 @@ pub struct VerifyParams {
     token: String,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignupBody {
-    #[schema(max_length = 50)]
     first_name: String,
-    #[schema(max_length = 50)]
     last_name: String,
-    #[schema(schema_with = openapi::email)]
     email: String,
-    #[schema(min_length = 5, max_length = 64)]
     username: String,
-    #[schema(min_length = 8, max_length = 64)]
     password: String,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize)]
 pub struct LoginBody {
     email: String,
     password: String,
 }
 
-#[utoipa::path(
-    post,
-    path = "/auth/signup",
-    request_body = SignupBody,
-    responses(
-        (status = 200, description = "User created successfully", body = User),
-        (status = 400, description = "Validation failed", body = Error),
-    )
-)]
 #[post("/signup")]
 pub async fn signup(
     body: web::Json<SignupBody>,
@@ -174,15 +159,6 @@ pub async fn signup(
     })))
 }
 
-#[utoipa::path(
-    post,
-    path = "/auth/login",
-    request_body = LoginBody,
-    responses(
-        (status = 200, description = "User created successfully", body = User),
-        (status = 400, description = "Validation failed"),
-    )
-)]
 #[post("/login")]
 pub async fn login(
     session: Session,

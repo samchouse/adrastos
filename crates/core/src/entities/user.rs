@@ -4,7 +4,6 @@ use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use tracing_unwrap::ResultExt;
-use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::{auth, error::Error};
@@ -20,7 +19,7 @@ fn validate_password(password: String) -> Result<String, Error> {
 }
 
 #[enum_def]
-#[derive(Debug, Default, Validate, Serialize, Deserialize, Clone, ToSchema, DbCommon, DbSelect, DbQuery)]
+#[derive(Debug, Default, Validate, Serialize, Deserialize, Clone, DbCommon, DbSelect, DbQuery)]
 #[adrastos(validated)]
 #[serde(rename_all = "camelCase")]
 pub struct User {

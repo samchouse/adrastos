@@ -9,16 +9,17 @@ use validator::ValidationError;
 
 use crate::util;
 
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum RelationTarget {
     Single,
     Many,
 }
 
-#[derive(Deserialize, Debug, Serialize, Clone)]
+#[derive(Deserialize, Debug, Serialize, Clone, ToSchema)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum FieldInfo {
+    #[serde(rename_all = "camelCase")]
     String {
         min_length: Option<i32>,
         max_length: Option<i32>,
@@ -26,6 +27,7 @@ pub enum FieldInfo {
         is_required: bool,
         is_unique: bool,
     },
+    #[serde(rename_all = "camelCase")]
     Number {
         min: Option<i32>,
         max: Option<i32>,
@@ -33,22 +35,26 @@ pub enum FieldInfo {
         is_unique: bool,
     },
     Boolean,
+    #[serde(rename_all = "camelCase")]
     Date {
         is_required: bool,
         is_unique: bool,
     },
+    #[serde(rename_all = "camelCase")]
     Email {
         except: Vec<String>,
         only: Vec<String>,
         is_required: bool,
         is_unique: bool,
     },
+    #[serde(rename_all = "camelCase")]
     Url {
         except: Vec<String>,
         only: Vec<String>,
         is_required: bool,
         is_unique: bool,
     },
+    #[serde(rename_all = "camelCase")]
     Select {
         options: Vec<String>,
         min_selected: Option<i32>,
@@ -56,6 +62,7 @@ pub enum FieldInfo {
         is_required: bool,
         is_unique: bool,
     },
+    #[serde(rename_all = "camelCase")]
     Relation {
         table: String,
         target: RelationTarget,
@@ -67,7 +74,7 @@ pub enum FieldInfo {
     },
 }
 
-#[derive(Deserialize, Debug, Serialize, Clone)]
+#[derive(Deserialize, Debug, Serialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Field {
     pub name: String,

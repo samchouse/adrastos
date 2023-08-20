@@ -141,50 +141,56 @@ async fn main() -> std::io::Result<()> {
                 None
             }))
             .service(
-                SwaggerUi::new("/swagger-ui/{_:.*}")
-                    .url("/api-doc/openapi.json", ApiDoc::openapi()),
-            )
-            .service((handlers::index, handlers::me))
-            .service(
-                web::scope("/auth")
-                    .service((
-                        handlers::auth::signup,
-                        handlers::auth::login,
-                        handlers::auth::logout,
-                        handlers::auth::verify,
-                        handlers::auth::resend_verification,
-                        handlers::auth::token::refresh,
-                    ))
-                    .service(web::scope("/oauth2").service((
-                        handlers::auth::oauth2::login,
-                        handlers::auth::oauth2::callback,
+                web::scope("/api")
+                    .service(
+                        SwaggerUi::new("/swagger-ui/{_:.*}")
+                            .url("/api-doc/openapi.json", ApiDoc::openapi())
+                            .config(utoipa_swagger_ui::Config::new([
+                                "/api/api-doc/openapi.json",
+                            ])),
+                    )
+                    .service((handlers::index, handlers::me))
+                    .service(
+                        web::scope("/auth")
+                            .service((
+                                handlers::auth::signup,
+                                handlers::auth::login,
+                                handlers::auth::logout,
+                                handlers::auth::verify,
+                                handlers::auth::resend_verification,
+                                handlers::auth::token::refresh,
+                            ))
+                            .service(web::scope("/oauth2").service((
+                                handlers::auth::oauth2::login,
+                                handlers::auth::oauth2::callback,
+                            )))
+                            .service(web::scope("/mfa").service((
+                                handlers::auth::mfa::enable,
+                                handlers::auth::mfa::disable,
+                                handlers::auth::mfa::verify,
+                                handlers::auth::mfa::confirm,
+                                handlers::auth::mfa::regenerate,
+                            ))),
+                    )
+                    .service(web::scope("/config").service((
+                        handlers::config::details,
+                        handlers::config::oauth2,
+                        handlers::config::smtp,
                     )))
-                    .service(web::scope("/mfa").service((
-                        handlers::auth::mfa::enable,
-                        handlers::auth::mfa::disable,
-                        handlers::auth::mfa::verify,
-                        handlers::auth::mfa::confirm,
-                        handlers::auth::mfa::regenerate,
-                    ))),
-            )
-            .service(web::scope("/config").service((
-                handlers::config::details,
-                handlers::config::oauth2,
-                handlers::config::smtp,
-            )))
-            .service(
-                web::scope("/tables")
-                    .service((
-                        handlers::tables::create,
-                        handlers::tables::update,
-                        handlers::tables::delete,
-                    ))
-                    .service(web::scope("/{name}").service((
-                        handlers::tables::custom::row,
-                        handlers::tables::custom::rows,
-                        handlers::tables::custom::create,
-                        handlers::tables::custom::delete,
-                    ))),
+                    .service(
+                        web::scope("/tables")
+                            .service((
+                                handlers::tables::create,
+                                handlers::tables::update,
+                                handlers::tables::delete,
+                            ))
+                            .service(web::scope("/{name}").service((
+                                handlers::tables::custom::row,
+                                handlers::tables::custom::rows,
+                                handlers::tables::custom::create,
+                                handlers::tables::custom::delete,
+                            ))),
+                    ),
             )
             .default_service(web::route().to(handlers::not_found))
     });

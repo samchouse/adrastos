@@ -13,13 +13,6 @@ use chrono::Utc;
 use serde_json::json;
 use tokio::sync::Mutex;
 
-#[utoipa::path(
-    get,
-    path = "/auth/token/refresh",
-    responses(
-        (status = 200, description = ""),
-    )
-)]
 #[get("/token/refresh")]
 #[tracing::instrument(skip(config, req, db_pool))]
 pub async fn refresh(

@@ -6,14 +6,13 @@ use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use tracing_unwrap::ResultExt;
-use utoipa::ToSchema;
 
 use crate::error::Error;
 
 use super::{Update, User, UserIden};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbCommon, DbSelect, DbQuery)]
+#[derive(Debug, Serialize, Deserialize, Clone, DbCommon, DbSelect, DbQuery)]
 pub struct RefreshTokenTree {
     pub id: String,
     #[adrastos(relation = User)]

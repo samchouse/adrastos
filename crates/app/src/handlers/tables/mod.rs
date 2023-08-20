@@ -28,7 +28,7 @@ pub struct CreateBody {
     fields: Vec<Field>,
 }
 
-#[derive(Deserialize, ToSchema, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 enum Action {
     Create,
@@ -36,28 +36,21 @@ enum Action {
     Delete,
 }
 
-#[derive(Deserialize, ToSchema, Debug)]
+#[derive(Deserialize, Debug)]
 struct UpdateField<T> {
     name: String,
     action: Action,
     field: T,
 }
 
-#[derive(Deserialize, ToSchema, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateBody {
     name: Option<String>,
     fields: Option<Vec<UpdateField<Field>>>,
 }
 
-#[utoipa::path(
-    post,
-    path = "/tables/create",
-    request_body = CreateBody,
-    responses(
-        (status = 200, description = "", body = Response<CustomTableSchema>),
-    )
-)]
+#[utoipa::path(path = "/tables")]
 #[post("/create")]
 pub async fn create(
     _: RequiredUser,
@@ -217,9 +210,7 @@ pub async fn update(
                 updated_fields = updated_fields
                     .clone()
                     .into_iter()
-                    .filter(|f| {
-                        f.name != update.name
-                    })
+                    .filter(|f| f.name != update.name)
                     .collect();
             }
         });
@@ -267,17 +258,6 @@ pub async fn update(
     })))
 }
 
-#[utoipa::path(
-    delete,
-    path = "/tables/delete/{name}",
-    request_body = CreateBody,
-    responses(
-        (status = 200, description = "", body = CustomTableSchema),
-    ),
-    params(
-        ("name" = String, Path, description = "The name of the table to delete"),
-    )
-)]
 #[delete("/delete/{name}")]
 pub async fn delete(
     _: RequiredUser,

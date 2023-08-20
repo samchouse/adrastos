@@ -2,12 +2,11 @@ use adrastos_macros::{DbCommon, DbQuery, DbSelect};
 use chrono::{DateTime, Utc};
 use sea_query::{enum_def, Alias, Expr};
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 use super::User;
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbSelect, DbCommon, DbQuery)]
+#[derive(Debug, Serialize, Deserialize, Clone, DbSelect, DbCommon, DbQuery)]
 pub struct Connection {
     pub id: String,
     #[adrastos(find)]
