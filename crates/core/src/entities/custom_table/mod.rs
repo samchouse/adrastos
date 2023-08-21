@@ -81,11 +81,30 @@ impl ColType {
 }
 
 pub struct CustomTableSelectBuilder {
+    is_count: bool,
     schema: CustomTableSchema,
     query_builder: sea_query::SelectStatement,
 }
 
 impl CustomTableSelectBuilder {
+    pub fn count(&mut self) -> Self {
+        let mut builder = CustomTableSelectBuilder {
+            is_count: true,
+            query_builder: self.query_builder.clone(),
+            schema: self.schema.clone(),
+        };
+
+        builder.query_builder.reset_limit();
+        builder.query_builder.reset_offset();
+        builder.query_builder.clear_selects();
+
+        builder
+            .query_builder
+            .expr(sea_query::Func::count(Expr::col(sea_query::Asterisk)));
+
+        builder
+    }
+
     pub fn and_where(&mut self, expressions: Vec<SimpleExpr>) -> &mut Self {
         for expression in expressions {
             self.query_builder.and_where(expression);
@@ -94,8 +113,14 @@ impl CustomTableSelectBuilder {
         self
     }
 
-    pub fn limit(&mut self, limit: Option<u64>) -> &mut Self {
-        self.query_builder.reset_limit().limit(limit.unwrap_or(100));
+    pub fn paginate(&mut self, page: Option<u64>, limit: Option<u64>) -> &mut Self {
+        self.query_builder.reset_limit();
+        self.query_builder.reset_offset();
+
+        if let Some(page) = page && let Some(limit) = limit {
+            self.query_builder.limit(limit);
+            self.query_builder.offset((page - 1) * limit);
+        }
 
         self
     }
@@ -142,18 +167,20 @@ impl CustomTableSelectBuilder {
         &mut self,
         db_pool: &deadpool_postgres::Pool,
     ) -> Result<serde_json::Value, Error> {
+        let query = if self.is_count {
+            self.query_builder.to_string(PostgresQueryBuilder)
+        } else {
+            format!(
+                "SELECT json_agg(columns) as columns FROM ({}) as columns",
+                self.query_builder.to_string(PostgresQueryBuilder)
+            )
+        };
+
         let row = db_pool
             .get()
             .await
             .unwrap()
-            .query(
-                format!(
-                    "SELECT json_agg(columns) as columns FROM ({}) as columns",
-                    self.query_builder.to_string(PostgresQueryBuilder)
-                )
-                .as_str(),
-                &[],
-            )
+            .query(query.as_str(), &[])
             .await
             .map_err(|e| {
                 let error = format!(
@@ -171,6 +198,11 @@ impl CustomTableSelectBuilder {
                 );
                 Error::BadRequest(message)
             })?;
+
+        if self.is_count {
+            let count = row.get::<_, i64>("count");
+            return Ok(count.into());
+        }
 
         let mut columns = vec![
             ("id", ColType::String),
@@ -239,6 +271,7 @@ impl From<&CustomTableSchema> for CustomTableSelectBuilder {
         });
 
         CustomTableSelectBuilder {
+            is_count: false,
             schema: schema.clone(),
             query_builder: sea_query::Query::select()
                 .from(Alias::new(&schema.name))

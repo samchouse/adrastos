@@ -15,6 +15,7 @@ use adrastos_core::{
 };
 use chrono::{DateTime, Utc};
 use heck::{AsLowerCamelCase, AsSnakeCase};
+use json_patch::{PatchOperation, AddOperation};
 use regex::Regex;
 use sea_query::{Alias, Expr, PostgresQueryBuilder, SimpleExpr, Value};
 use serde_json::json;
@@ -26,7 +27,7 @@ use crate::middleware::user::RequiredUser;
 pub async fn rows(
     _: RequiredUser,
     path: web::Path<String>,
-    web::Query(query): web::Query<HashMap<String, String>>,
+    web::Query(mut query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let custom_table = CustomTableSchema::find()
@@ -34,22 +35,56 @@ pub async fn rows(
         .one(&db_pool)
         .await?;
 
-    let rows = CustomTableSelectBuilder::from(&custom_table)
+    let page = query.get("page").map(|s| s.parse::<u64>().unwrap());
+    let limit = query.get("limit").map(|s| s.parse::<u64>().unwrap());
+    query.remove("page");
+    query.remove("limit");
+
+    let mut builder = CustomTableSelectBuilder::from(&custom_table);
+    builder
         .and_where(
             query
                 .iter()
                 .map(|(field, equals)| Expr::col(Alias::new(field)).eq(equals))
                 .collect(),
         )
-        .join()
-        .limit(None) // TODO(@Xenfo): support pagination
-        .finish(&db_pool)
-        .await?;
+        .paginate(page, limit)
+        .join();
 
-    Ok(HttpResponse::Ok().json(json!({
+    let rows = builder.finish(&db_pool).await?;
+    let mut response = json!({
         "success": true,
         "data": rows
-    })))
+    });
+
+    if let Some(page) = page && let Some(limit) = limit {
+        let count = builder.count().finish(&db_pool).await?.as_i64().unwrap();
+
+        let mut ops = json_patch::diff(
+            &response,
+            &json!({
+                "pagination": {
+                    "records": count,
+                    "pages": (count as f64 / limit as f64).ceil() as u64,
+                }
+            }),
+        );
+
+        ops.0.push(PatchOperation::Add(json_patch::AddOperation {
+            path: "/pagination/previous".to_string(),
+            value: if page > 1 { serde_json::to_value(page - 1).unwrap() } else { serde_json::Value::Null },
+        }));
+        ops.0.push(PatchOperation::Add(json_patch::AddOperation {
+            path: "/pagination/next".to_string(),
+            value: if page * limit < count as u64 { serde_json::to_value(page + 1).unwrap() } else { serde_json::Value::Null },
+        }));
+
+        ops.0.retain(|op| matches!(op, PatchOperation::Add(AddOperation { .. })));
+
+        json_patch::patch(&mut response, &ops).unwrap();
+    }
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 #[get("/row")]
