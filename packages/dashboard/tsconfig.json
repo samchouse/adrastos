@@ -29,6 +29,8 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
+    "src/env.mjs",
+    "next.config.mjs",
     ".next/types/**/*.ts",
     "src/reset.d.ts",
     "postcss.config.js"

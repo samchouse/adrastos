@@ -17,12 +17,12 @@ import { cn } from '~/lib/utils';
 
 const Form = FormProvider;
 
-interface FormFieldContextValue<
+type FormFieldContextValue<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
-> {
+> = {
   name: TName;
-}
+};
 
 const FormFieldContext = React.createContext<FormFieldContextValue>(
   {} as FormFieldContextValue
@@ -62,9 +62,9 @@ const useFormField = () => {
   };
 };
 
-interface FormItemContextValue {
+type FormItemContextValue = {
   id: string;
-}
+};
 
 const FormItemContext = React.createContext<FormItemContextValue>(
   {} as FormItemContextValue
@@ -146,7 +146,7 @@ const FormMessage = React.forwardRef<
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, children, ...props }, ref) => {
   const { error, formMessageId } = useFormField();
-  const body = error ? String(error.message) : children;
+  const body = error ? String(error?.message) : children;
 
   if (!body) {
     return null;
