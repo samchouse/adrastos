@@ -13,12 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
 
       - name: Check formatting
         run: cargo fmt --check
 
       - name: Check Clippy
-        run: cargo clippy --all-targets --frozen
+        run: cargo clippy --all-targets --locked
 
   check:
     name: Check
@@ -29,7 +31,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
 
       - name: Check the project
-        run: cargo check --all-targets --frozen
+        run: cargo check --all-targets --locked
 
   test:
     name: Test
@@ -41,4 +43,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
 
       - name: Test the project
-        run: cargo test --all-targets --frozen
+        run: cargo test --all-targets --locked
