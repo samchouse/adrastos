@@ -111,7 +111,9 @@ pub async fn verify(
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let Ok(Some(retries)) = session.get::<u8>(&SessionKey::MfaRetries.to_string()) else {
-        return Err(Error::BadRequest("You have not started the login process".into()));
+        return Err(Error::BadRequest(
+            "You have not started the login process".into(),
+        ));
     };
     if retries == 0 {
         session
@@ -131,7 +133,9 @@ pub async fn verify(
     }
 
     let Ok(Some(user_id)) = session.get::<String>(&SessionKey::LoginUserId.to_string()) else {
-        return Err(Error::BadRequest("You have not started the login process".into()));
+        return Err(Error::BadRequest(
+            "You have not started the login process".into(),
+        ));
     };
 
     let user = User::find_by_id(&user_id).one(&db_pool).await?;
