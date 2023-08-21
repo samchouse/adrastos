@@ -180,6 +180,7 @@ async fn main() -> std::io::Result<()> {
                     .service(
                         web::scope("/tables")
                             .service((
+                                handlers::tables::list,
                                 handlers::tables::create,
                                 handlers::tables::update,
                                 handlers::tables::delete,

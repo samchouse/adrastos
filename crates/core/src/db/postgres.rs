@@ -53,9 +53,8 @@ pub fn create_pool(config: &config::Config) -> Pool {
                 panic!("Certs path not set")
             };
 
-            let ca_cert = &mut BufReader::new(
-                File::open(format!("{}/cockroach.crt", certs_path)).unwrap(),
-            );
+            let ca_cert =
+                &mut BufReader::new(File::open(format!("{}/cockroach.crt", certs_path)).unwrap());
             let ca_cert = Certificate(certs(ca_cert).unwrap()[0].clone());
 
             let mut root_store = RootCertStore::empty();

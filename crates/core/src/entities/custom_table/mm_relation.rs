@@ -26,12 +26,7 @@ impl ManyToManyRelationTable {
             .fields
             .iter()
             .filter_map(|f| {
-                let FieldInfo::Relation {
-                    table,
-                    target,
-                    ..
-                } = &f.info
-                else {
+                let FieldInfo::Relation { table, target, .. } = &f.info else {
                     return None;
                 };
 

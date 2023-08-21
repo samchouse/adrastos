@@ -15,7 +15,7 @@ use adrastos_core::{
 };
 use chrono::{DateTime, Utc};
 use heck::{AsLowerCamelCase, AsSnakeCase};
-use json_patch::{PatchOperation, AddOperation};
+use json_patch::{AddOperation, PatchOperation};
 use regex::Regex;
 use sea_query::{Alias, Expr, PostgresQueryBuilder, SimpleExpr, Value};
 use serde_json::json;

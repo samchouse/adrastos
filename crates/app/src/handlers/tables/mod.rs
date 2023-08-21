@@ -1,4 +1,4 @@
-use actix_web::{delete, patch, post, web, HttpResponse, Responder};
+use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
     db::postgres,
     entities::custom_table::{
@@ -48,6 +48,20 @@ struct UpdateField<T> {
 pub struct UpdateBody {
     name: Option<String>,
     fields: Option<Vec<UpdateField<Field>>>,
+}
+
+#[get("/list")]
+pub async fn list(
+    _: RequiredUser,
+    db_pool: web::Data<deadpool_postgres::Pool>,
+) -> actix_web::Result<impl Responder, Error> {
+    let tables = CustomTableSchema::find().all(&db_pool).await?;
+
+    Ok(HttpResponse::Ok().json(json!({
+        "success": true,
+        "message": "Tables fetched successfully",
+        "tables": tables
+    })))
 }
 
 #[utoipa::path(path = "/tables")]

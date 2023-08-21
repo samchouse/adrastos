@@ -92,8 +92,11 @@ pub async fn callback(
     let provider = OAuth2Provider::try_from(params.provider.as_str())
         .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;
 
-    let Ok(Some(session_csrf_token)) = session.get::<String>(&SessionKey::CsrfToken.to_string()) else {
-        return Err(Error::BadRequest("The request is missing a session CSRF Token".into()));
+    let Ok(Some(session_csrf_token)) = session.get::<String>(&SessionKey::CsrfToken.to_string())
+    else {
+        return Err(Error::BadRequest(
+            "The request is missing a session CSRF Token".into(),
+        ));
     };
 
     let token = oauth2

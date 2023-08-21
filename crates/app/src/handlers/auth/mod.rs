@@ -317,7 +317,9 @@ pub async fn resend_verification(
     }
 
     let Some(mailer) = mailer.get_ref() else {
-        return Err(Error::InternalServerError("Mailer is not configured".into()));
+        return Err(Error::InternalServerError(
+            "Mailer is not configured".into(),
+        ));
     };
 
     let verification_token = Id::new().to_string();
