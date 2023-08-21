@@ -86,6 +86,7 @@ jobs:
 
       - name: Build and push the app image
         uses: docker/build-push-action@v4
+        id: app
         with:
           push: true
           file: crates/app/Dockerfile
@@ -93,6 +94,7 @@ jobs:
 
       - name: Build and push the worker image
         uses: docker/build-push-action@v4
+        id: emails
         with:
           push: true
           file: packages/emails/Dockerfile
@@ -106,7 +108,7 @@ jobs:
           edit-mode: replace
           body: |
             ## Backend Staging
-            Status: **[${{ success() && "SUCCEEDED" || failure() && "FAILED" || "CANCELLED" }}](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) ${{ success() && ":white_check_mark:" || failure() && ":x:" || ":grey_question:" }}**
+            Status: **[${{ (steps.app.conclusion == 'success' && steps.emails.conclusion == 'success') && 'SUCCEEDED' || (steps.app.conclusion == 'failure' && steps.emails.conclusion == 'failure') && 'FAILED' || 'CANCELLED' }}](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) ${{ (steps.app.conclusion == 'success' && steps.emails.conclusion == 'success') && ':white_check_mark:' || (steps.app.conclusion == 'failure' && steps.emails.conclusion == 'failure') && ':x:' || ':grey_question:' }}**
             - [ ] Deploy this PR
 
   release:
