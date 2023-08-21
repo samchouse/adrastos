@@ -1,25 +1,16 @@
-# Step 1
-FROM rustlang/rust:nightly-alpine AS chef
+FROM alpine:latest AS builder
 
-RUN apk add musl-dev
-RUN cargo install cargo-chef
+RUN apk add curl gcc musl-dev libressl-dev protobuf-dev
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+RUN rustup toolchain install nightly --profile minimal --no-self-update
+RUN rustup default nightly
+
+ENV CARGO_INCREMENTAL=0
 
 WORKDIR /work
-
-# Step 2
-FROM chef AS planner
-
-COPY ["Cargo.toml", "Cargo.lock", "./"]
-COPY ./crates ./crates
-
-RUN cargo chef prepare --recipe-path recipe.json
-
-# Step 3
-FROM chef AS builder
-
-COPY --from=planner /work/recipe.json recipe.json
-RUN apk add libressl-dev protobuf-dev
-RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY ["Cargo.toml", "Cargo.lock", "./"]
 COPY ./crates ./crates
