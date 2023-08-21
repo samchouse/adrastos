@@ -41,12 +41,13 @@ jobs:
   staging-init:
     name: Staging Init
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
 
     steps:
       - name: Create comment
         uses: peter-evans/create-or-update-comment@v3
         with:
-          issue-number: 1
+          issue-number: ${{ github.event.pull_request.number }}
           body: |
             **Backend Staging**
 
