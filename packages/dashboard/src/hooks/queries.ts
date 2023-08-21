@@ -1,11 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getConfigDetails, getMe, getTokenRefresh } from '~/lib';
+import {
+  getConfigDetails,
+  getMe,
+  getTableData,
+  getTables,
+  getTokenRefresh
+} from '~/lib';
 
 export const queryKeys = {
   tokenRefresh: ['auth', 'token', 'refresh'] as const,
   me: ['me'] as const,
-  configDetails: ['config', 'details'] as const
+  configDetails: ['config', 'details'] as const,
+  tables: ['tables'] as const
 };
 
 export const useTokenRefreshQuery = () =>
@@ -32,6 +39,26 @@ export const useConfigDetailsQuery = () => {
   return useQuery({
     queryKey: queryKeys.configDetails,
     queryFn: async () => await getConfigDetails(),
+    enabled: isSuccess
+  });
+};
+
+export const useTablesQuery = () => {
+  const { isSuccess } = useTokenRefreshQuery();
+
+  return useQuery({
+    queryKey: queryKeys.tables,
+    queryFn: async () => await getTables(),
+    enabled: isSuccess
+  });
+};
+
+export const useTableDataQuery = <T>(table: string) => {
+  const { isSuccess } = useTokenRefreshQuery();
+
+  return useQuery({
+    queryKey: ['data'],
+    queryFn: async () => await getTableData<T>(table),
     enabled: isSuccess
   });
 };

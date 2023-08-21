@@ -168,3 +168,52 @@ export const postResendVerification = async () => {
   const res = await client.post('/auth/resend-verification');
   return res.data;
 };
+
+interface Table {
+  id: string;
+  name: string;
+  fields: Field[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+type Field = StringField | NumberField;
+
+interface BaseField {
+  name: string;
+  type: string;
+}
+
+interface StringField extends BaseField {
+  type: 'string';
+  minLength: number | null;
+  maxLength: number | null;
+  pattern: string | null;
+  isRequired: boolean;
+  isUnique: boolean;
+}
+
+interface NumberField extends BaseField {
+  type: 'number';
+  max: number | null;
+  min: number | null;
+  isRequired: boolean;
+  isUnique: boolean;
+}
+
+export const getTables = async () => {
+  const res = await client.get<{
+    success: true;
+    message: string;
+    tables: Table[];
+  }>('/tables/list');
+  return res.data;
+};
+
+export const getTableData = async <T>(table: string) => {
+  const res = await client.get<{
+    success: true;
+    data: T[];
+  }>(`/tables/${table}/rows`);
+  return res.data;
+};

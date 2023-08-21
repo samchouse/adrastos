@@ -38,10 +38,10 @@ __metadata:
     axios: ^1.4.0
     class-variance-authority: ^0.7.0
     clsx: ^2.0.0
-    jotai: ^2.3.1
     lucide-react: ^0.268.0
     next: ^13.4.19
     postcss: ^8.4.28
+    radash: ^11.0.0
     react: ^18.2.0
     react-dom: ^18.2.0
     react-hook-form: ^7.45.4
@@ -5672,21 +5672,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jotai@npm:^2.3.1":
-  version: 2.3.1
-  resolution: "jotai@npm:2.3.1"
-  peerDependencies:
-    "@types/react": ">=17.0.0"
-    react: ">=17.0.0"
-  peerDependenciesMeta:
-    "@types/react":
-      optional: true
-    react:
-      optional: true
-  checksum: c2e3dcb3206749cd7f63ab9cfec5d0bacd19ac8c1710e688716fcbdaa031c6bb78f10ed24ea8da65cd98b4dc3c04170c05eedb4d3284b9ad80858f834c69a914
-  languageName: node
-  linkType: hard
-
 "joycon@npm:^3.0.1":
   version: 3.1.1
   resolution: "joycon@npm:3.1.1"
@@ -7207,6 +7192,13 @@ __metadata:
   version: 5.1.1
   resolution: "quick-lru@npm:5.1.1"
   checksum: a516faa25574be7947969883e6068dbe4aa19e8ef8e8e0fd96cddd6d36485e9106d85c0041a27153286b0770b381328f4072aa40d3b18a19f5f7d2b78b94b5ed
+  languageName: node
+  linkType: hard
+
+"radash@npm:^11.0.0":
+  version: 11.0.0
+  resolution: "radash@npm:11.0.0"
+  checksum: c9203ac64d65dee57aa6bd722a66db83d9910f998086ad15bc6e1a2c0dd8e4d874909d09855932ad00950d03d431ccd3866a250dfc154edce681eb3382604def
   languageName: node
   linkType: hard
 

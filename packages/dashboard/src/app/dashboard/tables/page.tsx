@@ -1,7 +1,5 @@
-const Page: React.FC = () => (
-  <main>
-    <div></div>
-  </main>
-);
+'use client';
+
+const Page: React.FC = () => <div></div>;
 
 export default Page;
