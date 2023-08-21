@@ -185,13 +185,13 @@ pub async fn create(
         .await
         .map_err(|error| {
             let Some(db_error) = error.as_db_error() else {
-                return Error::InternalServerError("Unable to convert error".to_string())
+                return Error::InternalServerError("Unable to convert error".to_string());
             };
             let Some(routine) = db_error.routine() else {
-                return Error::InternalServerError("Unable to get error info".to_string())
+                return Error::InternalServerError("Unable to get error info".to_string());
             };
             let Some(error) = postgres::Error::try_from(routine).ok() else {
-                return Error::InternalServerError("Unsupported database error code".to_string())
+                return Error::InternalServerError("Unsupported database error code".to_string());
             };
 
             match error {
@@ -199,7 +199,7 @@ pub async fn create(
                     let pre = Regex::new(r#"".+""#).unwrap();
 
                     let Some(matched) = pre.find(db_error.message()) else {
-                        return Error::InternalServerError("Invalid error details".to_string())
+                        return Error::InternalServerError("Invalid error details".to_string());
                     };
 
                     let table_name = matched.as_str().replace('\"', "");

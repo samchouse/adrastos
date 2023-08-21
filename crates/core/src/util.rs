@@ -25,14 +25,20 @@ pub fn create_validation_error(code: &str, message: Option<String>) -> Validatio
 
 pub fn get_auth_cookies(req: &HttpRequest) -> Result<Cookies, Error> {
     let Ok(cookies) = req.cookies() else {
-        return Err(Error::InternalServerError("An error occurred reading cookies".into()));
+        return Err(Error::InternalServerError(
+            "An error occurred reading cookies".into(),
+        ));
     };
 
-    let Some(is_logged_in_cookie) = cookies.iter().find(|cookie| cookie.name() == "isLoggedIn") else {
+    let Some(is_logged_in_cookie) = cookies.iter().find(|cookie| cookie.name() == "isLoggedIn")
+    else {
         return Err(Error::Unauthorized);
     };
 
-    let Some(refresh_token_cookie) = cookies.iter().find(|cookie| cookie.name() == "refreshToken") else {
+    let Some(refresh_token_cookie) = cookies
+        .iter()
+        .find(|cookie| cookie.name() == "refreshToken")
+    else {
         return Err(Error::Unauthorized);
     };
 
