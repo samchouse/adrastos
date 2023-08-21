@@ -437,13 +437,13 @@ pub async fn create(
         .await
         .map_err(|error| {
             let Some(db_error) = error.as_db_error() else {
-                return Error::InternalServerError("Unable to convert error".to_string())
+                return Error::InternalServerError("Unable to convert error".to_string());
             };
             let Some(routine) = db_error.routine() else {
-                return Error::InternalServerError("Unable to get error info".to_string())
+                return Error::InternalServerError("Unable to get error info".to_string());
             };
             let Some(error) = postgres::Error::try_from(routine).ok() else {
-                return Error::InternalServerError("Unsupported database error code".to_string())
+                return Error::InternalServerError("Unsupported database error code".to_string());
             };
 
             match error {
@@ -451,19 +451,19 @@ pub async fn create(
                     let pre = Regex::new(r"\(.+\)=\('.+'\)").unwrap();
 
                     let Some(detail) = db_error.detail() else {
-                        return Error::InternalServerError("Unable to get error info".to_string())
+                        return Error::InternalServerError("Unable to get error info".to_string());
                     };
                     let Some(matched) = pre.find(detail) else {
-                        return Error::InternalServerError("Invalid error details".to_string())
+                        return Error::InternalServerError("Invalid error details".to_string());
                     };
 
                     let mut details = matched.as_str().split('=').collect::<Vec<_>>().into_iter();
 
                     let Some(key) = details.next() else {
-                        return Error::InternalServerError("Invalid error details".to_string())
+                        return Error::InternalServerError("Invalid error details".to_string());
                     };
                     let Some(value) = details.next() else {
-                        return Error::InternalServerError("Invalid error details".to_string())
+                        return Error::InternalServerError("Invalid error details".to_string());
                     };
 
                     Error::BadRequest(format!(

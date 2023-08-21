@@ -97,27 +97,37 @@ impl From<Vec<Attribute>> for AttributeTokens {
                     TokenName::Unique => Some(Token::Unique),
                     TokenName::Validated => Some(Token::Validated),
                     TokenName::Rename => {
-                        let Some(TokenTree::Literal(literal)) = list.tokens.clone().into_iter().nth(index + 2) else {
+                        let Some(TokenTree::Literal(literal)) =
+                            list.tokens.clone().into_iter().nth(index + 2)
+                        else {
                             return None;
                         };
 
-                        let renamed = literal.to_string().parse::<String>().unwrap().replace('\"', "");
+                        let renamed = literal
+                            .to_string()
+                            .parse::<String>()
+                            .unwrap()
+                            .replace('\"', "");
                         Some(Token::Rename(renamed))
-                    },
+                    }
                     TokenName::Relation => {
-                        let Some(TokenTree::Ident(ident)) = list.tokens.clone().into_iter().nth(index + 2) else {
+                        let Some(TokenTree::Ident(ident)) =
+                            list.tokens.clone().into_iter().nth(index + 2)
+                        else {
                             return None;
                         };
 
                         Some(Token::Relation(ident))
-                    },
+                    }
                     TokenName::Transform => {
-                        let Some(TokenTree::Ident(ident)) = list.tokens.clone().into_iter().nth(index + 2) else {
+                        let Some(TokenTree::Ident(ident)) =
+                            list.tokens.clone().into_iter().nth(index + 2)
+                        else {
                             return None;
                         };
 
                         Some(Token::Transform(ident))
-                    },
+                    }
                     _ => None,
                 }
             })
