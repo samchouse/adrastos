@@ -49,8 +49,7 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            **Backend Staging**
-
+            ## Backend Staging
             - [ ] Deploy this PR
 
   staging:
@@ -74,8 +73,8 @@ jobs:
           comment-id: ${{ github.event.comment.id }}
           edit-mode: replace
           body: |
-            **Backend Staging**
-
+            ## Backend Staging
+            Status: **[DEPLOYING](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) :hourglass:**
             - [ ] Deploy this PR
 
       - uses: docker/login-action@v2
@@ -98,6 +97,17 @@ jobs:
           push: true
           file: packages/emails/Dockerfile
           tags: ghcr.io/xenfo/adrastos-emails:staging-pr-${{ github.event.issue.number }}
+
+      - name: Update comment
+        uses: peter-evans/create-or-update-comment@v3
+        if: always()
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          edit-mode: replace
+          body: |
+            ## Backend Staging
+            Status: **[${{ success() && "SUCCEEDED" || failure() && "FAILED" || "CANCELLED" }}](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) ${{ success() && ":white_check_mark:" || failure() && ":x:" || ":grey_question:" }}**
+            - [ ] Deploy this PR
 
   release:
     name: Release
