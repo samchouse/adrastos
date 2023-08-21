@@ -59,7 +59,7 @@ jobs:
     if: github.event_name == 'issue_comment' && ${{ github.event.issue.pull_request }}
 
     steps:
-      - run: echo "${{ github.event }}"
+      - run: echo "${{ github.event.comment.user.id }}"
     # permissions:
     #   contents: read
     #   packages: write
