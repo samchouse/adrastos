@@ -63,10 +63,9 @@ jobs:
       packages: write
 
     steps:
-      - run: git fetch origin pull/${{ github.event.issue.number }}/head:pull/${{ github.event.issue.number }}/head
       - uses: actions/checkout@v3
-        with:
-          ref: pull/${{ github.event.issue.number }}/head
+      - run: git fetch origin pull/${{ github.event.issue.number }}/head
+      - run: git checkout FETCH_HEAD
 
       - name: Update comment
         uses: peter-evans/create-or-update-comment@v3
