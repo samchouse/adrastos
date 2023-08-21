@@ -59,7 +59,18 @@ jobs:
     if: github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.user.id == 41898282 && contains(github.event.comment.body, '- [x] Deploy this PR')
 
     permissions:
-      contents: read
+      actions: write
+      checks: write
+      contents: write
+      deployments: write
+      id-token: write
+      issues: write
+      pull-requests: write
+      statuses: write
+      security-events: write
+      repository-projects: write
+      discussions: write
+      pages: write
       packages: write
 
     steps:
@@ -70,7 +81,7 @@ jobs:
       - name: Update comment
         uses: peter-evans/create-or-update-comment@v3
         with:
-          comment-id: ${{ github.event.issue.comment.id }}
+          comment-id: ${{ github.event.comment.id }}
           edit-mode: replace
           body: |
             **Backend Staging**
