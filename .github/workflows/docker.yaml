@@ -65,7 +65,6 @@ jobs:
       deployments: write
       id-token: write
       issues: write
-      metadata: write
       pull-requests: write
       statuses: write
       security-events: write
