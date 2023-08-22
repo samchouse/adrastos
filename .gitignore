@@ -7,6 +7,7 @@
 **/out
 /certs
 /target
+staging
 **/.next
 **/node_modules
 **/.react-email
