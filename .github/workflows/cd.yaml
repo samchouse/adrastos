@@ -110,6 +110,14 @@ jobs:
           file: .github/deploy/Dockerfile.emails
           tags: ghcr.io/xenfo/adrastos-emails:staging-pr-${{ github.event.issue.number }}
 
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          username: root
+          host: ${{ secrets.SSH_HOST }}
+          key: ${{ secrets.SSH_KEY }}
+          script: whoami
+
       - name: Update comment
         uses: peter-evans/create-or-update-comment@v3
         if: always()
