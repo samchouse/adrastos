@@ -31,6 +31,8 @@ services:
     restart: unless-stopped
     profiles:
       - deploy
+    depends_on:
+      - staging-nginx
     env_file:
       - nginx.env
     ports:
