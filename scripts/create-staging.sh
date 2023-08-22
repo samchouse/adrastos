@@ -13,7 +13,7 @@ server {
 
   # reverse proxy
   location / {
-    proxy_pass http://127.0.0.1:$2;
+    proxy_pass http://127.0.0.1:$PORT;
     proxy_set_header Host \$host;
     include nginxconfig.io/proxy.conf;
   }
