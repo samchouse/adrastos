@@ -87,10 +87,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v2
 
-      - uses: dtolnay/rust-toolchain@nightly
-      # - run: cargo build --release
+      - run: ls -la /
+      - run: echo $PWD
 
-      - run: docker system prune -af
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cargo build --release
 
       - name: Build and push the app image
         uses: docker/build-push-action@v4
