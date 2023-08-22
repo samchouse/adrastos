@@ -14,7 +14,7 @@ server {
 
   # reverse proxy
   location / {
-    proxy_pass http://adrastos-staging-$PR-app-1.adrastos_default:$PORT;
+    proxy_pass http://adrastos-staging-pr-$PR-app-1.adrastos_default:$PORT;
     proxy_set_header Host \$host;
     include nginxconfig.io/proxy.conf;
   }
@@ -46,8 +46,6 @@ services:
       - ../staging.env
     networks:
       - adrastos_default
-    ports:
-      - $PORT:8000
     volumes:
       - ~/.postgresql/root.crt:/work/certs/cockroach.crt
 
