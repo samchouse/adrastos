@@ -90,6 +90,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
       # - run: cargo build --release
 
+      - run: docker system prune -af
+
       - name: Build and push the app image
         uses: docker/build-push-action@v4
         id: app
