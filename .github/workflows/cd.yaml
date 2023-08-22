@@ -12,6 +12,7 @@ jobs:
   git:
     name: Git
     runs-on: ubuntu-latest
+    environment: production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
@@ -31,6 +32,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
+          context: .
           file: .github/deploy/Dockerfile.app
           tags: ghcr.io/xenfo/adrastos-app:git
 
@@ -58,6 +60,7 @@ jobs:
   staging:
     name: Staging
     runs-on: ubuntu-latest
+    environment: development
     if: github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.user.id == 41898282 && contains(github.event.comment.body, '- [x] Deploy this PR')
 
     permissions:
@@ -87,9 +90,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v2
 
-      - run: ls -la /
-      - run: echo $PWD
-
       - uses: dtolnay/rust-toolchain@nightly
       - run: cargo build --release
 
@@ -101,7 +101,6 @@ jobs:
           context: .
           file: .github/deploy/Dockerfile.app
           tags: ghcr.io/xenfo/adrastos-app:staging-pr-${{ github.event.issue.number }}
-          no-cache: true
 
       - name: Build and push the worker image
         uses: docker/build-push-action@v4
@@ -148,6 +147,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
+          context: .
           file: .github/deploy/Dockerfile.app
           tags: ghcr.io/xenfo/adrastos-app:latest,ghcr.io/xenfo/adrastos-app:${{ github.ref_name }}
 
