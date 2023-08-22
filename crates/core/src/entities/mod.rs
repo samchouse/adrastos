@@ -1,5 +1,6 @@
 // TODO(@Xenfo): use `*Iden::Table` instead of Alias::new() once https://github.com/SeaQL/sea-query/issues/533 is fixed
 
+use reqwest::Url;
 use sea_query::{IntoIden, PostgresQueryBuilder, SimpleExpr};
 use secrecy::ExposeSecret;
 
@@ -54,6 +55,16 @@ impl Update {
 
 pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
     let conn = db_pool.get().await.unwrap();
+
+    conn.execute(
+        &format!(
+            "CREATE DATABASE {}",
+            Url::parse(&config.postgres_url).unwrap().path()
+        ),
+        &[],
+    )
+    .await
+    .unwrap();
 
     let query = conn
         .query(
