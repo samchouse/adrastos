@@ -11,6 +11,7 @@
 **/node_modules
 **/.react-email
 data/letsencrypt
+data/staging/conf.d
 
 # yarn
 /.pnp.*
