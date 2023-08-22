@@ -32,6 +32,7 @@ services:
     profiles:
       - deploy
     depends_on:
+      - app
       - staging-nginx
     env_file:
       - nginx.env
@@ -72,7 +73,7 @@ services:
     profiles:
       - deploy
     depends_on:
-      - nginx
+      - emails
     env_file:
       - .env
     ports:
