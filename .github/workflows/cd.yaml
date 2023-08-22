@@ -12,7 +12,7 @@ jobs:
   git:
     name: Git
     runs-on: ubuntu-latest
-    environment: production
+    environment: Production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
@@ -60,7 +60,7 @@ jobs:
   staging:
     name: Staging
     runs-on: ubuntu-latest
-    environment: development
+    environment: Preview
     if: github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.user.id == 41898282 && contains(github.event.comment.body, '- [x] Deploy this PR')
 
     permissions:
