@@ -6,11 +6,11 @@ PORT=$2
 mkdir -p staging
 mkdir -p data/staging/conf.d
 
-cat <<EOF > "data/staging/conf.d/adrastos-pr-$PR.xenfo.dev.conf"
+cat <<EOF >"data/staging/conf.d/adrastos-pr-$PR.xenfo.dev.conf"
 server {
   listen 80;
   listen [::]:80;
-  server_name adrastos-pr-$PR.xenfo.dev;
+  server_name adrastos-api-pr-$PR.xenfo.dev;
 
   # reverse proxy
   location / {
@@ -24,33 +24,35 @@ server {
 }
 EOF
 
-cat <<EOF > "staging/docker-compose.pr-$PR.yml"
+cat <<EOF >"staging/docker-compose.pr-$PR.yml"
 version: '3.9'
 
 services:
   emails:
-    image: ghcr.io/xenfo/adrastos-emails:pr-$PR
+    image: ghcr.io/xenfo/adrastos-emails:staging-pr-$PR
     pull_policy: always
     restart: unless-stopped
     env_file:
-      - staging.env
-    networks:
-      - adrastos_default
+      - ../staging.env
 
   app:
-    image: ghcr.io/xenfo/adrastos-app:pr-$PR
+    image: ghcr.io/xenfo/adrastos-app:staging-pr-$PR
     pull_policy: always
     restart: unless-stopped
     depends_on:
       - emails
     env_file:
-      - staging.env
+      - ../staging.env
     networks:
       - adrastos_default
     ports:
       - $PORT:8000
     volumes:
       - ~/.postgresql/root.crt:/work/certs/cockroach.crt
+  
+networks:
+  adrastos_default:
+    external: true
 EOF
 
 docker compose -f "staging/docker-compose.pr-$PR.yml" up -d
