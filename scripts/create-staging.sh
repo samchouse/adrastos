@@ -1,7 +1,6 @@
 #!/bin/bash
 
 PR=$1
-PORT=$2
 
 mkdir -p staging
 mkdir -p data/staging/conf.d
@@ -14,7 +13,7 @@ server {
 
   # reverse proxy
   location / {
-    proxy_pass http://adrastos-staging-pr-$PR-app-1.adrastos_default:$PORT;
+    proxy_pass http://adrastos-staging-pr-$PR-app-1.adrastos_default:8000;
     proxy_set_header Host \$host;
     include nginxconfig.io/proxy.conf;
   }
