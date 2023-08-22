@@ -4,8 +4,6 @@ version: '3.9'
 services:
   cockroach:
     image: cockroachdb/cockroach:latest
-    profiles:
-      - db
     ports:
       - 26257:26257
       - 8080:8080
@@ -17,8 +15,6 @@ services:
 
   dragonfly:
     image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
-    profiles:
-      - db
     ulimits:
       memlock: -1
     ports:
@@ -63,6 +59,8 @@ services:
     restart: unless-stopped
     profiles:
       - deploy
+    depends_on:
+      - dragonfly
     env_file:
       - .env
 
@@ -74,6 +72,7 @@ services:
       - deploy
     depends_on:
       - emails
+      - cockroach
     env_file:
       - .env
     ports:
