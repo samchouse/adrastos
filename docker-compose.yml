@@ -36,6 +36,9 @@ services:
       - staging-nginx
     env_file:
       - nginx.env
+    networks:
+      - default
+      - staging
     ports:
       - 80:80
       - 443:443
@@ -50,9 +53,10 @@ services:
     restart: unless-stopped
     profiles:
       - deploy
+    networks:
+      - staging
     ports:
       - 7000:80
-    network_mode: host
     volumes:
       - ./data/staging/nginx.conf:/etc/nginx/nginx.conf
       - ./data/staging/conf.d:/etc/nginx/conf.d
@@ -86,3 +90,8 @@ volumes:
   cockroach:
   dragonfly:
   letsencrypt:
+
+networks:
+  staging:
+    name: staging
+    driver: bridge
