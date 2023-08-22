@@ -14,7 +14,7 @@ server {
 
   # reverse proxy
   location / {
-    proxy_pass http://127.0.0.1:$PORT;
+    proxy_pass http://adrastos-staging-$PR-app-1.adrastos_default:$PORT;
     proxy_set_header Host \$host;
     include nginxconfig.io/proxy.conf;
   }
@@ -25,6 +25,7 @@ server {
 EOF
 
 cat <<EOF >"staging/docker-compose.pr-$PR.yml"
+name: adrastos-staging-pr-$PR
 version: '3.9'
 
 services:
@@ -49,7 +50,7 @@ services:
       - $PORT:8000
     volumes:
       - ~/.postgresql/root.crt:/work/certs/cockroach.crt
-  
+
 networks:
   adrastos_default:
     external: true
