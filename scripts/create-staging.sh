@@ -4,9 +4,9 @@ PR=$1
 BRANCH=$2
 
 mkdir -p staging
-mkdir -p data/staging/conf.d
+mkdir -p data/nginx/staging/conf.d
 
-cat <<EOF >"data/staging/conf.d/adrastos-pr-$PR.xenfo.dev.conf"
+cat <<EOF >"data/nginx/staging/conf.d/adrastos-api-pr-$PR.xenfo.dev.conf"
 server {
   listen 80;
   listen [::]:80;
