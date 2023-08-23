@@ -118,10 +118,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            ls -la
-            pwd
             cd adrastos
-            pwd
             ./scripts/staging.sh cou ${{ github.event.issue.number }} $(gh pr view 32 --json headRefName -q .headRefName)
 
       - name: Update comment
@@ -147,7 +144,9 @@ jobs:
           username: root
           host: ${{ secrets.SSH_HOST }}
           key: ${{ secrets.SSH_KEY }}
-          script: cd adrastos && ./scripts/staging.sh destroy ${{ github.event.issue.number }}
+          script: |
+            cd adrastos
+            ./scripts/staging.sh destroy ${{ github.event.issue.number }}
 
   # release:
   #   name: Release
