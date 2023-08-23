@@ -44,6 +44,17 @@ jobs:
           file: .github/deploy/Dockerfile.emails
           tags: ghcr.io/xenfo/adrastos-emails:git
 
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          username: ${{ secrets.SSH_USER }}
+          host: ${{ secrets.SSH_HOST }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd adrastos
+            git pull
+            docker compose --profile deploy restart
+
   staging-init:
     name: Staging Init
     runs-on: ubuntu-latest
