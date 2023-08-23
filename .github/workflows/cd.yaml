@@ -5,7 +5,7 @@ on:
     tags: ["*"]
     branches: [main]
   pull_request:
-    types: [opened, closed]
+    types: [reopened]
   issue_comment:
     types: [edited]
 
