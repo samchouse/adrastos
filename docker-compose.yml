@@ -27,7 +27,7 @@ services:
       - dragonfly:/data
 
   nginx:
-    image: jonasal/nginx-certbot:latest
+    image: jonasal/nginx-certbot:latest-alpine
     restart: unless-stopped
     profiles:
       - deploy
@@ -56,7 +56,7 @@ services:
       - ./data/nginx/staging/nginxconfig.io:/etc/nginx/nginxconfig.io
 
   emails:
-    image: ghcr.io/xenfo/adrastos-emails:latest
+    image: ghcr.io/xenfo/adrastos-emails:git
     pull_policy: always
     restart: unless-stopped
     profiles:
@@ -65,7 +65,7 @@ services:
       - .env
 
   app:
-    image: ghcr.io/xenfo/adrastos-app:latest
+    image: ghcr.io/xenfo/adrastos-app:git
     pull_policy: always
     restart: unless-stopped
     profiles:
