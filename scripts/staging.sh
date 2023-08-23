@@ -1,12 +1,15 @@
 #!/bin/bash
 
-PR=$1
-BRANCH=$2
+case $1 in
+cou)
+  PR=$2
+  BRANCH=$3
 
-mkdir -p staging
-mkdir -p data/nginx/staging/conf.d
+  mkdir -p staging
+  mkdir -p data/nginx/staging/conf.d
 
-cat <<EOF >"data/nginx/staging/conf.d/adrastos-api-pr-$PR.xenfo.dev.conf"
+  if [ ! -f "staging/docker-compose.pr-$PR.yml" ]; then
+    cat <<EOF >"data/nginx/staging/conf.d/adrastos-api-pr-$PR.xenfo.dev.conf"
 server {
   listen 80;
   listen [::]:80;
@@ -24,7 +27,7 @@ server {
 }
 EOF
 
-cat <<EOF >"staging/docker-compose.pr-$PR.yml"
+    cat <<EOF >"staging/docker-compose.pr-$PR.yml"
 name: adrastos-staging-pr-$PR
 version: '3.9'
 
@@ -55,6 +58,17 @@ networks:
   adrastos_default:
     external: true
 EOF
+  fi
 
-docker compose -f "staging/docker-compose.pr-$PR.yml" up -d
-docker exec adrastos-staging-nginx-1 /usr/sbin/nginx -s reload
+  docker compose -f "staging/docker-compose.pr-$PR.yml" up -d
+  docker compose --profile deploy restart staging-nginx
+  ;;
+destroy)
+  PR=$2
+
+  docker compose -f "staging/docker-compose.pr-$PR.yml" down -v
+  rm -rf "staging/docker-compose.pr-$PR.yml"
+  rm -rf "data/nginx/staging/conf.d/adrastos-api-pr-$PR.xenfo.dev.conf"
+  docker compose --profile deploy restart staging-nginx
+  ;;
+esac
