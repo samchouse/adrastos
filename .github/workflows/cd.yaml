@@ -119,7 +119,9 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             ls -la
+            pwd
             cd adrastos
+            pwd
             ./scripts/staging.sh cou ${{ github.event.issue.number }} $(gh pr view 32 --json headRefName -q .headRefName)
 
       - name: Update comment
