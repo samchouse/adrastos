@@ -53,7 +53,7 @@ jobs:
           script: |
             cd adrastos
             git pull
-            docker compose --profile deploy restart
+            docker compose --profile deploy up -d
 
   staging-init:
     name: Staging Init
