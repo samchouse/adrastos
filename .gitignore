@@ -7,10 +7,12 @@
 **/out
 /certs
 /target
+/staging
 **/.next
-**/node_modules
+**/letsencrypt
 **/.react-email
-data/letsencrypt
+**/node_modules
+**/staging/conf.d
 
 # yarn
 /.pnp.*
