@@ -19,9 +19,7 @@ fn validate_password(password: String) -> Result<String, Error> {
 }
 
 #[enum_def]
-#[derive(
-    Debug, Default, Validate, Serialize, Deserialize, Clone, ToSchema, DbCommon, DbSelect, DbQuery,
-)]
+#[derive(Debug, Default, Validate, Serialize, Deserialize, Clone, DbCommon, DbSelect, DbQuery)]
 #[adrastos(validated)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
