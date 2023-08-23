@@ -27,7 +27,7 @@ services:
       - dragonfly:/data
 
   nginx:
-    image: jonasal/nginx-certbot:latest
+    image: jonasal/nginx-certbot:latest-alpine
     restart: unless-stopped
     profiles:
       - deploy
