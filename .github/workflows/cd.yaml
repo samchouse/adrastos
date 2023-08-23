@@ -158,7 +158,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd adrastos
-            ./scripts/staging.sh destroy ${{ github.event.issue.number }}
+            ./scripts/staging.sh destroy ${{ github.event.pull_request.number }}
 
       - name: Remove from Cloudflare
         run: |
@@ -166,6 +166,7 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.CF_TOKEN }}" \
             -H "Content-Type:application/json" \
           | jq '.result[0].id')
+          echo $RECORD_ID
           curl -s -o /dev/null -X DELETE "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records/$RECORD_ID" \
             -H "Authorization: Bearer ${{ secrets.CF_TOKEN }}" \
             -H "Content-Type:application/json"
