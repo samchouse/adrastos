@@ -62,6 +62,7 @@ EOF
 
   docker compose -f "staging/docker-compose.pr-$PR.yml" up -d
   docker compose --profile deploy restart staging-nginx
+  docker exec adrastos-nginx-1 /usr/sbin/nginx -s reload
   ;;
 destroy)
   PR=$2
