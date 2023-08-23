@@ -91,25 +91,25 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v2
 
-      # - uses: dtolnay/rust-toolchain@nightly
-      # - run: cargo build --release
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cargo build --release
 
-      # - name: Build and push the app image
-      #   uses: docker/build-push-action@v4
-      #   id: app
-      #   with:
-      #     push: true
-      #     context: .
-      #     file: .github/deploy/Dockerfile.app
-      #     tags: ghcr.io/xenfo/adrastos-app:staging-pr-${{ github.event.issue.number }}
+      - name: Build and push the app image
+        uses: docker/build-push-action@v4
+        id: app
+        with:
+          push: true
+          context: .
+          file: .github/deploy/Dockerfile.app
+          tags: ghcr.io/xenfo/adrastos-app:staging-pr-${{ github.event.issue.number }}
 
-      # - name: Build and push the worker image
-      #   uses: docker/build-push-action@v4
-      #   id: emails
-      #   with:
-      #     push: true
-      #     file: .github/deploy/Dockerfile.emails
-      #     tags: ghcr.io/xenfo/adrastos-emails:staging-pr-${{ github.event.issue.number }}
+      - name: Build and push the worker image
+        uses: docker/build-push-action@v4
+        id: emails
+        with:
+          push: true
+          file: .github/deploy/Dockerfile.emails
+          tags: ghcr.io/xenfo/adrastos-emails:staging-pr-${{ github.event.issue.number }}
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.0
@@ -118,7 +118,6 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            ls -la
             cd adrastos
             ./scripts/staging.sh cou ${{ github.event.issue.number }} $(gh pr view 32 --json headRefName -q .headRefName)
 
@@ -130,7 +129,7 @@ jobs:
           edit-mode: replace
           body: |
             ## Backend Staging
-            Status: **[${{ (steps.app.conclusion == 'success' && steps.emails.conclusion == 'success') && 'SUCCEEDED' || (steps.app.conclusion == 'failure' || steps.emails.conclusion == 'failure') && 'FAILED' || 'CANCELLED' }}](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) ${{ (steps.app.conclusion == 'success' && steps.emails.conclusion == 'success') && ':white_check_mark:' || (steps.app.conclusion == 'failure' || steps.emails.conclusion == 'failure') && ':x:' || ':grey_question:' }}**
+            Status: **[${{ contains(steps.*.conclusion, 'success') && 'SUCCEEDED' || contains(steps.*.conclusion, 'failure') && 'FAILED' || 'CANCELLED' }}](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) ${{ contains(steps.*.conclusion, 'success') && ':white_check_mark:' || contains(steps.*.conclusion, 'failure') && ':x:' || ':grey_question:' }}**
             - [ ] Deploy this PR
 
   staging-end:
@@ -145,7 +144,9 @@ jobs:
           username: root
           host: ${{ secrets.SSH_HOST }}
           key: ${{ secrets.SSH_KEY }}
-          script: cd adrastos && ./scripts/staging.sh destroy ${{ github.event.issue.number }}
+          script: |
+            cd adrastos
+            ./scripts/staging.sh destroy ${{ github.event.issue.number }}
 
   # release:
   #   name: Release
