@@ -1,6 +1,7 @@
 #!/bin/bash
 
 PR=$1
+BRANCH=$2
 
 mkdir -p staging
 mkdir -p data/staging/conf.d
@@ -43,6 +44,8 @@ services:
       - emails
     env_file:
       - ../staging.env
+    environment:
+      - CLIENT_URL=https://adrastos-git-$(echo "$BRANCH" | sed 's/\//-/')-xenfo.vercel.app
     networks:
       - adrastos_default
     volumes:
