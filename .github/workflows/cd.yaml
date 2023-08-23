@@ -141,7 +141,7 @@ jobs:
           edit-mode: replace
           body: |
             ## Backend Staging
-            Status: **[${{ !contains(steps.*.conclusion, 'failure') && 'SUCCEEDED' || !contains(steps.*.conclusion, 'cancelled') && 'FAILED' || 'CANCELLED' }}](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) ${{ !contains(steps.*.conclusion, 'failure') && ':white_check_mark:' || !contains(steps.*.conclusion, 'cancelled') && ':x:' || ':grey_question:' }}**
+            Status: **[${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && 'SUCCEEDED' || !contains(steps.*.conclusion, 'cancelled') && 'FAILED' || 'CANCELLED' }}](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) ${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && ':white_check_mark:' || !contains(steps.*.conclusion, 'cancelled') && ':x:' || ':grey_question:' }}**
             - [ ] Deploy this PR
 
   staging-end:
