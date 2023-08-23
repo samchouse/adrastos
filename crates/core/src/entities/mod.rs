@@ -55,6 +55,18 @@ impl Update {
 pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
     let conn = db_pool.get().await.unwrap();
 
+    let query = conn
+        .query(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';",
+            &[],
+        )
+        .await
+        .unwrap();
+    let count = query.get(0).unwrap().get::<_, i64>(0);
+    if count > 0 {
+        return;
+    }
+
     let inits = vec![
         System::init(),
         User::init(),
