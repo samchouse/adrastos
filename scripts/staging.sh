@@ -70,7 +70,7 @@ destroy)
   rm -rf "staging/docker-compose.pr-$PR.yml"
   rm -rf "data/nginx/staging/conf.d/adrastos-api-pr-$PR.xenfo.dev.conf"
   docker compose --profile deploy restart staging-nginx
-  docker system prune -f
+  docker system prune -af
 
   exit 0
   ;;
