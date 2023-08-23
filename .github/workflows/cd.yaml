@@ -5,6 +5,7 @@ on:
     tags: ["*"]
     branches: [main]
   pull_request:
+    types: [opened, closed]
   issue_comment:
     types: [edited]
 
@@ -61,7 +62,7 @@ jobs:
     name: Staging
     runs-on: ubuntu-latest
     environment: Backend Preview
-    if: github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.user.id == 41898282 && contains(github.event.comment.body, '- [x] Deploy this PR')
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.user.id == 41898282 && contains(github.event.comment.body, '- [x] Deploy this PR') && github.issue.state == "open"
 
     permissions:
       contents: read
@@ -90,25 +91,25 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v2
 
-      - uses: dtolnay/rust-toolchain@nightly
-      - run: cargo build --release
+      # - uses: dtolnay/rust-toolchain@nightly
+      # - run: cargo build --release
 
-      - name: Build and push the app image
-        uses: docker/build-push-action@v4
-        id: app
-        with:
-          push: true
-          context: .
-          file: .github/deploy/Dockerfile.app
-          tags: ghcr.io/xenfo/adrastos-app:staging-pr-${{ github.event.issue.number }}
+      # - name: Build and push the app image
+      #   uses: docker/build-push-action@v4
+      #   id: app
+      #   with:
+      #     push: true
+      #     context: .
+      #     file: .github/deploy/Dockerfile.app
+      #     tags: ghcr.io/xenfo/adrastos-app:staging-pr-${{ github.event.issue.number }}
 
-      - name: Build and push the worker image
-        uses: docker/build-push-action@v4
-        id: emails
-        with:
-          push: true
-          file: .github/deploy/Dockerfile.emails
-          tags: ghcr.io/xenfo/adrastos-emails:staging-pr-${{ github.event.issue.number }}
+      # - name: Build and push the worker image
+      #   uses: docker/build-push-action@v4
+      #   id: emails
+      #   with:
+      #     push: true
+      #     file: .github/deploy/Dockerfile.emails
+      #     tags: ghcr.io/xenfo/adrastos-emails:staging-pr-${{ github.event.issue.number }}
 
       - run: |
           echo "data=$(curl -L -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/repos/Xenfo/adrastos/pulls/${{ github.event.issue.number }})" >> $GITHUB_OUTPUT
@@ -122,7 +123,7 @@ jobs:
           username: root
           host: ${{ secrets.SSH_HOST }}
           key: ${{ secrets.SSH_KEY }}
-          script: cd adrastos && ./scripts/staging.sh cou ${{ github.event.issue.number }} ${{ steps.branch.outputs.data }}
+          script: cd adrastos && ./scripts/staging.sh cou ${{ github.event.issue.number }} $(gh pr view 32 --json headRefName -q .headRefName)
 
       - name: Update comment
         uses: peter-evans/create-or-update-comment@v3
@@ -134,6 +135,20 @@ jobs:
             ## Backend Staging
             Status: **[${{ (steps.app.conclusion == 'success' && steps.emails.conclusion == 'success') && 'SUCCEEDED' || (steps.app.conclusion == 'failure' || steps.emails.conclusion == 'failure') && 'FAILED' || 'CANCELLED' }}](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) ${{ (steps.app.conclusion == 'success' && steps.emails.conclusion == 'success') && ':white_check_mark:' || (steps.app.conclusion == 'failure' || steps.emails.conclusion == 'failure') && ':x:' || ':grey_question:' }}**
             - [ ] Deploy this PR
+
+  staging-end:
+    name: Staging End
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+
+    steps:
+      - name: Remove from VPS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          username: root
+          host: ${{ secrets.SSH_HOST }}
+          key: ${{ secrets.SSH_KEY }}
+          script: cd adrastos && ./scripts/staging.sh destroy ${{ github.event.issue.number }}
 
   release:
     name: Release
