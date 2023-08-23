@@ -74,8 +74,6 @@ services:
       - emails
     env_file:
       - .env
-    ports:
-      - 8000:8000
     volumes:
       - ~/.postgresql/root.crt:/work/certs/cockroach.crt
 
