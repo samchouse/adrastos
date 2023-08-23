@@ -117,7 +117,7 @@ jobs:
           username: root
           host: ${{ secrets.SSH_HOST }}
           key: ${{ secrets.SSH_KEY }}
-          script: cd adrastos && ./scripts/staging.sh cou ${{ github.event.issue.number }} $(gh pr view 32 --json headRefName -q .headRefName)
+          script: ls -la && cd /root/adrastos && ./scripts/staging.sh cou ${{ github.event.issue.number }} $(gh pr view 32 --json headRefName -q .headRefName)
 
       - name: Update comment
         uses: peter-evans/create-or-update-comment@v3
