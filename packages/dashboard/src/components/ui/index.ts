@@ -87,3 +87,14 @@ export {
   SheetTitle,
   SheetTrigger
 } from './sheet';
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue
+} from './select';
+export { Separator } from './separator';
