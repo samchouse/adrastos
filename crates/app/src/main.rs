@@ -141,15 +141,13 @@ async fn main() -> std::io::Result<()> {
                 None
             }))
             .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-doc/openapi.json", ApiDoc::openapi()),
+            )
+            .service(handlers::index)
+            .service(
                 web::scope("/api")
-                    .service(
-                        SwaggerUi::new("/swagger-ui/{_:.*}")
-                            .url("/api-doc/openapi.json", ApiDoc::openapi())
-                            .config(utoipa_swagger_ui::Config::new([
-                                "/api/api-doc/openapi.json",
-                            ])),
-                    )
-                    .service((handlers::index, handlers::me))
+                    .service(handlers::me)
                     .service(
                         web::scope("/auth")
                             .service((
