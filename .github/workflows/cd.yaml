@@ -10,8 +10,8 @@ on:
     types: [edited]
 
 jobs:
-  staging-init:
-    name: Staging Init
+  staging-start:
+    name: Staging Start
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
 
@@ -187,8 +187,17 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/tags/v*'
 
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - run: |
+          echo "data=$(echo ${{ github.ref_name }} | sed 's/v//')" >> $GITHUB_OUTPUT
+        id: version
 
       - uses: docker/login-action@v2
         with:
@@ -198,11 +207,8 @@ jobs:
       - uses: docker/setup-buildx-action@v2
 
       - uses: dtolnay/rust-toolchain@nightly
+      - run: cargo install --git https://github.com/SanchithHegde/changelog-gh-usernames
       - run: cargo build --release
-
-      - run: |
-          echo "VERSION=\"$(echo ${{ github.ref_name }} | sed 's/v//')\"" >> $GITHUB_OUTPUT
-        id: version
 
       - name: Build and push the app image
         uses: docker/build-push-action@v4
@@ -210,11 +216,26 @@ jobs:
           push: true
           context: .
           file: .github/deploy/Dockerfile.app
-          tags: ghcr.io/xenfo/adrastos-app:latest,ghcr.io/xenfo/adrastos-app:${{ github.ref_name }}
+          tags: ghcr.io/xenfo/adrastos-app:latest,ghcr.io/xenfo/adrastos-app:${{ steps.version.outputs.data }}
 
       - name: Build and push the worker image
         uses: docker/build-push-action@v4
         with:
           push: true
           file: .github/deploy/Dockerfile.emails
-          tags: ghcr.io/xenfo/adrastos-emails:latest,ghcr.io/xenfo/adrastos-emails:${{ steps.version.outputs.VERSION }}
+          tags: ghcr.io/xenfo/adrastos-emails:latest,ghcr.io/xenfo/adrastos-emails:${{ steps.version.outputs.data }}
+
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@v2
+        with:
+          config: .github/deploy/cliff.toml
+          args: -l
+        env:
+          OUTPUT: CHANGELOG.md
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          name: ${{ github.ref_name }}
+          bodyFile: CHANGELOG.md
