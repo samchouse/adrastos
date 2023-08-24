@@ -12,7 +12,7 @@ const Page: React.FC = () => {
   const { mutate, isLoading } = useResendVerificationMutation();
 
   return (
-    <div className="flex flex-col gap-y-5">
+    <div className="flex flex-col gap-y-5 p-5">
       {!data?.user.verified && (
         <Alert
           variant="default"

@@ -77,3 +77,13 @@ export {
 } from './toast';
 export { reducer, toast, useToast } from './use-toast';
 export { Toaster } from './toaster';
+export {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger
+} from './sheet';

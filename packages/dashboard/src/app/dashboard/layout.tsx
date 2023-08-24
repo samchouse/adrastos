@@ -73,7 +73,7 @@ const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
         <User user={data?.user} setIsLoggingOff={setIsLoggingOff} />
       </div>
 
-      <div className="bg-background z-20 m-5 h-full">{children}</div>
+      <div className="bg-background z-20 h-full">{children}</div>
     </section>
   );
 };

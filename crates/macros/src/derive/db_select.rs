@@ -208,10 +208,7 @@ pub fn db_select(item: TokenStream) -> TokenStream {
                     .into_iter()
                     .next()
                     .ok_or_else(|| {
-                        let message = {
-                            let res = "df".to_owned();
-                            res
-                        };
+                        let message = format!("No {} was found", #ident::error_identifier());
                         crate::error::Error::BadRequest(message)
                     })?
                     .into())
