@@ -2,7 +2,7 @@ use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
     db::postgres,
     entities::custom_table::{
-        fields::{Field, FieldInfo},
+        fields::Field,
         mm_relation::ManyToManyRelationTable,
         schema::{CustomTableSchema, UpdateCustomTableSchema},
     },
@@ -37,17 +37,17 @@ enum Action {
 }
 
 #[derive(Deserialize, Debug)]
-struct UpdateField<T> {
+struct UpdateField {
     name: String,
+    field: Field,
     action: Action,
-    field: T,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateBody {
     name: Option<String>,
-    fields: Option<Vec<UpdateField<Field>>>,
+    fields: Option<Vec<UpdateField>>,
 }
 
 #[get("/list")]
@@ -169,7 +169,6 @@ pub async fn update(
         .one(&db_pool)
         .await?;
 
-    let mut table_name = custom_table.name.clone();
     let mut alter_query = Table::alter();
     let mut update = UpdateCustomTableSchema {
         ..Default::default()
@@ -197,29 +196,24 @@ pub async fn update(
             Action::Create => {
                 updated_fields.push(update.field.clone());
             }
-            Action::Update => match &update.field.info {
-                FieldInfo::String { .. } => {
-                    updated_fields = updated_fields
-                        .clone()
-                        .into_iter()
-                        .map(|f| {
-                            if f.name == update.name {
-                                return update.field.clone();
-                            }
+            Action::Update => {
+                updated_fields = updated_fields
+                    .clone()
+                    .into_iter()
+                    .map(|f| {
+                        if f.name == update.name {
+                            return update.field.clone();
+                        }
 
-                            f
-                        })
-                        .collect();
+                        f
+                    })
+                    .collect();
 
-                    if update.name != update.field.name {
-                        alter_query.rename_column(
-                            Alias::new(&update.name),
-                            Alias::new(&update.field.name),
-                        );
-                    }
+                if update.name != update.field.name {
+                    alter_query
+                        .rename_column(Alias::new(&update.name), Alias::new(&update.field.name));
                 }
-                _ => todo!(),
-            },
+            }
             Action::Delete => {
                 updated_fields = updated_fields
                     .clone()
@@ -234,37 +228,35 @@ pub async fn update(
 
     custom_table.update(&db_pool, update.clone()).await?;
 
-    if let Some(updated_name) = update.name {
-        db_pool
-            .get()
-            .await
-            .unwrap()
-            .execute(
-                Table::rename()
-                    .table(Alias::new(&table_name), Alias::new(updated_name.clone()))
-                    .to_string(PostgresQueryBuilder)
-                    .as_str(),
-                &[],
-            )
-            .await
-            .unwrap();
-
-        table_name = updated_name;
-    }
-
     db_pool
         .get()
         .await
         .unwrap()
         .execute(
             alter_query
-                .table(Alias::new(table_name))
+                .table(Alias::new(&custom_table.name))
                 .to_string(PostgresQueryBuilder)
                 .as_str(),
             &[],
         )
         .await
         .unwrap();
+
+    if let Some(name) = update.name {
+        db_pool
+            .get()
+            .await
+            .unwrap()
+            .execute(
+                Table::rename()
+                    .table(Alias::new(&custom_table.name), Alias::new(name.clone()))
+                    .to_string(PostgresQueryBuilder)
+                    .as_str(),
+                &[],
+            )
+            .await
+            .unwrap();
+    }
 
     Ok(HttpResponse::Ok().json(json!({
         "success": true,

@@ -34,6 +34,7 @@ mod middleware;
 mod openapi;
 mod session;
 mod telemetry;
+mod util;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

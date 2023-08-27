@@ -15,7 +15,6 @@ use adrastos_core::{
 };
 use chrono::{DateTime, Utc};
 use heck::{AsLowerCamelCase, AsSnakeCase};
-use json_patch::{AddOperation, PatchOperation};
 use regex::Regex;
 use sea_query::{Alias, Expr, PostgresQueryBuilder, SimpleExpr, Value};
 use serde_json::json;
@@ -58,30 +57,12 @@ pub async fn rows(
     });
 
     if let Some(page) = page && let Some(limit) = limit {
-        let count = builder.count().finish(&db_pool).await?.as_i64().unwrap();
+        let count = builder.count().finish(&db_pool).await?.as_i64().unwrap() as u64;
 
-        let mut ops = json_patch::diff(
-            &response,
-            &json!({
-                "pagination": {
-                    "records": count,
-                    "pages": (count as f64 / limit as f64).ceil() as u64,
-                }
-            }),
+        crate::util::attach_pagination_details(
+            &mut response,
+            crate::util::PaginationInfo { page, limit, count },
         );
-
-        ops.0.push(PatchOperation::Add(json_patch::AddOperation {
-            path: "/pagination/previous".to_string(),
-            value: if page > 1 { serde_json::to_value(page - 1).unwrap() } else { serde_json::Value::Null },
-        }));
-        ops.0.push(PatchOperation::Add(json_patch::AddOperation {
-            path: "/pagination/next".to_string(),
-            value: if page * limit < count as u64 { serde_json::to_value(page + 1).unwrap() } else { serde_json::Value::Null },
-        }));
-
-        ops.0.retain(|op| matches!(op, PatchOperation::Add(AddOperation { .. })));
-
-        json_patch::patch(&mut response, &ops).unwrap();
     }
 
     Ok(HttpResponse::Ok().json(response))
