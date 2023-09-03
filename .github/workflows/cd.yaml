@@ -2,10 +2,10 @@ name: CD
 
 on:
   push:
-    tags: ['*']
+    tags: ["*"]
     branches: [main]
   pull_request:
-    types: [reopened]
+    types: [opened, closed]
   issue_comment:
     types: [edited]
 
@@ -13,7 +13,7 @@ jobs:
   staging-start:
     name: Staging Start
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.action == 'opened'
 
     steps:
       - name: Create comment

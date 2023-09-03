@@ -214,12 +214,12 @@ impl Field {
                         let mut length_error = ValidationError::new("length");
 
                         if let Some(min_length) = min_length {
-                            if value.len() < (*min_length).try_into().unwrap() {
+                            if value.len() < *min_length as usize {
                                 length_error.add_param(Cow::from("min"), &min_length);
                             }
                         }
                         if let Some(max_length) = max_length {
-                            if value.len() > (*max_length).try_into().unwrap() {
+                            if value.len() > *max_length as usize {
                                 length_error.add_param(Cow::from("max"), &max_length);
                             }
                         }
@@ -436,12 +436,12 @@ impl Field {
                     }
 
                     if let Some(min_selected) = min_selected {
-                        if value.len() < (*min_selected).try_into().unwrap() {
+                        if value.len() < *min_selected as usize {
                             selections_error.add_param(Cow::from("min"), &min_selected);
                         }
                     }
                     if let Some(max_selected) = max_selected {
-                        if value.len() > (*max_selected).try_into().unwrap() {
+                        if value.len() > *max_selected as usize {
                             selections_error.add_param(Cow::from("max"), &max_selected);
                         }
                     }

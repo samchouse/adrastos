@@ -11,7 +11,7 @@ export class AccountsModule extends BaseModule {
     this.client.request({
       path: '/auth/signup',
       method: 'POST',
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
   }
 
@@ -22,12 +22,12 @@ export class AccountsModule extends BaseModule {
     return this.client.request({
       path: '/auth/login',
       method: 'POST',
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
   }
 
   public authWithOAuth2(
-    provider: 'google' | 'facebook' | 'github' | 'twitter' | 'discord'
+    provider: 'google' | 'facebook' | 'github' | 'twitter' | 'discord',
   ) {
     return this.client.buildUrl(`/auth/oauth2/${provider}`).toString();
   }

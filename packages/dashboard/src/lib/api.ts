@@ -6,8 +6,8 @@ import { User } from '~/types';
 export const client = axios.create({
   baseURL: '/api',
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 
 export const hasAccessToken = () =>
@@ -19,9 +19,11 @@ client.interceptors.response.use(
     err: AxiosError<{
       success: false;
       message: string;
-    }>
+    }>,
   ) =>
-    err.response?.data ? Promise.reject(err.response.data) : Promise.reject(err)
+    err.response?.data
+      ? Promise.reject(err.response.data)
+      : Promise.reject(err),
 );
 
 export const getMe = async () => {
@@ -53,7 +55,7 @@ interface LoginData {
 export const postLogin = async (data: LoginData) => {
   const res = await client.post<{ success: true; accessToken: string }>(
     '/auth/login',
-    data
+    data,
   );
   return res.data;
 };
@@ -65,7 +67,7 @@ export const getLogout = async () => {
 
 export const getTokenRefresh = async () => {
   const res = await client.get<{ success: true; accessToken: string }>(
-    '/auth/token/refresh'
+    '/auth/token/refresh',
   );
   return res.data;
 };
@@ -75,12 +77,12 @@ export const providers = [
   'facebook',
   'github',
   'twitter',
-  'discord'
+  'discord',
 ] as const;
 
 export const getOauth2LoginUrl = (
   provider: (typeof providers)[number],
-  options?: { to?: string; auth?: string }
+  options?: { to?: string; auth?: string },
 ) =>
   `${env.NEXT_PUBLIC_BACKEND_URL}/auth/oauth2/login?provider=${provider}${
     options?.to ? `&to=${options.to}` : ''

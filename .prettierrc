@@ -2,9 +2,7 @@
   "semi": true,
   "singleQuote": true,
   "bracketSpacing": true,
-  "trailingComma": "none",
-  "pluginSearchDirs": false,
-  "importOrderTypeScriptVersion": "5.0.4",
+  "importOrderTypeScriptVersion": "5.2.2",
   "importOrder": [
     "<BUILTIN_MODULES>",
     "",

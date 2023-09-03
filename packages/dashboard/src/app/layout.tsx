@@ -13,7 +13,7 @@ const workSans = WorkSans({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'Adrastos',
-  description: 'A killer Backend-as-a-Service (BaaS) written in Rust'
+  description: 'A killer Backend-as-a-Service (BaaS) written in Rust',
 };
 
 const RootLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
@@ -21,13 +21,13 @@ const RootLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
     <body
       className={cn(
         workSans.className,
-        'bg-background text-primary flex h-screen flex-col'
+        'bg-background text-primary flex h-screen flex-col',
       )}
     >
       <Providers>
         <header
           className={cn(
-            'bg-background relative z-10 flex w-screen justify-between border-b px-4 py-3'
+            'bg-background relative z-10 flex w-screen justify-between border-b px-4 py-3',
           )}
         >
           <Link href="/">

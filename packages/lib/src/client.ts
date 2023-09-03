@@ -9,7 +9,7 @@ export class Client {
   constructor(
     // eslint-disable-next-line no-unused-vars
     private baseUrl: string,
-    private _projectId: string
+    private _projectId: string,
   ) {
     this.accounts = new AccountsModule(this);
     this.tables = new TablesModule(this);
@@ -22,7 +22,7 @@ export class Client {
   async request({ path, method, options }: Request) {
     const res = await fetch(this.buildUrl(path), {
       method,
-      ...options
+      ...options,
     });
 
     if (!res.ok) throw new ResponseError('Something went wrong');

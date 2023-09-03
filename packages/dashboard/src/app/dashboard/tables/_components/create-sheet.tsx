@@ -7,7 +7,7 @@ import {
   List,
   Plus,
   ToggleRight,
-  Type
+  Type,
 } from 'lucide-react';
 
 import {
@@ -21,7 +21,7 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetTrigger
+  SheetTrigger,
 } from '~/components';
 
 export const CreateSheet: React.FC = () => (

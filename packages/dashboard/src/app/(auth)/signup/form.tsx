@@ -18,7 +18,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  Input
+  Input,
 } from '~/components';
 import { useSignupMutation } from '~/hooks';
 
@@ -47,16 +47,16 @@ const formSchema = z
       .min(8, { message: 'Password must be at least 8 characters' })
       .max(64, { message: 'Password must be less than 64 characters' }),
     confirmPassword: z.string().nonempty({ message: 'Re-enter your password' }),
-    tac: z
-      .boolean()
-      .refine((v) => v, { message: 'You must accept the Terms and Conditions' })
+    tac: z.boolean().refine((v) => v, {
+      message: 'You must accept the Terms and Conditions',
+    }),
   })
   .superRefine(({ password, confirmPassword }, ctx) => {
     if (password !== confirmPassword)
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "The passwords don't match",
-        path: ['confirmPassword']
+        path: ['confirmPassword'],
       });
   });
 
@@ -72,8 +72,8 @@ export const SignupForm: React.FC = () => {
       email: '',
       username: '',
       password: '',
-      tac: false
-    }
+      tac: false,
+    },
   });
 
   return (

@@ -21,7 +21,7 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  Switch
+  Switch,
 } from '~/components';
 import { useConfigOAuth2Mutation } from '~/hooks/mutations';
 import { useConfigDetailsQuery } from '~/hooks/queries';
@@ -32,40 +32,40 @@ const providerNames = {
   facebook: 'Facebook',
   github: 'GitHub',
   twitter: 'Twitter',
-  discord: 'Discord'
+  discord: 'Discord',
 };
 
 const formSchema = z.object({
   google: z
     .object({
       clientId: z.string().nonempty('Client ID is required'),
-      clientSecret: z.string().nonempty('Client secret is required')
+      clientSecret: z.string().nonempty('Client secret is required'),
     })
     .nullable(),
   facebook: z
     .object({
       clientId: z.string().nonempty('Client ID is required'),
-      clientSecret: z.string().nonempty('Client secret is required')
+      clientSecret: z.string().nonempty('Client secret is required'),
     })
     .nullable(),
   github: z
     .object({
       clientId: z.string().nonempty('Client ID is required'),
-      clientSecret: z.string().nonempty('Client secret is required')
+      clientSecret: z.string().nonempty('Client secret is required'),
     })
     .nullable(),
   twitter: z
     .object({
       clientId: z.string().nonempty('Client ID is required'),
-      clientSecret: z.string().nonempty('Client secret is required')
+      clientSecret: z.string().nonempty('Client secret is required'),
     })
     .nullable(),
   discord: z
     .object({
       clientId: z.string().nonempty('Client ID is required'),
-      clientSecret: z.string().nonempty('Client secret is required')
+      clientSecret: z.string().nonempty('Client secret is required'),
     })
-    .nullable()
+    .nullable(),
 });
 
 export const OAuth2Card: React.FC = () => {
@@ -74,7 +74,7 @@ export const OAuth2Card: React.FC = () => {
     facebook: false,
     github: false,
     twitter: false,
-    discord: false
+    discord: false,
   });
 
   const { data, isLoading } = useConfigDetailsQuery();
@@ -87,9 +87,9 @@ export const OAuth2Card: React.FC = () => {
       facebook: null,
       github: null,
       twitter: null,
-      discord: null
+      discord: null,
     },
-    mode: 'onChange'
+    mode: 'onChange',
   });
 
   useEffect(() => {
@@ -130,14 +130,14 @@ export const OAuth2Card: React.FC = () => {
               providers.reduce(
                 (acc, provider) => ({
                   ...acc,
-                  [provider]: enabled[provider] ? values[provider] : null
+                  [provider]: enabled[provider] ? values[provider] : null,
                 }),
                 {} as Record<
                   (typeof providers)[number],
                   { clientId: string; clientSecret: string } | null
-                >
-              )
-            )
+                >,
+              ),
+            ),
           )}
         >
           <CardContent>
@@ -208,7 +208,7 @@ export const OAuth2Card: React.FC = () => {
                 (!form.formState.isDirty &&
                   providers.every(
                     (provider) =>
-                      enabled[provider] === !!data?.oauth2Config[provider]
+                      enabled[provider] === !!data?.oauth2Config[provider],
                   )) ||
                 isLoading ||
                 mutationIsLoading
@@ -217,7 +217,7 @@ export const OAuth2Card: React.FC = () => {
                 providers.forEach((provider) => {
                   setEnabled((v) => ({
                     ...v,
-                    [provider]: !!data?.oauth2Config[provider]
+                    [provider]: !!data?.oauth2Config[provider],
                   }));
                 });
 
@@ -233,7 +233,7 @@ export const OAuth2Card: React.FC = () => {
                 (!form.formState.isDirty &&
                   providers.every(
                     (provider) =>
-                      enabled[provider] === !!data?.oauth2Config[provider]
+                      enabled[provider] === !!data?.oauth2Config[provider],
                   )) ||
                 isLoading ||
                 mutationIsLoading

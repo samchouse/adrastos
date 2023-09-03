@@ -7,7 +7,7 @@ import {
   postConfigSmtp,
   postLogin,
   postResendVerification,
-  postSignup
+  postSignup,
 } from '~/lib';
 
 import { queryKeys } from './queries';
@@ -19,7 +19,7 @@ export const useSignupMutation = () => {
     mutationKey: ['auth', 'signup'],
     mutationFn: async (data: Parameters<typeof postSignup>[0]) =>
       await postSignup(data),
-    onSuccess: async (_, vars) => mutateAsync(vars)
+    onSuccess: async (_, vars) => mutateAsync(vars),
   });
 };
 
@@ -30,7 +30,7 @@ export const useLoginMutation = () => {
     mutationKey: ['auth', 'login'],
     mutationFn: async (data: Parameters<typeof postLogin>[0]) =>
       await postLogin(data),
-    onSuccess: () => queryClient.refetchQueries(queryKeys.tokenRefresh)
+    onSuccess: () => queryClient.refetchQueries(queryKeys.tokenRefresh),
   });
 };
 
@@ -44,7 +44,7 @@ export const useLogoutMutation = () => {
       client.defaults.headers.common.Authorization = undefined;
       queryClient.resetQueries(queryKeys.tokenRefresh);
       queryClient.resetQueries(queryKeys.me);
-    }
+    },
   });
 };
 
@@ -55,7 +55,7 @@ export const useConfigSmtpMutation = () => {
     mutationKey: ['config', 'smtp'],
     mutationFn: async (data: Parameters<typeof postConfigSmtp>[0]) =>
       await postConfigSmtp(data),
-    onSuccess: () => queryClient.refetchQueries(queryKeys.configDetails)
+    onSuccess: () => queryClient.refetchQueries(queryKeys.configDetails),
   });
 };
 
@@ -66,7 +66,7 @@ export const useConfigOAuth2Mutation = () => {
     mutationKey: ['config', 'oauth2'],
     mutationFn: async (data: Parameters<typeof postConfigOAuth2>[0]) =>
       await postConfigOAuth2(data),
-    onSuccess: () => queryClient.refetchQueries(queryKeys.configDetails)
+    onSuccess: () => queryClient.refetchQueries(queryKeys.configDetails),
   });
 };
 
@@ -76,6 +76,6 @@ export const useResendVerificationMutation = () => {
   return useMutation({
     mutationKey: ['auth', 'resendVerification'],
     mutationFn: async () => await postResendVerification(),
-    onSuccess: () => queryClient.refetchQueries(queryKeys.me)
+    onSuccess: () => queryClient.refetchQueries(queryKeys.me),
   });
 };

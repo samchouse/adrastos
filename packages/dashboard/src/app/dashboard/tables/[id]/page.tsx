@@ -4,7 +4,7 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
-  useReactTable
+  useReactTable,
 } from '@tanstack/react-table';
 import { title } from 'radash';
 import { useEffect, useState } from 'react';
@@ -15,7 +15,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from '~/components';
 import { useTableDataQuery, useTablesQuery } from '~/hooks';
 
@@ -26,12 +26,12 @@ interface DataTableProps<TData, TValue> {
 
 function DataTable<TData, TValue>({
   columns,
-  data
+  data,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
     columns,
-    getCoreRowModel: getCoreRowModel()
+    getCoreRowModel: getCoreRowModel(),
   });
 
   return (
@@ -46,7 +46,7 @@ function DataTable<TData, TValue>({
                     ? null
                     : flexRender(
                         header.column.columnDef.header,
-                        header.getContext()
+                        header.getContext(),
                       )}
                 </TableHead>
               ))}
@@ -84,7 +84,7 @@ const Page: React.FC<{ params: { id: string } }> = ({ params }) => {
   const [cols, setCols] = useState<ColumnDef<unknown>[]>([]);
   const { data: tables } = useTablesQuery();
   const { data } = useTableDataQuery<{ name: string; rating: number }>(
-    params.id
+    params.id,
   );
 
   useEffect(() => {
@@ -93,8 +93,8 @@ const Page: React.FC<{ params: { id: string } }> = ({ params }) => {
         .find((t) => t.name === params.id)
         ?.fields.map((f) => ({
           accessorKey: f.name,
-          header: title(f.name)
-        })) ?? []
+          header: title(f.name),
+        })) ?? [],
     );
   }, [tables, params]);
 

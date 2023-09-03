@@ -21,7 +21,7 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  Switch
+  Switch,
 } from '~/components';
 import { useConfigSmtpMutation } from '~/hooks/mutations';
 import { useConfigDetailsQuery } from '~/hooks/queries';
@@ -38,7 +38,7 @@ const formSchema = z.object({
     .nullable()
     .refine((password) => password !== '', 'Password is required'),
   senderName: z.string().nonempty('Sender name is required'),
-  senderEmail: z.string().email({ message: 'Invalid email address' })
+  senderEmail: z.string().email({ message: 'Invalid email address' }),
 });
 
 export const SmtpCard: React.FC = () => {
@@ -55,8 +55,8 @@ export const SmtpCard: React.FC = () => {
       username: '',
       password: '',
       senderName: 'Adrastos',
-      senderEmail: 'no-reply@example.com'
-    }
+      senderEmail: 'no-reply@example.com',
+    },
   });
 
   useEffect(() => {
@@ -71,8 +71,8 @@ export const SmtpCard: React.FC = () => {
             username: '',
             password: '',
             senderName: 'Adrastos',
-            senderEmail: 'no-reply@example.com'
-          }
+            senderEmail: 'no-reply@example.com',
+          },
     );
   }, [data?.smtpConfig, form]);
 
@@ -95,7 +95,7 @@ export const SmtpCard: React.FC = () => {
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit((values) =>
-            mutate(enabled ? values : null)
+            mutate(enabled ? values : null),
           )}
         >
           {enabled && (
@@ -200,7 +200,7 @@ export const SmtpCard: React.FC = () => {
                               >
                                 <Edit2 className="text-primary h-4 w-4" />
                               </button>
-                            )
+                            ),
                           })}
                         />
                       </FormControl>

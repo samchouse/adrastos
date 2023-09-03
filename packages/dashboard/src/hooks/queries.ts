@@ -5,14 +5,14 @@ import {
   getMe,
   getTableData,
   getTables,
-  getTokenRefresh
+  getTokenRefresh,
 } from '~/lib';
 
 export const queryKeys = {
   tokenRefresh: ['auth', 'token', 'refresh'] as const,
   me: ['me'] as const,
   configDetails: ['config', 'details'] as const,
-  tables: ['tables'] as const
+  tables: ['tables'] as const,
 };
 
 export const useTokenRefreshQuery = () =>
@@ -20,7 +20,7 @@ export const useTokenRefreshQuery = () =>
     queryKey: queryKeys.tokenRefresh,
     queryFn: async () => await getTokenRefresh(),
     refetchInterval: 1000 * 60 * 10,
-    retry: false
+    retry: false,
   });
 
 export const useMeQuery = () => {
@@ -29,7 +29,7 @@ export const useMeQuery = () => {
   return useQuery({
     queryKey: queryKeys.me,
     queryFn: async () => await getMe(),
-    enabled: isSuccess
+    enabled: isSuccess,
   });
 };
 
@@ -39,7 +39,7 @@ export const useConfigDetailsQuery = () => {
   return useQuery({
     queryKey: queryKeys.configDetails,
     queryFn: async () => await getConfigDetails(),
-    enabled: isSuccess
+    enabled: isSuccess,
   });
 };
 
@@ -49,7 +49,7 @@ export const useTablesQuery = () => {
   return useQuery({
     queryKey: queryKeys.tables,
     queryFn: async () => await getTables(),
-    enabled: isSuccess
+    enabled: isSuccess,
   });
 };
 
@@ -59,6 +59,6 @@ export const useTableDataQuery = <T>(table: string) => {
   return useQuery({
     queryKey: ['data'],
     queryFn: async () => await getTableData<T>(table),
-    enabled: isSuccess
+    enabled: isSuccess,
   });
 };

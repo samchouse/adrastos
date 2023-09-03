@@ -14,7 +14,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Skeleton
+  Skeleton,
 } from '~/components/ui';
 import { useLogoutMutation } from '~/hooks';
 import { User as UserType } from '~/types';

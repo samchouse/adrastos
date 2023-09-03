@@ -3,7 +3,7 @@ import {
   SiFacebook,
   SiGithub,
   SiGoogle,
-  SiTwitter
+  SiTwitter,
 } from '@icons-pack/react-simple-icons';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -14,7 +14,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from '~/components';
 import { useTokenRefreshQuery } from '~/hooks';
 import { getOauth2LoginUrl, providers } from '~/lib';
@@ -24,7 +24,7 @@ const providerIcons = {
   facebook: <SiFacebook className="h-4 w-4" />,
   github: <SiGithub className="h-4 w-4" />,
   twitter: <SiTwitter className="h-4 w-4" />,
-  discord: <SiDiscord className="h-4 w-4" />
+  discord: <SiDiscord className="h-4 w-4" />,
 };
 
 export const OAuth2Card: React.FC = () => {
@@ -47,7 +47,7 @@ export const OAuth2Card: React.FC = () => {
               <Link
                 href={getOauth2LoginUrl(provider, {
                   auth: data?.accessToken,
-                  to: pathname
+                  to: pathname,
                 })}
               >
                 {providerIcons[provider]}

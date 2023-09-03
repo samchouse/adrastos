@@ -6,7 +6,7 @@ import {
   SiFacebook,
   SiGithub,
   SiGoogle,
-  SiTwitter
+  SiTwitter,
 } from '@icons-pack/react-simple-icons';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -26,7 +26,7 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  useToast
+  useToast,
 } from '~/components';
 import { useLoginMutation } from '~/hooks';
 import { getOauth2LoginUrl, providers } from '~/lib';
@@ -36,7 +36,7 @@ const providerIcons = {
   facebook: <SiFacebook className="h-4 w-4" />,
   github: <SiGithub className="h-4 w-4" />,
   twitter: <SiTwitter className="h-4 w-4" />,
-  discord: <SiDiscord className="h-4 w-4" />
+  discord: <SiDiscord className="h-4 w-4" />,
 };
 
 const formSchema = z.object({
@@ -48,7 +48,7 @@ const formSchema = z.object({
     .string()
     .nonempty({ message: 'Password is required' })
     .min(8, { message: 'Password is too short' })
-    .max(64, { message: 'Password is too long' })
+    .max(64, { message: 'Password is too long' }),
 });
 
 export const LoginForm: React.FC = () => {
@@ -62,15 +62,15 @@ export const LoginForm: React.FC = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
-      password: ''
-    }
+      password: '',
+    },
   });
 
   useEffect(() => {
     if (isError)
       toast({
         title: 'Login failed',
-        description: (error as { message: string }).message
+        description: (error as { message: string }).message,
       });
   }, [isError, error, toast]);
 
@@ -141,7 +141,7 @@ export const LoginForm: React.FC = () => {
                 >
                   <Link
                     href={getOauth2LoginUrl(provider, {
-                      to: searchParams.get('to') ?? undefined
+                      to: searchParams.get('to') ?? undefined,
                     })}
                   >
                     {providerIcons[provider]}

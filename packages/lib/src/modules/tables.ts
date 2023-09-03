@@ -7,7 +7,7 @@ import {
   SelectField,
   StringField,
   UpdateField,
-  UrlField
+  UrlField,
 } from '../types';
 import { BaseModule } from './util';
 
@@ -26,7 +26,7 @@ export class TablesModule extends BaseModule {
     return this.client.request({
       path: '/tables/create',
       method: 'POST',
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
   }
 
@@ -41,19 +41,19 @@ export class TablesModule extends BaseModule {
       urlFields?: UpdateField<UrlField>[];
       selectFields?: UpdateField<SelectField>[];
       relationFields?: UpdateField<RelationField>[];
-    }
+    },
   ) {
     return this.client.request({
       path: `/tables/update/${name}`,
       method: 'PATCH',
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
   }
 
   public delete(name: string) {
     return this.client.request({
       path: `/tables/delete/${name}`,
-      method: 'DELETE'
+      method: 'DELETE',
     });
   }
 }

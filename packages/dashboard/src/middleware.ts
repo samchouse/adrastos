@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 export const config = {
-  matcher: ['/((?!_next).*)']
+  matcher: ['/((?!_next).*)'],
 };
 
 export const middleware = (request: NextRequest) => {
@@ -25,6 +25,6 @@ export const middleware = (request: NextRequest) => {
     request.cookies.get('isLoggedIn')?.value !== 'true'
   )
     return NextResponse.redirect(
-      new URL(`/login?to=${request.nextUrl.pathname}`, request.url)
+      new URL(`/login?to=${request.nextUrl.pathname}`, request.url),
     );
 };

@@ -10,7 +10,7 @@ import {
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  User
+  User,
 } from '~/components';
 import { useMeQuery, useTokenRefreshQuery } from '~/hooks';
 import { cn } from '~/lib/utils';
@@ -34,7 +34,7 @@ const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
     <section className="flex h-full flex-col">
       <div
         className={cn(
-          'bg-background absolute left-0 top-0 z-30 flex w-screen justify-between border-b px-4 py-3'
+          'bg-background absolute left-0 top-0 z-30 flex w-screen justify-between border-b px-4 py-3',
         )}
       >
         <div className="flex flex-row">
