@@ -9,6 +9,8 @@ import {
   ToggleRight,
   Type,
 } from 'lucide-react';
+import { title } from 'radash';
+import { useState } from 'react';
 
 import {
   Button,
@@ -22,79 +24,471 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  Switch,
 } from '~/components';
+import { useCreateTableMutation } from '~/hooks';
+import { Field, mkId } from '~/lib';
 
-export const CreateSheet: React.FC = () => (
-  <Sheet>
-    <SheetTrigger asChild>
-      <Button className="mb-3 w-full">
-        <Plus className="mr-2 h-4 w-4" /> Create New
-      </Button>
-    </SheetTrigger>
-    <SheetContent className="flex w-[500px] flex-col justify-between lg:max-w-[500px]">
-      <div className="h-full">
-        <SheetHeader className="mb-5">
-          <SheetTitle>Create A New Table</SheetTitle>
-        </SheetHeader>
+export const CreateSheet: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [fields, setFields] = useState<
+    (Field & {
+      id: string;
+    })[]
+  >([]);
 
-        <div className="flex h-full flex-col gap-y-5">
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" placeholder="Name"></Input>
+  const { mutate } = useCreateTableMutation();
+
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button className="mb-3 w-full">
+          <Plus className="mr-2 h-4 w-4" /> Create New
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="flex w-[500px] flex-col justify-between lg:max-w-[500px]">
+        <div className="h-full">
+          <SheetHeader className="mb-5">
+            <SheetTitle>Create A New Table</SheetTitle>
+          </SheetHeader>
+
+          <div className="flex flex-col gap-y-5">
+            <div>
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                placeholder="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+
+            <div className="max-h-[calc(100vh-300px)] space-y-3 overflow-auto">
+              {fields.map((f, index) => {
+                let field: React.ReactNode = null;
+                switch (f.type) {
+                  case 'string':
+                    field = (
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor={mkId(f.id, 'name')}>Name</Label>
+                          <Input
+                            value={f.name}
+                            id={mkId(f.id, 'name')}
+                            placeholder="Name"
+                            onChange={(e) =>
+                              setFields((fields) =>
+                                fields.map((field) =>
+                                  field.id === f.id
+                                    ? { ...field, name: e.target.value }
+                                    : field,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor={mkId(f.id, 'pattern')}>Pattern</Label>
+                          <Input
+                            id={mkId(f.id, 'pattern')}
+                            placeholder="Pattern"
+                            onChange={(e) =>
+                              setFields((fields) =>
+                                fields.map((field) =>
+                                  field.id === f.id
+                                    ? { ...field, pattern: e.target.value }
+                                    : field,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor={mkId(f.id, 'maxLength')}>
+                            Max Length
+                          </Label>
+                          <Input
+                            type="number"
+                            id={mkId(f.id, 'maxLength')}
+                            placeholder="Max Length"
+                            onChange={(e) =>
+                              setFields((fields) =>
+                                fields.map((field) =>
+                                  field.id === f.id
+                                    ? {
+                                        ...field,
+                                        maxLength: !isNaN(
+                                          e.target.valueAsNumber,
+                                        )
+                                          ? e.target.valueAsNumber
+                                          : null,
+                                      }
+                                    : field,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor={mkId(f.id, 'minLength')}>
+                            Min Length
+                          </Label>
+                          <Input
+                            type="number"
+                            id={mkId(f.id, 'minLength')}
+                            placeholder="Min Length"
+                            onChange={(e) =>
+                              setFields((fields) =>
+                                fields.map((field) =>
+                                  field.id === f.id
+                                    ? {
+                                        ...field,
+                                        minLength: !isNaN(
+                                          e.target.valueAsNumber,
+                                        )
+                                          ? e.target.valueAsNumber
+                                          : null,
+                                      }
+                                    : field,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <div className="mt-2 flex flex-row space-x-5">
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                size="sm"
+                                checked={f.isRequired}
+                                id={mkId(f.id, 'isRequired')}
+                                onCheckedChange={() =>
+                                  setFields((fields) =>
+                                    fields.map((field) =>
+                                      field.id === f.id
+                                        ? {
+                                            ...field,
+                                            isRequired: !field.isRequired,
+                                          }
+                                        : field,
+                                    ),
+                                  )
+                                }
+                              />
+                              <Label htmlFor={mkId(f.id, 'isRequired')}>
+                                Required
+                              </Label>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                size="sm"
+                                checked={f.isUnique}
+                                id={mkId(f.id, 'isUnique')}
+                                onCheckedChange={() =>
+                                  setFields((fields) =>
+                                    fields.map((field) =>
+                                      field.id === f.id
+                                        ? {
+                                            ...field,
+                                            isUnique: !field.isUnique,
+                                          }
+                                        : field,
+                                    ),
+                                  )
+                                }
+                              />
+                              <Label htmlFor={mkId(f.id, 'isUnique')}>
+                                Unique
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                    break;
+                  case 'number':
+                    field = (
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <div className="col-span-2">
+                          <Label htmlFor={mkId(f.id, 'name')}>Name</Label>
+                          <Input
+                            value={f.name}
+                            id={mkId(f.id, 'name')}
+                            placeholder="Name"
+                            onChange={(e) =>
+                              setFields((fields) =>
+                                fields.map((field) =>
+                                  field.id === f.id
+                                    ? { ...field, name: e.target.value }
+                                    : field,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor={mkId(f.id, 'max')}>Max</Label>
+                          <Input
+                            type="number"
+                            id={mkId(f.id, 'max')}
+                            placeholder="Max"
+                            onChange={(e) =>
+                              setFields((fields) =>
+                                fields.map((field) =>
+                                  field.id === f.id
+                                    ? {
+                                        ...field,
+                                        max: !isNaN(e.target.valueAsNumber)
+                                          ? e.target.valueAsNumber
+                                          : null,
+                                      }
+                                    : field,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor={mkId(f.id, 'min')}>Min</Label>
+                          <Input
+                            type="number"
+                            id={mkId(f.id, 'min')}
+                            placeholder="Min"
+                            onChange={(e) =>
+                              setFields((fields) =>
+                                fields.map((field) =>
+                                  field.id === f.id
+                                    ? {
+                                        ...field,
+                                        min: !isNaN(e.target.valueAsNumber)
+                                          ? e.target.valueAsNumber
+                                          : null,
+                                      }
+                                    : field,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <div className="mt-2 flex flex-row space-x-5">
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                size="sm"
+                                checked={f.isRequired}
+                                id={mkId(f.id, 'isRequired')}
+                                onCheckedChange={() =>
+                                  setFields((fields) =>
+                                    fields.map((field) =>
+                                      field.id === f.id
+                                        ? {
+                                            ...field,
+                                            isRequired: !field.isRequired,
+                                          }
+                                        : field,
+                                    ),
+                                  )
+                                }
+                              />
+                              <Label htmlFor={mkId(f.id, 'isRequired')}>
+                                Required
+                              </Label>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                size="sm"
+                                checked={f.isUnique}
+                                id={mkId(f.id, 'isUnique')}
+                                onCheckedChange={() =>
+                                  setFields((fields) =>
+                                    fields.map((field) =>
+                                      field.id === f.id
+                                        ? {
+                                            ...field,
+                                            isUnique: !field.isUnique,
+                                          }
+                                        : field,
+                                    ),
+                                  )
+                                }
+                              />
+                              <Label htmlFor={mkId(f.id, 'isUnique')}>
+                                Unique
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                    break;
+                  default:
+                }
+
+                return (
+                  <div key={index} className="rounded-md border p-3 pt-2">
+                    <h3 className="text-base font-medium">
+                      {title(f.type)} Field
+                    </h3>
+
+                    {field}
+                  </div>
+                );
+              })}
+            </div>
+
+            <Popover open={open} onOpenChange={() => setOpen((o) => !o)}>
+              <PopoverTrigger asChild>
+                <Button className="w-full" variant="secondary">
+                  Add field
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="bg-background w-[451px]"
+                sideOffset={8}
+              >
+                <div className="grid grid-cols-6 gap-2 rounded-md border p-3">
+                  <div className="col-span-2 h-14">
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setOpen(false);
+                        setFields([
+                          ...fields,
+                          {
+                            id: Math.random().toString(36).substring(2),
+                            name: `field${
+                              fields.length === 0 ? '' : fields.length
+                            }`,
+                            type: 'string',
+                            isRequired: false,
+                            isUnique: false,
+                            maxLength: null,
+                            minLength: null,
+                            pattern: null,
+                          },
+                        ]);
+                      }}
+                      sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                    >
+                      <Type className="h-6 w-6" />
+                      String
+                    </Button>
+                  </div>
+                  <div className="col-span-2 h-14">
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setOpen(false);
+                        setFields([
+                          ...fields,
+                          {
+                            id: Math.random().toString(36).substring(2),
+                            name: `field${
+                              fields.length === 0 ? '' : fields.length
+                            }`,
+                            type: 'number',
+                            isRequired: false,
+                            isUnique: false,
+                            max: null,
+                            min: null,
+                          },
+                        ]);
+                      }}
+                      sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                    >
+                      <Hash className="h-6 w-6" />
+                      Number
+                    </Button>
+                  </div>
+                  <div className="col-span-2 h-14">
+                    <Button
+                      variant="secondary"
+                      sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                    >
+                      <ToggleRight className="h-6 w-6" />
+                      Boolean
+                    </Button>
+                  </div>
+                  <div className="col-span-2 h-14">
+                    <Button
+                      variant="secondary"
+                      sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                    >
+                      <Calendar className="h-6 w-6" />
+                      Date
+                    </Button>
+                  </div>
+                  <div className="col-span-2 h-14">
+                    <Button
+                      variant="secondary"
+                      sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                    >
+                      <ToggleRight className="h-6 w-6" />
+                      Email
+                    </Button>
+                  </div>
+                  <div className="col-span-2 h-14">
+                    <Button
+                      variant="secondary"
+                      sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                    >
+                      <Link2 className="h-6 w-6" />
+                      Url
+                    </Button>
+                  </div>
+                  <div className="col-span-3 h-14">
+                    <Button
+                      variant="secondary"
+                      sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                    >
+                      <List className="h-6 w-6" />
+                      Select
+                    </Button>
+                  </div>
+                  <div className="col-span-3 h-14">
+                    <Button
+                      variant="secondary"
+                      sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                    >
+                      <Database className="h-6 w-6" />
+                      Relation
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button className="w-full" variant="secondary">
-                Add field
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[451px]" sideOffset={8}>
-              <div className="grid grid-cols-6 gap-2 rounded-md border p-3">
-                <div className="bg-secondary col-span-2 flex h-14 flex-col items-center justify-center rounded-md">
-                  <Type className="h-6 w-6" />
-                  String
-                </div>
-                <div className="bg-secondary col-span-2 flex h-14 flex-col items-center justify-center rounded-md">
-                  <Hash className="h-6 w-6" />
-                  Number
-                </div>
-                <div className="bg-secondary col-span-2 flex h-14 flex-col items-center justify-center rounded-md">
-                  <ToggleRight className="h-6 w-6" />
-                  Boolean
-                </div>
-                <div className="bg-secondary col-span-2 flex h-14 flex-col items-center justify-center rounded-md">
-                  <Calendar className="h-6 w-6" />
-                  Date
-                </div>
-                <div className="bg-secondary col-span-2 flex h-14 flex-col items-center justify-center rounded-md">
-                  <ToggleRight className="h-6 w-6" />
-                  Email
-                </div>
-                <div className="bg-secondary col-span-2 flex h-14 flex-col items-center justify-center rounded-md">
-                  <Link2 className="h-6 w-6" />
-                  Url
-                </div>
-                <div className="bg-secondary col-span-3 flex h-14 flex-col items-center justify-center rounded-md">
-                  <List className="h-6 w-6" />
-                  Select
-                </div>
-                <div className="bg-secondary col-span-3 flex h-14 flex-col items-center justify-center rounded-md">
-                  <Database className="h-6 w-6" />
-                  Relation
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
         </div>
-      </div>
 
-      <SheetFooter>
-        <SheetClose asChild>
-          <Button variant="ghost">Cancel</Button>
-        </SheetClose>
-        <Button>Submit</Button>
-      </SheetFooter>
-    </SheetContent>
-  </Sheet>
-);
+        <SheetFooter>
+          <SheetClose asChild>
+            <Button variant="ghost">Cancel</Button>
+          </SheetClose>
+          <Button
+            onClick={() => {
+              setOpen(false);
+              setName('');
+              setFields([]);
+              mutate({
+                name,
+                fields,
+              });
+            }}
+          >
+            Submit
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+};

@@ -99,7 +99,7 @@ const Page: React.FC<{ params: { id: string } }> = ({ params }) => {
   }, [tables, params]);
 
   return (
-    <div>
+    <div className="p-5">
       <DataTable data={data?.data ?? []} columns={cols} />
     </div>
   );

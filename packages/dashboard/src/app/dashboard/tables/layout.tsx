@@ -17,7 +17,7 @@ const TablesLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
         <div className="m-4">
           <CreateSheet />
 
-          <h2 className="mb-2 text-lg font-semibold">Tables</h2>
+          <h2 className="mb-2 ml-3 text-lg font-semibold">Tables</h2>
           {data?.tables.map((table) => (
             <Link key={table.id} href={`/dashboard/tables/${table.name}`}>
               <Button variant="ghost" className="w-full justify-start">

@@ -2,9 +2,6 @@ import { env } from './src/env.mjs';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
   rewrites: async () => [
     {
       source: '/home',

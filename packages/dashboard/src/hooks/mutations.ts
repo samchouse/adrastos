@@ -5,6 +5,7 @@ import {
   getLogout,
   postConfigOAuth2,
   postConfigSmtp,
+  postCreateTable,
   postLogin,
   postResendVerification,
   postSignup,
@@ -77,5 +78,16 @@ export const useResendVerificationMutation = () => {
     mutationKey: ['auth', 'resendVerification'],
     mutationFn: async () => await postResendVerification(),
     onSuccess: () => queryClient.refetchQueries(queryKeys.me),
+  });
+};
+
+export const useCreateTableMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ['customTable', 'create'],
+    mutationFn: async (data: Parameters<typeof postCreateTable>[0]) =>
+      await postCreateTable(data),
+    onSuccess: () => queryClient.refetchQueries(queryKeys.createTable()),
   });
 };

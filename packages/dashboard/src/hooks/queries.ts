@@ -13,6 +13,7 @@ export const queryKeys = {
   me: ['me'] as const,
   configDetails: ['config', 'details'] as const,
   tables: ['tables'] as const,
+  createTable: () => [...queryKeys.tables, 'create'] as const,
 };
 
 export const useTokenRefreshQuery = () =>

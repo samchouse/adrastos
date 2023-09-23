@@ -37,18 +37,28 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  sharedClasses?: string;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  (
+    { className, variant, size, asChild = false, sharedClasses, ...props },
+    ref,
+  ) => {
     const Comp = asChild ? Slot : 'button';
     return (
       <span
         aria-disabled={props.disabled}
-        className="leading-[0] aria-disabled:cursor-not-allowed"
+        className={cn(
+          'leading-[0] aria-disabled:cursor-not-allowed',
+          sharedClasses,
+        )}
       >
         <Comp
-          className={cn(buttonVariants({ variant, size, className }))}
+          className={cn(
+            buttonVariants({ variant, size, className }),
+            sharedClasses,
+          )}
           ref={ref}
           {...props}
         />

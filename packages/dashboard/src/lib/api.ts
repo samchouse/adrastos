@@ -179,7 +179,7 @@ interface Table {
   updatedAt: string;
 }
 
-type Field = StringField | NumberField;
+export type Field = StringField | NumberField;
 
 interface BaseField {
   name: string;
@@ -217,5 +217,17 @@ export const getTableData = async <T>(table: string) => {
     success: true;
     data: T[];
   }>(`/tables/${table}/rows`);
+  return res.data;
+};
+
+export const postCreateTable = async (data: {
+  name: string;
+  fields: Field[];
+}) => {
+  const res = await client.post<{
+    success: true;
+    message: string;
+    table: Table;
+  }>('/tables/create', data);
   return res.data;
 };
