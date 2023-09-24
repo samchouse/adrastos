@@ -1,95 +1,36 @@
 'use client';
 
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
-import { Settings2 } from 'lucide-react';
+import { ColumnDef, createColumnHelper } from '@tanstack/react-table';
+import { MoreHorizontal, PencilLine, Settings2, Trash2 } from 'lucide-react';
 import { title } from 'radash';
 import { useEffect, useMemo, useState } from 'react';
 
 import {
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
 } from '~/components';
-import { useTableDataQuery, useTablesQuery } from '~/hooks';
+import {
+  useDeleteRowMutation,
+  useTableDataQuery,
+  useTablesQuery,
+} from '~/hooks';
 
-import { CreateRowSheet } from './_components';
+import { CreateRowSheet, DataTable } from './_components';
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
-}
+export type Row = { id: string } & Record<string, unknown>;
 
-function DataTable<TData, TValue>({
-  columns,
-  data,
-}: DataTableProps<TData, TValue>) {
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
-
-  return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() && 'selected'}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                No results.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
+const columnHelper = createColumnHelper<Row>();
 
 const Page: React.FC<{ params: { id: string } }> = ({ params }) => {
-  const [cols, setCols] = useState<ColumnDef<unknown>[]>([]);
+  const [cols, setCols] = useState<ColumnDef<Row>[]>([]);
   const { data: tables } = useTablesQuery();
-  const { data } = useTableDataQuery<{ name: string; rating: number }>(
-    params.id,
-  );
+  const { data } = useTableDataQuery<Row>(params.id);
+
+  const { mutate } = useDeleteRowMutation(params.id);
 
   const table = useMemo(
     () => tables?.tables.find((t) => t.name === params.id),
@@ -98,12 +39,40 @@ const Page: React.FC<{ params: { id: string } }> = ({ params }) => {
 
   useEffect(() => {
     setCols(
-      table?.fields.map((f) => ({
-        accessorKey: f.name,
-        header: title(f.name),
-      })) ?? [],
+      [columnHelper.accessor('id', { header: 'Id' }) as ColumnDef<Row>]
+        .concat(
+          table?.fields.map((f) =>
+            columnHelper.accessor(f.name, {
+              header: title(f.name),
+            }),
+          ) ?? [],
+        )
+        .concat([
+          columnHelper.display({
+            id: 'actions',
+            cell: ({ row }) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 w-8 p-0">
+                    <span className="sr-only">Open menu</span>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuItem>
+                    <PencilLine className="mr-2 h-4 w-4" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => mutate(row.original.id)}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ),
+          }),
+        ]),
     );
-  }, [table]);
+  }, [table, mutate]);
 
   return (
     <div className="p-5">

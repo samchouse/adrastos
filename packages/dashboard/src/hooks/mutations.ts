@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
   client,
+  deleteRow,
   getLogout,
   postConfigOAuth2,
   postConfigSmtp,
@@ -100,6 +101,17 @@ export const useCreateRowMutation = (table: string) => {
     mutationKey: ['customRow', 'create'],
     mutationFn: async (data: Parameters<typeof postCreateRow>[1]) =>
       await postCreateRow(table, data),
+    onSuccess: () => queryClient.refetchQueries(queryKeys.tableData(table)),
+  });
+};
+
+export const useDeleteRowMutation = (table: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ['customRow', 'delete'],
+    mutationFn: async (id: Parameters<typeof deleteRow>[1]) =>
+      await deleteRow(table, id),
     onSuccess: () => queryClient.refetchQueries(queryKeys.tableData(table)),
   });
 };

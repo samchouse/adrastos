@@ -242,3 +242,11 @@ export const postCreateRow = async (
   }>(`/tables/${table}/create`, data);
   return res.data;
 };
+
+export const deleteRow = async (table: string, id: string) => {
+  const res = await client.delete<{
+    success: true;
+    message: string;
+  }>(`/tables/${table}/delete/?id=${id}`);
+  return res.data;
+};
