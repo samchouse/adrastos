@@ -57,7 +57,7 @@ impl Mfa {
     }
 
     pub fn get_qr(&self) -> Result<String, String> {
-        self.0.get_qr()
+        self.0.get_qr_base64()
     }
 
     pub async fn generate_codes() -> Result<BackupCodes, Error> {

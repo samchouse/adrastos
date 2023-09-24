@@ -13,7 +13,7 @@ export const queryKeys = {
   me: ['me'] as const,
   configDetails: ['config', 'details'] as const,
   tables: ['tables'] as const,
-  createTable: () => [...queryKeys.tables, 'create'] as const,
+  tableData: (table: string) => [...queryKeys.tables, table, 'data'] as const,
 };
 
 export const useTokenRefreshQuery = () =>
@@ -58,7 +58,7 @@ export const useTableDataQuery = <T>(table: string) => {
   const { isSuccess } = useTokenRefreshQuery();
 
   return useQuery({
-    queryKey: ['data'],
+    queryKey: queryKeys.tableData(table),
     queryFn: async () => await getTableData<T>(table),
     enabled: isSuccess,
   });

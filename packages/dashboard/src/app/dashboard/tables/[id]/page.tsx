@@ -6,10 +6,12 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import { Settings2 } from 'lucide-react';
 import { title } from 'radash';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
+  Button,
   Table,
   TableBody,
   TableCell,
@@ -18,6 +20,8 @@ import {
   TableRow,
 } from '~/components';
 import { useTableDataQuery, useTablesQuery } from '~/hooks';
+
+import { CreateRowSheet } from './_components';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -87,19 +91,36 @@ const Page: React.FC<{ params: { id: string } }> = ({ params }) => {
     params.id,
   );
 
+  const table = useMemo(
+    () => tables?.tables.find((t) => t.name === params.id),
+    [tables, params.id],
+  );
+
   useEffect(() => {
     setCols(
-      tables?.tables
-        .find((t) => t.name === params.id)
-        ?.fields.map((f) => ({
-          accessorKey: f.name,
-          header: title(f.name),
-        })) ?? [],
+      table?.fields.map((f) => ({
+        accessorKey: f.name,
+        header: title(f.name),
+      })) ?? [],
     );
-  }, [tables, params]);
+  }, [table]);
 
   return (
     <div className="p-5">
+      <div className="flex w-full flex-row justify-between pb-4">
+        <div className="flex flex-row space-x-3">
+          <h2 className="text-2xl font-semibold">{title(params.id)}</h2>
+          <Button size="icon" variant="ghost">
+            <Settings2 className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <CreateRowSheet
+          table={table?.name ?? ''}
+          fields={table?.fields ?? []}
+        />
+      </div>
+
       <DataTable data={data?.data ?? []} columns={cols} />
     </div>
   );

@@ -7,6 +7,7 @@ import {
   List,
   Plus,
   ToggleRight,
+  Trash2,
   Type,
 } from 'lucide-react';
 import { title } from 'radash';
@@ -41,7 +42,12 @@ export const CreateSheet: React.FC = () => {
   const { mutate } = useCreateTableMutation();
 
   return (
-    <Sheet>
+    <Sheet
+      onOpenChange={() => {
+        setName('');
+        setFields([]);
+      }}
+    >
       <SheetTrigger asChild>
         <Button className="mb-3 w-full">
           <Plus className="mr-2 h-4 w-4" /> Create New
@@ -64,287 +70,304 @@ export const CreateSheet: React.FC = () => {
               />
             </div>
 
-            <div className="max-h-[calc(100vh-300px)] space-y-3 overflow-auto">
-              {fields.map((f, index) => {
-                let field: React.ReactNode = null;
-                switch (f.type) {
-                  case 'string':
-                    field = (
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <div>
-                          <Label htmlFor={mkId(f.id, 'name')}>Name</Label>
-                          <Input
-                            value={f.name}
-                            id={mkId(f.id, 'name')}
-                            placeholder="Name"
-                            onChange={(e) =>
-                              setFields((fields) =>
-                                fields.map((field) =>
-                                  field.id === f.id
-                                    ? { ...field, name: e.target.value }
-                                    : field,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
+            {fields.length > 0 && (
+              <div className="max-h-[calc(100vh-300px)] space-y-3 overflow-auto">
+                {fields.map((f, index) => {
+                  let field: React.ReactNode = null;
+                  switch (f.type) {
+                    case 'string':
+                      field = (
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <div>
+                            <Label htmlFor={mkId(f.id, 'name')}>Name</Label>
+                            <Input
+                              value={f.name}
+                              id={mkId(f.id, 'name')}
+                              placeholder="Name"
+                              onChange={(e) =>
+                                setFields((fields) =>
+                                  fields.map((field) =>
+                                    field.id === f.id
+                                      ? { ...field, name: e.target.value }
+                                      : field,
+                                  ),
+                                )
+                              }
+                            />
+                          </div>
 
-                        <div>
-                          <Label htmlFor={mkId(f.id, 'pattern')}>Pattern</Label>
-                          <Input
-                            id={mkId(f.id, 'pattern')}
-                            placeholder="Pattern"
-                            onChange={(e) =>
-                              setFields((fields) =>
-                                fields.map((field) =>
-                                  field.id === f.id
-                                    ? { ...field, pattern: e.target.value }
-                                    : field,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
+                          <div>
+                            <Label htmlFor={mkId(f.id, 'pattern')}>
+                              Pattern
+                            </Label>
+                            <Input
+                              id={mkId(f.id, 'pattern')}
+                              placeholder="Pattern"
+                              onChange={(e) =>
+                                setFields((fields) =>
+                                  fields.map((field) =>
+                                    field.id === f.id
+                                      ? { ...field, pattern: e.target.value }
+                                      : field,
+                                  ),
+                                )
+                              }
+                            />
+                          </div>
 
-                        <div>
-                          <Label htmlFor={mkId(f.id, 'maxLength')}>
-                            Max Length
-                          </Label>
-                          <Input
-                            type="number"
-                            id={mkId(f.id, 'maxLength')}
-                            placeholder="Max Length"
-                            onChange={(e) =>
-                              setFields((fields) =>
-                                fields.map((field) =>
-                                  field.id === f.id
-                                    ? {
-                                        ...field,
-                                        maxLength: !isNaN(
-                                          e.target.valueAsNumber,
-                                        )
-                                          ? e.target.valueAsNumber
-                                          : null,
-                                      }
-                                    : field,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
+                          <div>
+                            <Label htmlFor={mkId(f.id, 'maxLength')}>
+                              Max Length
+                            </Label>
+                            <Input
+                              type="number"
+                              id={mkId(f.id, 'maxLength')}
+                              placeholder="Max Length"
+                              onChange={(e) =>
+                                setFields((fields) =>
+                                  fields.map((field) =>
+                                    field.id === f.id
+                                      ? {
+                                          ...field,
+                                          maxLength: !isNaN(
+                                            e.target.valueAsNumber,
+                                          )
+                                            ? e.target.valueAsNumber
+                                            : null,
+                                        }
+                                      : field,
+                                  ),
+                                )
+                              }
+                            />
+                          </div>
 
-                        <div>
-                          <Label htmlFor={mkId(f.id, 'minLength')}>
-                            Min Length
-                          </Label>
-                          <Input
-                            type="number"
-                            id={mkId(f.id, 'minLength')}
-                            placeholder="Min Length"
-                            onChange={(e) =>
-                              setFields((fields) =>
-                                fields.map((field) =>
-                                  field.id === f.id
-                                    ? {
-                                        ...field,
-                                        minLength: !isNaN(
-                                          e.target.valueAsNumber,
-                                        )
-                                          ? e.target.valueAsNumber
-                                          : null,
-                                      }
-                                    : field,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
+                          <div>
+                            <Label htmlFor={mkId(f.id, 'minLength')}>
+                              Min Length
+                            </Label>
+                            <Input
+                              type="number"
+                              id={mkId(f.id, 'minLength')}
+                              placeholder="Min Length"
+                              onChange={(e) =>
+                                setFields((fields) =>
+                                  fields.map((field) =>
+                                    field.id === f.id
+                                      ? {
+                                          ...field,
+                                          minLength: !isNaN(
+                                            e.target.valueAsNumber,
+                                          )
+                                            ? e.target.valueAsNumber
+                                            : null,
+                                        }
+                                      : field,
+                                  ),
+                                )
+                              }
+                            />
+                          </div>
 
-                        <div>
-                          <div className="mt-2 flex flex-row space-x-5">
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                size="sm"
-                                checked={f.isRequired}
-                                id={mkId(f.id, 'isRequired')}
-                                onCheckedChange={() =>
-                                  setFields((fields) =>
-                                    fields.map((field) =>
-                                      field.id === f.id
-                                        ? {
-                                            ...field,
-                                            isRequired: !field.isRequired,
-                                          }
-                                        : field,
-                                    ),
-                                  )
-                                }
-                              />
-                              <Label htmlFor={mkId(f.id, 'isRequired')}>
-                                Required
-                              </Label>
-                            </div>
+                          <div>
+                            <div className="mt-2 flex flex-row space-x-5">
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  size="sm"
+                                  checked={f.isRequired}
+                                  id={mkId(f.id, 'isRequired')}
+                                  onCheckedChange={() =>
+                                    setFields((fields) =>
+                                      fields.map((field) =>
+                                        field.id === f.id
+                                          ? {
+                                              ...field,
+                                              isRequired: !field.isRequired,
+                                            }
+                                          : field,
+                                      ),
+                                    )
+                                  }
+                                />
+                                <Label htmlFor={mkId(f.id, 'isRequired')}>
+                                  Required
+                                </Label>
+                              </div>
 
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                size="sm"
-                                checked={f.isUnique}
-                                id={mkId(f.id, 'isUnique')}
-                                onCheckedChange={() =>
-                                  setFields((fields) =>
-                                    fields.map((field) =>
-                                      field.id === f.id
-                                        ? {
-                                            ...field,
-                                            isUnique: !field.isUnique,
-                                          }
-                                        : field,
-                                    ),
-                                  )
-                                }
-                              />
-                              <Label htmlFor={mkId(f.id, 'isUnique')}>
-                                Unique
-                              </Label>
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  size="sm"
+                                  checked={f.isUnique}
+                                  id={mkId(f.id, 'isUnique')}
+                                  onCheckedChange={() =>
+                                    setFields((fields) =>
+                                      fields.map((field) =>
+                                        field.id === f.id
+                                          ? {
+                                              ...field,
+                                              isUnique: !field.isUnique,
+                                            }
+                                          : field,
+                                      ),
+                                    )
+                                  }
+                                />
+                                <Label htmlFor={mkId(f.id, 'isUnique')}>
+                                  Unique
+                                </Label>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                    break;
-                  case 'number':
-                    field = (
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <div className="col-span-2">
-                          <Label htmlFor={mkId(f.id, 'name')}>Name</Label>
-                          <Input
-                            value={f.name}
-                            id={mkId(f.id, 'name')}
-                            placeholder="Name"
-                            onChange={(e) =>
-                              setFields((fields) =>
-                                fields.map((field) =>
-                                  field.id === f.id
-                                    ? { ...field, name: e.target.value }
-                                    : field,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
+                      );
+                      break;
+                    case 'number':
+                      field = (
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <div className="col-span-2">
+                            <Label htmlFor={mkId(f.id, 'name')}>Name</Label>
+                            <Input
+                              value={f.name}
+                              id={mkId(f.id, 'name')}
+                              placeholder="Name"
+                              onChange={(e) =>
+                                setFields((fields) =>
+                                  fields.map((field) =>
+                                    field.id === f.id
+                                      ? { ...field, name: e.target.value }
+                                      : field,
+                                  ),
+                                )
+                              }
+                            />
+                          </div>
 
-                        <div>
-                          <Label htmlFor={mkId(f.id, 'max')}>Max</Label>
-                          <Input
-                            type="number"
-                            id={mkId(f.id, 'max')}
-                            placeholder="Max"
-                            onChange={(e) =>
-                              setFields((fields) =>
-                                fields.map((field) =>
-                                  field.id === f.id
-                                    ? {
-                                        ...field,
-                                        max: !isNaN(e.target.valueAsNumber)
-                                          ? e.target.valueAsNumber
-                                          : null,
-                                      }
-                                    : field,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
+                          <div>
+                            <Label htmlFor={mkId(f.id, 'max')}>Max</Label>
+                            <Input
+                              type="number"
+                              id={mkId(f.id, 'max')}
+                              placeholder="Max"
+                              onChange={(e) =>
+                                setFields((fields) =>
+                                  fields.map((field) =>
+                                    field.id === f.id
+                                      ? {
+                                          ...field,
+                                          max: !isNaN(e.target.valueAsNumber)
+                                            ? e.target.valueAsNumber
+                                            : null,
+                                        }
+                                      : field,
+                                  ),
+                                )
+                              }
+                            />
+                          </div>
 
-                        <div>
-                          <Label htmlFor={mkId(f.id, 'min')}>Min</Label>
-                          <Input
-                            type="number"
-                            id={mkId(f.id, 'min')}
-                            placeholder="Min"
-                            onChange={(e) =>
-                              setFields((fields) =>
-                                fields.map((field) =>
-                                  field.id === f.id
-                                    ? {
-                                        ...field,
-                                        min: !isNaN(e.target.valueAsNumber)
-                                          ? e.target.valueAsNumber
-                                          : null,
-                                      }
-                                    : field,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
+                          <div>
+                            <Label htmlFor={mkId(f.id, 'min')}>Min</Label>
+                            <Input
+                              type="number"
+                              id={mkId(f.id, 'min')}
+                              placeholder="Min"
+                              onChange={(e) =>
+                                setFields((fields) =>
+                                  fields.map((field) =>
+                                    field.id === f.id
+                                      ? {
+                                          ...field,
+                                          min: !isNaN(e.target.valueAsNumber)
+                                            ? e.target.valueAsNumber
+                                            : null,
+                                        }
+                                      : field,
+                                  ),
+                                )
+                              }
+                            />
+                          </div>
 
-                        <div>
-                          <div className="mt-2 flex flex-row space-x-5">
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                size="sm"
-                                checked={f.isRequired}
-                                id={mkId(f.id, 'isRequired')}
-                                onCheckedChange={() =>
-                                  setFields((fields) =>
-                                    fields.map((field) =>
-                                      field.id === f.id
-                                        ? {
-                                            ...field,
-                                            isRequired: !field.isRequired,
-                                          }
-                                        : field,
-                                    ),
-                                  )
-                                }
-                              />
-                              <Label htmlFor={mkId(f.id, 'isRequired')}>
-                                Required
-                              </Label>
-                            </div>
+                          <div>
+                            <div className="mt-2 flex flex-row space-x-5">
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  size="sm"
+                                  checked={f.isRequired}
+                                  id={mkId(f.id, 'isRequired')}
+                                  onCheckedChange={() =>
+                                    setFields((fields) =>
+                                      fields.map((field) =>
+                                        field.id === f.id
+                                          ? {
+                                              ...field,
+                                              isRequired: !field.isRequired,
+                                            }
+                                          : field,
+                                      ),
+                                    )
+                                  }
+                                />
+                                <Label htmlFor={mkId(f.id, 'isRequired')}>
+                                  Required
+                                </Label>
+                              </div>
 
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                size="sm"
-                                checked={f.isUnique}
-                                id={mkId(f.id, 'isUnique')}
-                                onCheckedChange={() =>
-                                  setFields((fields) =>
-                                    fields.map((field) =>
-                                      field.id === f.id
-                                        ? {
-                                            ...field,
-                                            isUnique: !field.isUnique,
-                                          }
-                                        : field,
-                                    ),
-                                  )
-                                }
-                              />
-                              <Label htmlFor={mkId(f.id, 'isUnique')}>
-                                Unique
-                              </Label>
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  size="sm"
+                                  checked={f.isUnique}
+                                  id={mkId(f.id, 'isUnique')}
+                                  onCheckedChange={() =>
+                                    setFields((fields) =>
+                                      fields.map((field) =>
+                                        field.id === f.id
+                                          ? {
+                                              ...field,
+                                              isUnique: !field.isUnique,
+                                            }
+                                          : field,
+                                      ),
+                                    )
+                                  }
+                                />
+                                <Label htmlFor={mkId(f.id, 'isUnique')}>
+                                  Unique
+                                </Label>
+                              </div>
                             </div>
                           </div>
                         </div>
+                      );
+                      break;
+                    default:
+                  }
+
+                  return (
+                    <div key={index} className="rounded-md border p-3 pt-2">
+                      <div className="flex flex-row items-center justify-between">
+                        <h3 className="text-base font-medium">
+                          {title(f.type)} Field
+                        </h3>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setFields((fields) =>
+                              fields.filter((field) => field.id !== f.id),
+                            )
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                    );
-                    break;
-                  default:
-                }
 
-                return (
-                  <div key={index} className="rounded-md border p-3 pt-2">
-                    <h3 className="text-base font-medium">
-                      {title(f.type)} Field
-                    </h3>
-
-                    {field}
-                  </div>
-                );
-              })}
-            </div>
+                      {field}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             <Popover open={open} onOpenChange={() => setOpen((o) => !o)}>
               <PopoverTrigger asChild>

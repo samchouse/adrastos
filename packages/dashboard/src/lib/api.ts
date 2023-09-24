@@ -231,3 +231,14 @@ export const postCreateTable = async (data: {
   }>('/tables/create', data);
   return res.data;
 };
+
+export const postCreateRow = async (
+  table: string,
+  data: Record<string, unknown>,
+) => {
+  const res = await client.post<{
+    success: true;
+    message: string;
+  }>(`/tables/${table}/create`, data);
+  return res.data;
+};
