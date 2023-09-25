@@ -30,9 +30,9 @@ import {
 import { useCreateTableMutation } from '~/hooks';
 import { Field, mkId } from '~/lib';
 
-export const CreateSheet: React.FC = () => {
-  const [open, setOpen] = useState(false);
+export const TableSheet: React.FC = () => {
   const [name, setName] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
   const [fields, setFields] = useState<
     (Field & {
       id: string;
@@ -369,7 +369,7 @@ export const CreateSheet: React.FC = () => {
               </div>
             )}
 
-            <Popover open={open} onOpenChange={() => setOpen((o) => !o)}>
+            <Popover open={isOpen} onOpenChange={() => setIsOpen((o) => !o)}>
               <PopoverTrigger asChild>
                 <Button className="w-full" variant="secondary">
                   Add field
@@ -384,7 +384,7 @@ export const CreateSheet: React.FC = () => {
                     <Button
                       variant="secondary"
                       onClick={() => {
-                        setOpen(false);
+                        setIsOpen(false);
                         setFields([
                           ...fields,
                           {
@@ -411,7 +411,7 @@ export const CreateSheet: React.FC = () => {
                     <Button
                       variant="secondary"
                       onClick={() => {
-                        setOpen(false);
+                        setIsOpen(false);
                         setFields([
                           ...fields,
                           {
@@ -499,7 +499,7 @@ export const CreateSheet: React.FC = () => {
           </SheetClose>
           <Button
             onClick={() => {
-              setOpen(false);
+              setIsOpen(false);
               setName('');
               setFields([]);
               mutate({

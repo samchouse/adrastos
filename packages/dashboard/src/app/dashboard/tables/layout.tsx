@@ -6,7 +6,7 @@ import { title } from 'radash';
 import { Button } from '~/components';
 import { useTablesQuery } from '~/hooks';
 
-import { CreateSheet } from './_components';
+import { TableSheet } from './_components';
 
 const TablesLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { data } = useTablesQuery();
@@ -15,7 +15,7 @@ const TablesLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
     <section className="flex h-full w-full flex-row">
       <div className="flex h-full w-72 flex-col border-r">
         <div className="m-4">
-          <CreateSheet />
+          <TableSheet />
 
           <h2 className="mb-2 ml-3 text-lg font-semibold">Tables</h2>
           {data?.tables.map((table) => (

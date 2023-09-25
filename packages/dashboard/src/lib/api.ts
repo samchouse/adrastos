@@ -171,7 +171,7 @@ export const postResendVerification = async () => {
   return res.data;
 };
 
-interface Table {
+export interface Table {
   id: string;
   name: string;
   fields: Field[];
