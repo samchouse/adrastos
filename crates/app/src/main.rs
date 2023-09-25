@@ -188,6 +188,7 @@ async fn main() -> std::io::Result<()> {
                                 handlers::tables::custom::row,
                                 handlers::tables::custom::rows,
                                 handlers::tables::custom::create,
+                                handlers::tables::custom::update,
                                 handlers::tables::custom::delete,
                             ))),
                     ),

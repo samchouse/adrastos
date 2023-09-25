@@ -4,6 +4,7 @@ import {
   client,
   deleteRow,
   getLogout,
+  patchUpdateRow,
   postConfigOAuth2,
   postConfigSmtp,
   postCreateRow,
@@ -101,6 +102,22 @@ export const useCreateRowMutation = (table: string) => {
     mutationKey: ['customRow', 'create'],
     mutationFn: async (data: Parameters<typeof postCreateRow>[1]) =>
       await postCreateRow(table, data),
+    onSuccess: () => queryClient.refetchQueries(queryKeys.tableData(table)),
+  });
+};
+
+export const useUpdateRowMutation = (table: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ['customRow', 'update'],
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: Parameters<typeof patchUpdateRow>[1];
+      data: Parameters<typeof patchUpdateRow>[2];
+    }) => await patchUpdateRow(table, id, data),
     onSuccess: () => queryClient.refetchQueries(queryKeys.tableData(table)),
   });
 };

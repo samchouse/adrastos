@@ -300,10 +300,16 @@ pub async fn create(
 #[patch("/update")]
 pub async fn update(
     _: RequiredUser,
+    bytes: web::Bytes,
     path: web::Path<String>,
     web::Query(query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
+    let body = serde_json::from_str::<HashMap<String, serde_json::Value>>(
+        &String::from_utf8(bytes.to_vec()).unwrap(),
+    )
+    .map_err(|err| Error::BadRequest(err.to_string()))?;
+
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
         .one(&db_pool)
@@ -315,6 +321,37 @@ pub async fn update(
         db_query.and_where(Expr::col(Alias::new(AsSnakeCase(field).to_string())).eq(equals));
     });
 
+    let mut errors = ValidationErrors::new();
+    let mut table_values: Vec<(_, SimpleExpr)> = vec![("updated_at", Utc::now().into())];
+
+    custom_table.fields.iter().for_each(|field| {
+        let validation_results =
+            field.validate(body.get(&AsLowerCamelCase(field.name.clone()).to_string()));
+
+        match validation_results {
+            Ok(value) => {
+                table_values.push((&field.name, value));
+            }
+            Err(validation_errors) => {
+                validation_errors.iter().for_each(|error| {
+                    errors.add(
+                        util::string_to_static_str(
+                            AsLowerCamelCase(field.name.clone()).to_string(),
+                        ),
+                        error.clone(),
+                    );
+                });
+            }
+        }
+    });
+
+    if !errors.is_empty() {
+        return Err(Error::ValidationErrors {
+            message: "Validation failed".to_string(),
+            errors,
+        });
+    }
+
     db_pool
         .get()
         .await
@@ -322,6 +359,12 @@ pub async fn update(
         .execute(
             db_query
                 .table(Alias::new(&custom_table.name))
+                .values(
+                    table_values
+                        .clone()
+                        .into_iter()
+                        .map(|(f, v)| (Alias::new(f), v.clone())),
+                )
                 .to_string(PostgresQueryBuilder)
                 .as_str(),
             &[],
@@ -329,9 +372,42 @@ pub async fn update(
         .await
         .unwrap();
 
+    let mut data = json!({});
+
+    table_values
+        .into_iter()
+        .filter_map(|(name, value)| {
+            let camel_case_name = heck::AsLowerCamelCase(name).to_string();
+            let camel_case_name = camel_case_name.as_str();
+
+            match value {
+                SimpleExpr::Value(value) => match value {
+                    Value::String(value) => Some(json!({ camel_case_name: value })),
+                    Value::BigInt(value) => Some(json!({ camel_case_name: value })),
+                    Value::Bool(value) => Some(json!({ camel_case_name: value })),
+                    Value::ChronoDateTimeUtc(value) => Some(json!({ camel_case_name: value })),
+                    Value::Array(_, Some(value)) => {
+                        let value = value
+                            .iter()
+                            .filter_map(|value| match value {
+                                Value::String(value) => Some(value),
+                                _ => None,
+                            })
+                            .collect::<Vec<_>>();
+
+                        Some(json!({ camel_case_name: value }))
+                    }
+                    _ => None,
+                },
+                _ => None,
+            }
+        })
+        .for_each(|patch| json_patch::merge(&mut data, &patch));
+
     Ok(HttpResponse::Ok().json(json!({
         "success": true,
-        "message": "Row updated successfully"
+        "message": "Row updated successfully",
+        "data": data
     })))
 }
 

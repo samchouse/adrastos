@@ -22,7 +22,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '~/components';
-import { useCreateRowMutation, useDeleteRowMutation } from '~/hooks';
+import {
+  useCreateRowMutation,
+  useDeleteRowMutation,
+  useUpdateRowMutation,
+} from '~/hooks';
 import { cn, Field, Table } from '~/lib';
 
 import { Row } from '../page';
@@ -65,6 +69,7 @@ export const RowSheet: React.FC<{
   const [isOpen, setIsOpen] = useState(false);
 
   const { mutateAsync: createMutateAsync } = useCreateRowMutation(table.name);
+  const { mutateAsync: updateMutateAsync } = useUpdateRowMutation(table.name);
   const { mutateAsync: deleteMutateAsync } = useDeleteRowMutation(table.name);
 
   const formSchema = useMemo(
@@ -98,7 +103,9 @@ export const RowSheet: React.FC<{
           <form
             className="flex h-full flex-col justify-between"
             onSubmit={form.handleSubmit(async (values) => {
-              await createMutateAsync(values);
+              if (row) await updateMutateAsync({ id: row.id, data: values });
+              else await createMutateAsync(values);
+
               form.reset();
               setIsOpen(false);
             })}

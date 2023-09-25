@@ -243,6 +243,18 @@ export const postCreateRow = async (
   return res.data;
 };
 
+export const patchUpdateRow = async (
+  table: string,
+  id: string,
+  data: Record<string, unknown>,
+) => {
+  const res = await client.patch<{
+    success: true;
+    message: string;
+  }>(`/tables/${table}/update?id=${id}`, data);
+  return res.data;
+};
+
 export const deleteRow = async (table: string, id: string) => {
   const res = await client.delete<{
     success: true;
