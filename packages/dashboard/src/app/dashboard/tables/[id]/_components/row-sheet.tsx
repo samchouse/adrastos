@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ChevronRight, Trash2 } from 'lucide-react';
 import { title } from 'radash';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -77,8 +77,8 @@ export const RowSheet: React.FC<{
     [table.fields],
   );
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
     mode: 'onChange',
+    resolver: zodResolver(formSchema),
     defaultValues:
       row &&
       table.fields.reduce(
@@ -86,6 +86,16 @@ export const RowSheet: React.FC<{
         {},
       ),
   });
+
+  useEffect(() => {
+    if (row)
+      form.reset(
+        table.fields.reduce(
+          (a, b) => ({ ...a, [b.name]: row[b.name] ?? '' }),
+          {},
+        ),
+      );
+  }, [row, table.fields, form]);
 
   return (
     <Sheet open={isOpen} onOpenChange={() => setIsOpen((o) => !o)}>
