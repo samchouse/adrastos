@@ -23,6 +23,9 @@
     "postpack": "rm LICENSE",
     "build": "tsup"
   },
+  "peerDependencies": {
+    "zod": ">=3.22"
+  },
   "devDependencies": {
     "tsup": "^7.2.0"
   }
