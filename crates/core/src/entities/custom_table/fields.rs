@@ -261,12 +261,12 @@ impl Field {
                     let mut value_error = ValidationError::new("value");
 
                     if let Some(min) = min {
-                        if value < (*min).try_into().unwrap() {
+                        if value < (*min).into() {
                             value_error.add_param(Cow::from("min"), &min);
                         }
                     }
                     if let Some(max) = max {
-                        if value > (*max).try_into().unwrap() {
+                        if value > (*max).into() {
                             value_error.add_param(Cow::from("max"), &max);
                         }
                     }

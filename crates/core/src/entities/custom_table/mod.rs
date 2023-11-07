@@ -117,7 +117,9 @@ impl CustomTableSelectBuilder {
         self.query_builder.reset_limit();
         self.query_builder.reset_offset();
 
-        if let Some(page) = page && let Some(limit) = limit {
+        if let Some(page) = page
+            && let Some(limit) = limit
+        {
             self.query_builder.limit(limit);
             self.query_builder.offset((page - 1) * limit);
         }

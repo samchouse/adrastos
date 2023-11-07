@@ -62,7 +62,7 @@ pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
         )
         .await
         .unwrap();
-    let count = query.get(0).unwrap().get::<_, i64>(0);
+    let count = query.first().unwrap().get::<_, i64>(0);
     if count > 0 {
         return;
     }

@@ -56,7 +56,9 @@ pub async fn rows(
         "data": rows
     });
 
-    if let Some(page) = page && let Some(limit) = limit {
+    if let Some(page) = page
+        && let Some(limit) = limit
+    {
         let count = builder.count().finish(&db_pool).await?.as_i64().unwrap() as u64;
 
         crate::util::attach_pagination_details(

@@ -14,13 +14,13 @@ actix-web-httpauth = "0.8.1"
 adrastos_core = { path = "../core" }
 argon2 = "0.5.2"
 chrono = "0.4.31"
-clap = { version = "4.4.4", features = ["derive"] }
+clap = { version = "4.4.7", features = ["derive"] }
 deadpool-postgres = "0.10.5"
 deadpool-redis = "0.12.0"
 dotenvy = "0.15.7"
-futures-util = "0.3.28"
+futures-util = "0.3.29"
 heck = "0.4.1"
-json-patch = "1.1.0"
+json-patch = "1.2.0"
 jsonwebtoken = "8.3.0"
 lettre = { version = "0.10.4", default-features = false, features = [
 	"tokio1-rustls-tls",
@@ -31,8 +31,8 @@ lettre = { version = "0.10.4", default-features = false, features = [
 ] }
 mailchecker = "5.0.9"
 oauth2 = "4.4.2"
-regex = "1.9.5"
-reqwest = { version = "0.11.20", features = ["json"] }
+regex = "1.10.2"
+reqwest = { version = "0.11.22", features = ["json"] }
 rustls = "0.20"
 rustls-pemfile = "1.0.3"
 sea-query = { version = "0.30.2", features = [
@@ -45,11 +45,11 @@ secrecy = { version = "0.8.0", features = ["serde"] }
 sentry = "0.31.7"
 sentry-actix = "0.31.7"
 sentry-tracing = "0.31.7"
-serde = { version = "1.0.188", features = ["derive"] }
-serde_json = "1.0.107"
-tokio = { version = "1.32.0", features = ["macros"] }
-tracing = "0.1.37"
-tracing-actix-web = "0.7.6"
+serde = { version = "1.0.192", features = ["derive"] }
+serde_json = "1.0.108"
+tokio = { version = "1.33.0", features = ["macros"] }
+tracing = "0.1.40"
+tracing-actix-web = "0.7.8"
 tracing-axiom = "0.4.0"
 tracing-bunyan-formatter = "0.3.9"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
