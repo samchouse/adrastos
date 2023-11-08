@@ -9,7 +9,7 @@
     }
   },
   "parserOptions": {
-    "project": "./packages/**/tsconfig.json"
+    "project": ["./tsconfig.json", "./packages/**/tsconfig.json"]
   },
   "extends": [
     "eslint:recommended",
