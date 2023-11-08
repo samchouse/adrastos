@@ -42,11 +42,10 @@ const providerIcons = {
 const formSchema = z.object({
   email: z
     .string()
-    .nonempty({ message: 'Email is required' })
+    .min(1, { message: 'Email is required' })
     .email({ message: 'Invalid email address' }),
   password: z
     .string()
-    .nonempty({ message: 'Password is required' })
     .min(8, { message: 'Password is too short' })
     .max(64, { message: 'Password is too long' }),
 });
@@ -56,7 +55,7 @@ export const LoginForm: React.FC = () => {
   const { toast } = useToast();
   const searchParams = useSearchParams();
 
-  const { mutateAsync, isLoading, isError, error } = useLoginMutation();
+  const { mutateAsync, isPending, isError, error } = useLoginMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -77,10 +76,12 @@ export const LoginForm: React.FC = () => {
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(async (values) => {
-          await mutateAsync(values);
-          router.push(searchParams.get('to') ?? '/dashboard');
-        })}
+        onSubmit={
+          void form.handleSubmit(async (values) => {
+            await mutateAsync(values);
+            router.push(searchParams.get('to') ?? '/dashboard');
+          })
+        }
       >
         <CardContent>
           <div className="flex flex-col gap-1">
@@ -115,8 +116,8 @@ export const LoginForm: React.FC = () => {
 
         <CardFooter>
           <div className="w-full">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Login
             </Button>
 

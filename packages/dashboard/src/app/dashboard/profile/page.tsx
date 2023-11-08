@@ -9,7 +9,7 @@ import { OAuth2Card } from './_components';
 
 const Page: React.FC = () => {
   const { data } = useMeQuery();
-  const { mutate, isLoading } = useResendVerificationMutation();
+  const { mutate, isPending } = useResendVerificationMutation();
 
   return (
     <div className="flex flex-col gap-y-5 p-5">
@@ -28,9 +28,9 @@ const Page: React.FC = () => {
           <Button
             variant="outline"
             onClick={() => mutate()}
-            disabled={isLoading}
+            disabled={isPending}
           >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Resend verification
           </Button>
         </Alert>

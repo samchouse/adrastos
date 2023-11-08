@@ -27,17 +27,17 @@ import { useConfigSmtpMutation } from '~/hooks/mutations';
 import { useConfigDetailsQuery } from '~/hooks/queries';
 
 const formSchema = z.object({
-  host: z.string().nonempty('Host is required'),
+  host: z.string().min(1, 'Host is required'),
   port: z.coerce
     .number()
     .int("Port can't contain decimals")
     .positive('Port must be positive'),
-  username: z.string().nonempty('Username is required'),
+  username: z.string().min(1, 'Username is required'),
   password: z
     .string()
     .nullable()
     .refine((password) => password !== '', 'Password is required'),
-  senderName: z.string().nonempty('Sender name is required'),
+  senderName: z.string().min(1, 'Sender name is required'),
   senderEmail: z.string().email({ message: 'Invalid email address' }),
 });
 
@@ -45,7 +45,7 @@ export const SmtpCard: React.FC = () => {
   const [enabled, setEnabled] = useState(false);
 
   const { data, isLoading } = useConfigDetailsQuery();
-  const { mutate, isLoading: mutationIsLoading } = useConfigSmtpMutation();
+  const { mutate, isPending: mutationIsPending } = useConfigSmtpMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -94,9 +94,9 @@ export const SmtpCard: React.FC = () => {
 
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit((values) =>
-            mutate(enabled ? values : null),
-          )}
+          onSubmit={
+            void form.handleSubmit((values) => mutate(enabled ? values : null))
+          }
         >
           {enabled && (
             <CardContent>
@@ -181,9 +181,7 @@ export const SmtpCard: React.FC = () => {
                           {...field}
                           type="password"
                           placeholder="Password"
-                          value={
-                            field.value !== null ? field.value : '********'
-                          }
+                          value={field.value ?? '********'}
                           disabled={!!data?.smtpConfig && field.value === null}
                           {...(field.value === null && {
                             rightAdornment: (
@@ -221,7 +219,7 @@ export const SmtpCard: React.FC = () => {
                   enabled === !!data?.smtpConfig &&
                   form.watch('password') === null) ||
                 isLoading ||
-                mutationIsLoading
+                mutationIsPending
               }
               onClick={() => {
                 if (data?.smtpConfig) {
@@ -239,10 +237,10 @@ export const SmtpCard: React.FC = () => {
               disabled={
                 (!form.formState.isDirty && enabled === !!data?.smtpConfig) ||
                 isLoading ||
-                mutationIsLoading
+                mutationIsPending
               }
             >
-              {(isLoading || mutationIsLoading) && (
+              {(isLoading || mutationIsPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Save

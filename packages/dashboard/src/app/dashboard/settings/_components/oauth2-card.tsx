@@ -38,32 +38,32 @@ const providerNames = {
 const formSchema = z.object({
   google: z
     .object({
-      clientId: z.string().nonempty('Client ID is required'),
-      clientSecret: z.string().nonempty('Client secret is required'),
+      clientId: z.string().min(1, 'Client ID is required'),
+      clientSecret: z.string().min(1, 'Client secret is required'),
     })
     .nullable(),
   facebook: z
     .object({
-      clientId: z.string().nonempty('Client ID is required'),
-      clientSecret: z.string().nonempty('Client secret is required'),
+      clientId: z.string().min(1, 'Client ID is required'),
+      clientSecret: z.string().min(1, 'Client secret is required'),
     })
     .nullable(),
   github: z
     .object({
-      clientId: z.string().nonempty('Client ID is required'),
-      clientSecret: z.string().nonempty('Client secret is required'),
+      clientId: z.string().min(1, 'Client ID is required'),
+      clientSecret: z.string().min(1, 'Client secret is required'),
     })
     .nullable(),
   twitter: z
     .object({
-      clientId: z.string().nonempty('Client ID is required'),
-      clientSecret: z.string().nonempty('Client secret is required'),
+      clientId: z.string().min(1, 'Client ID is required'),
+      clientSecret: z.string().min(1, 'Client secret is required'),
     })
     .nullable(),
   discord: z
     .object({
-      clientId: z.string().nonempty('Client ID is required'),
-      clientSecret: z.string().nonempty('Client secret is required'),
+      clientId: z.string().min(1, 'Client ID is required'),
+      clientSecret: z.string().min(1, 'Client secret is required'),
     })
     .nullable(),
 });
@@ -78,7 +78,7 @@ export const OAuth2Card: React.FC = () => {
   });
 
   const { data, isLoading } = useConfigDetailsQuery();
-  const { mutate, isLoading: mutationIsLoading } = useConfigOAuth2Mutation();
+  const { mutate, isPending: mutationIsPending } = useConfigOAuth2Mutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -125,20 +125,22 @@ export const OAuth2Card: React.FC = () => {
 
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit((values) =>
-            mutate(
-              providers.reduce(
-                (acc, provider) => ({
-                  ...acc,
-                  [provider]: enabled[provider] ? values[provider] : null,
-                }),
-                {} as Record<
-                  (typeof providers)[number],
-                  { clientId: string; clientSecret: string } | null
-                >,
+          onSubmit={
+            void form.handleSubmit((values) =>
+              mutate(
+                providers.reduce(
+                  (acc, provider) => ({
+                    ...acc,
+                    [provider]: enabled[provider] ? values[provider] : null,
+                  }),
+                  {} as Record<
+                    (typeof providers)[number],
+                    { clientId: string; clientSecret: string } | null
+                  >,
+                ),
               ),
-            ),
-          )}
+            )
+          }
         >
           <CardContent>
             <div className="flex flex-col gap-y-3">
@@ -211,7 +213,7 @@ export const OAuth2Card: React.FC = () => {
                       enabled[provider] === !!data?.oauth2Config[provider],
                   )) ||
                 isLoading ||
-                mutationIsLoading
+                mutationIsPending
               }
               onClick={() => {
                 providers.forEach((provider) => {
@@ -236,10 +238,10 @@ export const OAuth2Card: React.FC = () => {
                       enabled[provider] === !!data?.oauth2Config[provider],
                   )) ||
                 isLoading ||
-                mutationIsLoading
+                mutationIsPending
               }
             >
-              {(isLoading || mutationIsLoading) && (
+              {(isLoading || mutationIsPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Save

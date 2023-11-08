@@ -8,18 +8,15 @@ export class AccountsModule extends BaseModule {
     username: string;
     password: string;
   }) {
-    this.client.request({
+    return this.client.request({
       path: '/auth/signup',
       method: 'POST',
       body: JSON.stringify(body),
     });
   }
 
-  public async authWithPassword(body: {
-    email: string;
-    password: string;
-  }): Promise<{ token: string }> {
-    return this.client.request({
+  public async authWithPassword(body: { email: string; password: string }) {
+    return this.client.request<{ token: string }>({
       path: '/auth/login',
       method: 'POST',
       body: JSON.stringify(body),

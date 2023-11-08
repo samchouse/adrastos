@@ -25,7 +25,7 @@ export interface NumberField extends Field {
   isUnique: boolean;
 }
 
-export interface BooleanField extends Field {}
+export type BooleanField = Field;
 
 export interface DateField extends Field {
   isRequired: boolean;

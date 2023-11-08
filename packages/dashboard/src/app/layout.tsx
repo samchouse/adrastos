@@ -1,5 +1,6 @@
 import './globals.css';
 
+import { StaticImport } from 'next/dist/shared/lib/get-img-props';
 import { Work_Sans as WorkSans } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -32,7 +33,7 @@ const RootLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
         >
           <Link href="/">
             <Image
-              src={logo}
+              src={logo as StaticImport}
               alt="logo"
               width={40}
               height={40}

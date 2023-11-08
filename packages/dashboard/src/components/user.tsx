@@ -73,11 +73,13 @@ export const User: React.FC<{
         </Link>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onSelect={async () => {
-            setIsLoggingOff(true);
-            await mutateAsync();
-            router.push('/');
-          }}
+          onSelect={() =>
+            void (async () => {
+              setIsLoggingOff(true);
+              await mutateAsync();
+              router.push('/');
+            })()
+          }
           className="cursor-pointer"
         >
           <LogOut className="mr-2 h-4 w-4" />

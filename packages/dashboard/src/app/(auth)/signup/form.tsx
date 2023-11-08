@@ -26,27 +26,25 @@ const formSchema = z
   .object({
     firstName: z
       .string()
-      .nonempty({ message: 'First name is required' })
+      .min(1, { message: 'First name is required' })
       .max(50, { message: 'First name must be less than 50 characters' }),
     lastName: z
       .string()
-      .nonempty({ message: 'Last name is required' })
+      .min(1, { message: 'Last name is required' })
       .max(50, { message: 'Last name must be less than 50 characters' }),
     email: z
       .string()
-      .nonempty({ message: 'Email is required' })
+      .min(1, { message: 'Email is required' })
       .email({ message: 'Invalid email address' }),
     username: z
       .string()
-      .nonempty({ message: 'Username is required' })
       .min(5, { message: 'Username must be at least 5 characters' })
       .max(64, { message: 'Username must be less than 64 characters' }),
     password: z
       .string()
-      .nonempty({ message: 'Password is required' })
       .min(8, { message: 'Password must be at least 8 characters' })
       .max(64, { message: 'Password must be less than 64 characters' }),
-    confirmPassword: z.string().nonempty({ message: 'Re-enter your password' }),
+    confirmPassword: z.string().min(1, { message: 'Re-enter your password' }),
     tac: z.boolean().refine((v) => v, {
       message: 'You must accept the Terms and Conditions',
     }),
@@ -62,7 +60,7 @@ const formSchema = z
 
 export const SignupForm: React.FC = () => {
   const router = useRouter();
-  const { mutateAsync, isLoading } = useSignupMutation();
+  const { mutateAsync, isPending } = useSignupMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -79,10 +77,12 @@ export const SignupForm: React.FC = () => {
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(async (values) => {
-          await mutateAsync(values);
-          router.push('/dashboard');
-        })}
+        onSubmit={
+          void form.handleSubmit(async (values) => {
+            await mutateAsync(values);
+            router.push('/dashboard');
+          })
+        }
       >
         <CardContent>
           <div className="flex flex-col gap-1">
@@ -204,8 +204,8 @@ export const SignupForm: React.FC = () => {
 
         <CardFooter>
           <div className="w-full">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign Up
             </Button>
 

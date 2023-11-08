@@ -1,5 +1,6 @@
 'use client';
 
+import { StaticImport } from 'next/dist/shared/lib/get-img-props';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -40,7 +41,7 @@ const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
         <div className="flex flex-row">
           <Link href="/dashboard">
             <Image
-              src={logo}
+              src={logo as StaticImport}
               alt="logo"
               width={40}
               height={40}

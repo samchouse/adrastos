@@ -34,7 +34,8 @@ export const useLoginMutation = () => {
     mutationKey: ['auth', 'login'],
     mutationFn: async (data: Parameters<typeof postLogin>[0]) =>
       await postLogin(data),
-    onSuccess: () => queryClient.refetchQueries(queryKeys.tokenRefresh),
+    onSuccess: () =>
+      queryClient.refetchQueries({ queryKey: queryKeys.tokenRefresh }),
   });
 };
 
@@ -46,8 +47,8 @@ export const useLogoutMutation = () => {
     mutationFn: async () => await getLogout(),
     onSuccess: () => {
       client.defaults.headers.common.Authorization = undefined;
-      queryClient.resetQueries(queryKeys.tokenRefresh);
-      queryClient.resetQueries(queryKeys.me);
+      void queryClient.resetQueries({ queryKey: queryKeys.tokenRefresh });
+      void queryClient.resetQueries({ queryKey: queryKeys.me });
     },
   });
 };
@@ -59,7 +60,8 @@ export const useConfigSmtpMutation = () => {
     mutationKey: ['config', 'smtp'],
     mutationFn: async (data: Parameters<typeof postConfigSmtp>[0]) =>
       await postConfigSmtp(data),
-    onSuccess: () => queryClient.refetchQueries(queryKeys.configDetails),
+    onSuccess: () =>
+      queryClient.refetchQueries({ queryKey: queryKeys.configDetails }),
   });
 };
 
@@ -70,7 +72,8 @@ export const useConfigOAuth2Mutation = () => {
     mutationKey: ['config', 'oauth2'],
     mutationFn: async (data: Parameters<typeof postConfigOAuth2>[0]) =>
       await postConfigOAuth2(data),
-    onSuccess: () => queryClient.refetchQueries(queryKeys.configDetails),
+    onSuccess: () =>
+      queryClient.refetchQueries({ queryKey: queryKeys.configDetails }),
   });
 };
 
@@ -80,7 +83,7 @@ export const useResendVerificationMutation = () => {
   return useMutation({
     mutationKey: ['auth', 'resendVerification'],
     mutationFn: async () => await postResendVerification(),
-    onSuccess: () => queryClient.refetchQueries(queryKeys.me),
+    onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.me }),
   });
 };
 
@@ -91,7 +94,7 @@ export const useCreateTableMutation = () => {
     mutationKey: ['customTable', 'create'],
     mutationFn: async (data: Parameters<typeof postCreateTable>[0]) =>
       await postCreateTable(data),
-    onSuccess: () => queryClient.refetchQueries(queryKeys.tables),
+    onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.tables }),
   });
 };
 
@@ -102,7 +105,8 @@ export const useCreateRowMutation = (table: string) => {
     mutationKey: ['customRow', 'create'],
     mutationFn: async (data: Parameters<typeof postCreateRow>[1]) =>
       await postCreateRow(table, data),
-    onSuccess: () => queryClient.refetchQueries(queryKeys.tableData(table)),
+    onSuccess: () =>
+      queryClient.refetchQueries({ queryKey: queryKeys.tableData(table) }),
   });
 };
 
@@ -118,7 +122,8 @@ export const useUpdateRowMutation = (table: string) => {
       id: Parameters<typeof patchUpdateRow>[1];
       data: Parameters<typeof patchUpdateRow>[2];
     }) => await patchUpdateRow(table, id, data),
-    onSuccess: () => queryClient.refetchQueries(queryKeys.tableData(table)),
+    onSuccess: () =>
+      queryClient.refetchQueries({ queryKey: queryKeys.tableData(table) }),
   });
 };
 
@@ -129,6 +134,7 @@ export const useDeleteRowMutation = (table: string) => {
     mutationKey: ['customRow', 'delete'],
     mutationFn: async (id: Parameters<typeof deleteRow>[1]) =>
       await deleteRow(table, id),
-    onSuccess: () => queryClient.refetchQueries(queryKeys.tableData(table)),
+    onSuccess: () =>
+      queryClient.refetchQueries({ queryKey: queryKeys.tableData(table) }),
   });
 };

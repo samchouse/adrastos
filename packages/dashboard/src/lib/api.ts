@@ -44,7 +44,7 @@ interface SignupData {
 
 export const postSignup = async (data: SignupData) => {
   const res = await client.post('/auth/signup', data);
-  return res.data;
+  return res.data as unknown;
 };
 
 interface LoginData {
@@ -62,7 +62,7 @@ export const postLogin = async (data: LoginData) => {
 
 export const getLogout = async () => {
   const res = await client.get('/auth/logout');
-  return res.data;
+  return res.data as unknown;
 };
 
 export const getTokenRefresh = async () => {
@@ -135,7 +135,7 @@ interface ConfigSmtpData {
 
 export const postConfigSmtp = async (data: ConfigSmtpData | null) => {
   const res = await client.post('/config/smtp', data);
-  return res.data;
+  return res.data as unknown;
 };
 
 interface ConfigOAuth2Data {
@@ -163,12 +163,12 @@ interface ConfigOAuth2Data {
 
 export const postConfigOAuth2 = async (data: ConfigOAuth2Data) => {
   const res = await client.post('/config/oauth2', data);
-  return res.data;
+  return res.data as unknown;
 };
 
 export const postResendVerification = async () => {
   const res = await client.post('/auth/resend-verification');
-  return res.data;
+  return res.data as unknown;
 };
 
 export interface Table {

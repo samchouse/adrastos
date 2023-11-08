@@ -39,11 +39,11 @@ const createFormSchema = (fields: Field[]) =>
         switch (f.type) {
           case 'string': {
             let type = z.string();
-            if (f.isRequired) type = type.nonempty();
             if (f.maxLength) type = type.max(f.maxLength);
             if (f.minLength) type = type.min(f.minLength);
 
             finalType = type;
+            if (!f.isRequired) finalType = finalType.optional();
             break;
           }
           case 'number': {
@@ -112,13 +112,15 @@ export const RowSheet: React.FC<{
         <Form {...form}>
           <form
             className="flex h-full flex-col justify-between"
-            onSubmit={form.handleSubmit(async (values) => {
-              if (row) await updateMutateAsync({ id: row.id, data: values });
-              else await createMutateAsync(values);
+            onSubmit={
+              void form.handleSubmit(async (values) => {
+                if (row) await updateMutateAsync({ id: row.id, data: values });
+                else await createMutateAsync(values);
 
-              form.reset();
-              setIsOpen(false);
-            })}
+                form.reset();
+                setIsOpen(false);
+              })
+            }
           >
             <div>
               <SheetHeader>
@@ -176,10 +178,12 @@ export const RowSheet: React.FC<{
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={async () => {
-                    await deleteMutateAsync(row.id);
-                    setIsOpen(false);
-                  }}
+                  onClick={() =>
+                    void (async () => {
+                      await deleteMutateAsync(row.id);
+                      setIsOpen(false);
+                    })()
+                  }
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete

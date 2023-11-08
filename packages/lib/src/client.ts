@@ -19,7 +19,7 @@ export class Client {
     return new URL(path, this.baseUrl);
   }
 
-  async request({ path, method, options }: Request) {
+  async request<T>({ path, method, options }: Request): Promise<T> {
     const res = await fetch(this.buildUrl(path), {
       method,
       ...options,
@@ -27,6 +27,6 @@ export class Client {
 
     if (!res.ok) throw new ResponseError('Something went wrong');
 
-    return res.json();
+    return res.json() as Promise<T>;
   }
 }

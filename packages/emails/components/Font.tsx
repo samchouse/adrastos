@@ -33,7 +33,7 @@ export const Font: React.FC<FontProps> = ({
           ${fontFaceStyles.join('\n')}
 
           * {
-              font-family: ${fonts.map((font) => font.family)}, ${
+              font-family: ${fonts.map((font) => font.family).join(', ')}, ${
                 Array.isArray(fallbackFontFamily)
                   ? fallbackFontFamily.join(', ')
                   : fallbackFontFamily
