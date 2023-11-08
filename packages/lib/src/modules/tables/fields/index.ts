@@ -11,7 +11,14 @@ import {
   TString,
   TUrl,
 } from './fields';
-import { TBase, TOptional, TUnique } from './shared';
+import { TOptional, TUnique } from './shared';
+
+export * from './fields';
+export * from './shared';
+
+export type TInfer<T> = T extends Table<infer _>
+  ? z.infer<ReturnType<T['schema']>>
+  : never;
 
 type RelationBuilderReturn<T extends { target: 'single' | 'many' }> =
   T['target'] extends 'single' ? TRelationSingle : TRelationMany;
@@ -40,7 +47,23 @@ type ZExtend<T> = T extends TOptional<infer U>
   ? z.ZodArray<z.ZodString, 'many'>
   : never;
 
-export class Table<T extends Record<string, TBase>> {
+type TT =
+  | TString
+  | TNumber
+  | TBoolean
+  | TDate
+  | TEmail
+  | TUrl
+  | TSelect
+  | TRelationSingle
+  | TRelationMany;
+
+export type TTE =
+  | TT
+  | TOptional<Exclude<TT, TBoolean>>
+  | TUnique<Exclude<TT, TBoolean>>;
+
+export class Table<T extends Record<string, TTE>> {
   constructor(private shape: T) {}
 
   schema(): z.ZodObject<{
@@ -49,15 +72,11 @@ export class Table<T extends Record<string, TBase>> {
     return z.object(
       Object.keys(this.shape).reduce(
         (acc, key) => {
-          const setModifiers = (type: z.ZodTypeAny) => {
-            if (this.shape[key].modifiers.includes('optional'))
-              type = type.optional();
-
-            return type;
-          };
-
-          switch (this.shape[key].type) {
+          const field = this.shape[key];
+          if (field.type === 'email') field.values;
+          switch (field.type) {
             case 'string':
+            case 'relationSingle':
               acc[key] = z.string();
               break;
             case 'number':
@@ -76,14 +95,14 @@ export class Table<T extends Record<string, TBase>> {
               acc[key] = z.string().url();
               break;
             case 'select':
+            case 'relationMany':
               acc[key] = z.array(z.string());
-              break;
-            case 'relation':
-              acc[key] = z.string();
               break;
           }
 
-          acc[key] = setModifiers(acc[key]);
+          if (field.modifiers.includes('optional'))
+            acc[key] = acc[key].optional();
+
           return acc;
         },
         {} as Record<string, z.ZodTypeAny>,
@@ -130,16 +149,7 @@ export class TBuilder {
   }
 }
 
-const table = <T extends Record<string, TBase>>(
+export const table = <T extends Record<string, TTE>>(
   name: string,
   shape: (builder: TBuilder) => T,
 ): Table<T> => new Table(shape(new TBuilder()));
-
-const tbl = table('recipes', (b) => ({
-  name: b.string().maxLength(20).minLength(20).unique().optional(),
-  ingredients: b.number().max(10).min(1).optional(),
-  sdf: b.boolean(),
-  asdsdfs: b.relation({ table: 'sdf', target: 'many' }).maxSelected(10),
-}));
-
-console.log(tbl.schema().parse({}));

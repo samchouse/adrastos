@@ -8,18 +8,21 @@ export abstract class TBase {
       | 'email'
       | 'url'
       | 'select'
-      | 'relation',
-    public modifiers: string[],
+      | 'relationSingle'
+      | 'relationMany',
+    public modifiers: readonly string[],
     public values: Record<string, unknown>,
   ) {}
 }
 
 export class TExtended extends TBase {
-  optional(): TOptional<this> {
+  public static modifiers = ['optional', 'unique'] as const;
+
+  optional() {
     return new TOptional(this.type, this.modifiers, this.values);
   }
 
-  unique(): TUnique<this> {
+  unique() {
     return new TUnique(this.type, this.modifiers, this.values);
   }
 }

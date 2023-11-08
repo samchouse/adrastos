@@ -1,7 +1,7 @@
 import { TBase, TExtended } from './shared';
 
 export class TString extends TExtended {
-  private _name = 'string';
+  public static type = 'string' as const;
 
   constructor(
     public values: {
@@ -10,61 +10,62 @@ export class TString extends TExtended {
       pattern?: RegExp;
     } = {},
   ) {
-    super('string', [], values);
+    super(TString.type, [], values);
   }
 
-  maxLength(max: number): TString {
+  maxLength(max: number) {
     this.values.maxLength = max;
     return this;
   }
 
-  minLength(min: number): TString {
+  minLength(min: number) {
     this.values.minLength = min;
     return this;
   }
 
-  pattern(pattern: RegExp): TString {
+  pattern(pattern: RegExp) {
     this.values.pattern = pattern;
     return this;
   }
 }
 
 export class TNumber extends TExtended {
-  private _name = 'string';
+  public static type = 'number' as const;
 
   constructor(public values: { max?: number; min?: number } = {}) {
-    super('string', [], values);
+    super(TNumber.type, [], values);
   }
 
-  max(max: number): TNumber {
+  max(max: number) {
     this.values.max = max;
     return this;
   }
 
-  min(min: number): TNumber {
+  min(min: number) {
     this.values.min = min;
     return this;
   }
 }
 
 export class TBoolean extends TBase {
-  private _name = 'boolean';
+  public static type = 'boolean' as const;
+  public static modifiers = [] as const;
 
   constructor() {
-    super('boolean', [], {});
+    super(TBoolean.type, [], {});
   }
 }
 
 export class TDate extends TExtended {
-  private _name = 'date';
+  public static type = 'date' as const;
 
   constructor() {
-    super('date', [], {});
+    super(TDate.type, [], {});
   }
 }
 
 export class TEmail extends TExtended {
-  private _name = 'email';
+  public static type = 'email' as const;
 
   constructor(
     public values: { except: string[]; only: string[] } = {
@@ -72,22 +73,22 @@ export class TEmail extends TExtended {
       only: [],
     },
   ) {
-    super('email', [], values);
+    super(TEmail.type, [], values);
   }
 
-  except(emails: string[]): TEmail {
+  except(emails: string[]) {
     this.values.except = emails;
     return this;
   }
 
-  only(emails: string[]): TEmail {
+  only(emails: string[]) {
     this.values.only = emails;
     return this;
   }
 }
 
 export class TUrl extends TExtended {
-  private _name = 'url';
+  public static type = 'url' as const;
 
   constructor(
     public values: { except: string[]; only: string[] } = {
@@ -95,22 +96,22 @@ export class TUrl extends TExtended {
       only: [],
     },
   ) {
-    super('url', [], values);
+    super(TUrl.type, [], values);
   }
 
-  except(urls: string[]): TUrl {
+  except(urls: string[]) {
     this.values.except = urls;
     return this;
   }
 
-  only(urls: string[]): TUrl {
+  only(urls: string[]) {
     this.values.only = urls;
     return this;
   }
 }
 
 export class TSelect extends TExtended {
-  private _name = 'select';
+  public static type = 'select' as const;
 
   constructor(
     public values: {
@@ -119,15 +120,15 @@ export class TSelect extends TExtended {
       minSelected?: number;
     },
   ) {
-    super('select', [], values);
+    super(TSelect.type, [], values);
   }
 
-  maxSelected(max: number): TSelect {
+  maxSelected(max: number) {
     this.values.maxSelected = max;
     return this;
   }
 
-  minSelected(min: number): TSelect {
+  minSelected(min: number) {
     this.values.minSelected = min;
     return this;
   }
@@ -139,15 +140,15 @@ interface TRelationValues extends Record<string, unknown> {
 }
 
 export class TRelationSingle extends TExtended {
-  private _name = 'relationSingle';
+  public static type = 'relationSingle' as const;
 
   constructor(public values: TRelationValues) {
-    super('relation', ['single'], values);
+    super(TRelationSingle.type, [], values);
   }
 }
 
 export class TRelationMany extends TExtended {
-  private _name = 'relationMany';
+  public static type = 'relationMany' as const;
 
   constructor(
     public values: TRelationValues & {
@@ -155,15 +156,15 @@ export class TRelationMany extends TExtended {
       maxSelected?: number;
     },
   ) {
-    super('relation', ['multi'], values);
+    super(TRelationMany.type, [], values);
   }
 
-  minSelected(min: number): TRelationMany {
+  minSelected(min: number) {
     this.values.minSelected = min;
     return this;
   }
 
-  maxSelected(max: number): TRelationMany {
+  maxSelected(max: number) {
     this.values.maxSelected = max;
     return this;
   }
