@@ -9,13 +9,11 @@ import {
   UpdateField,
   UrlField,
 } from '../../types';
-import { Table, TFieldWithModifiers } from '../tables/fields';
+import { Table, TFWithModifiers } from '../tables/fields';
 import { BaseModule } from '../util';
 
 export class TablesModule extends BaseModule {
-  public create<T extends Record<string, TFieldWithModifiers>>(
-    table: Table<T>,
-  ) {
+  public create<T extends Record<string, TFWithModifiers>>(table: Table<T>) {
     return this.client.request({
       path: '/tables/create',
       method: 'POST',
