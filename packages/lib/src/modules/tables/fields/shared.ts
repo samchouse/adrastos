@@ -1,4 +1,4 @@
-export abstract class TBase {
+export abstract class TFBase {
   constructor(
     public type:
       | 'string'
@@ -10,35 +10,39 @@ export abstract class TBase {
       | 'select'
       | 'relationSingle'
       | 'relationMany',
-    public modifiers: readonly string[],
-    public values: Record<string, unknown>,
   ) {}
 }
 
-export class TExtended extends TBase {
-  public static modifiers = ['optional', 'unique'] as const;
+export class TFExtended extends TFBase {
+  constructor(
+    public type: TFBase['type'],
+    public values: Record<string, unknown> = {},
+    public modifiers: readonly ('optional' | 'unique')[] = [],
+  ) {
+    super(type);
+  }
 
   optional() {
-    return new TOptional(this.type, this.modifiers, this.values);
+    return new TFOptional(this.type, this.values, this.modifiers);
   }
 
   unique() {
-    return new TUnique(this.type, this.modifiers, this.values);
+    return new TFUnique(this.type, this.values, this.modifiers);
   }
 }
 
-export class TOptional<T extends TExtended> extends TExtended {
+export class TFOptional<T extends TFExtended> extends TFExtended {
   private _name = 'optional';
 
-  constructor(type: T['type'], modifiers: T['modifiers'], values: T['values']) {
-    super(type, [...modifiers, 'optional'], values);
+  constructor(type: T['type'], values: T['values'], modifiers: T['modifiers']) {
+    super(type, values, [...modifiers, 'optional']);
   }
 }
 
-export class TUnique<T extends TExtended> extends TExtended {
+export class TFUnique<T extends TFExtended> extends TFExtended {
   private _name = 'unique';
 
-  constructor(type: T['type'], modifiers: T['modifiers'], values: T['values']) {
-    super(type, [...modifiers, 'unique'], values);
+  constructor(type: T['type'], values: T['values'], modifiers: T['modifiers']) {
+    super(type, values, [...modifiers, 'unique']);
   }
 }

@@ -1,7 +1,7 @@
-import { TBase, TExtended } from './shared';
+import { TFBase, TFExtended } from './shared';
 
-export class TString extends TExtended {
-  public static type = 'string' as const;
+export class TFString extends TFExtended {
+  public type = 'string' as const;
 
   constructor(
     public values: {
@@ -10,7 +10,7 @@ export class TString extends TExtended {
       pattern?: RegExp;
     } = {},
   ) {
-    super(TString.type, [], values);
+    super('string' satisfies TFString['type'], values);
   }
 
   maxLength(max: number) {
@@ -29,11 +29,11 @@ export class TString extends TExtended {
   }
 }
 
-export class TNumber extends TExtended {
-  public static type = 'number' as const;
+export class TFNumber extends TFExtended {
+  public type = 'number' as const;
 
   constructor(public values: { max?: number; min?: number } = {}) {
-    super(TNumber.type, [], values);
+    super('number' satisfies TFNumber['type'], values);
   }
 
   max(max: number) {
@@ -47,25 +47,25 @@ export class TNumber extends TExtended {
   }
 }
 
-export class TBoolean extends TBase {
-  public static type = 'boolean' as const;
+export class TFBoolean extends TFBase {
+  public type = 'boolean' as const;
   public static modifiers = [] as const;
 
   constructor() {
-    super(TBoolean.type, [], {});
+    super('boolean' satisfies TFBoolean['type']);
   }
 }
 
-export class TDate extends TExtended {
-  public static type = 'date' as const;
+export class TFDate extends TFExtended {
+  public type = 'date' as const;
 
   constructor() {
-    super(TDate.type, [], {});
+    super('date' satisfies TFDate['type']);
   }
 }
 
-export class TEmail extends TExtended {
-  public static type = 'email' as const;
+export class TFEmail extends TFExtended {
+  public type = 'email' as const;
 
   constructor(
     public values: { except: string[]; only: string[] } = {
@@ -73,7 +73,7 @@ export class TEmail extends TExtended {
       only: [],
     },
   ) {
-    super(TEmail.type, [], values);
+    super('email' satisfies TFEmail['type'], values);
   }
 
   except(emails: string[]) {
@@ -87,8 +87,8 @@ export class TEmail extends TExtended {
   }
 }
 
-export class TUrl extends TExtended {
-  public static type = 'url' as const;
+export class TFUrl extends TFExtended {
+  public type = 'url' as const;
 
   constructor(
     public values: { except: string[]; only: string[] } = {
@@ -96,7 +96,7 @@ export class TUrl extends TExtended {
       only: [],
     },
   ) {
-    super(TUrl.type, [], values);
+    super('url' satisfies TFUrl['type'], values);
   }
 
   except(urls: string[]) {
@@ -110,8 +110,8 @@ export class TUrl extends TExtended {
   }
 }
 
-export class TSelect extends TExtended {
-  public static type = 'select' as const;
+export class TFSelect extends TFExtended {
+  public type = 'select' as const;
 
   constructor(
     public values: {
@@ -120,7 +120,7 @@ export class TSelect extends TExtended {
       minSelected?: number;
     },
   ) {
-    super(TSelect.type, [], values);
+    super('select' satisfies TFSelect['type'], values);
   }
 
   maxSelected(max: number) {
@@ -134,29 +134,39 @@ export class TSelect extends TExtended {
   }
 }
 
-interface TRelationValues extends Record<string, unknown> {
+interface TFRelationValues extends Record<string, unknown> {
   table: string;
   cascadeDelete?: boolean;
 }
 
-export class TRelationSingle extends TExtended {
-  public static type = 'relationSingle' as const;
+export class TFRelationSingle extends TFExtended {
+  public type = 'relationSingle' as const;
 
-  constructor(public values: TRelationValues) {
-    super(TRelationSingle.type, [], values);
+  constructor(public values: TFRelationValues) {
+    super('relationSingle' satisfies TFRelationSingle['type'], values);
+  }
+
+  cascadeDelete() {
+    this.values.cascadeDelete = true;
+    return this;
   }
 }
 
-export class TRelationMany extends TExtended {
-  public static type = 'relationMany' as const;
+export class TFRelationMany extends TFExtended {
+  public type = 'relationMany' as const;
 
   constructor(
-    public values: TRelationValues & {
+    public values: TFRelationValues & {
       minSelected?: number;
       maxSelected?: number;
     },
   ) {
-    super(TRelationMany.type, [], values);
+    super('relationMany' satisfies TFRelationMany['type'], values);
+  }
+
+  cascadeDelete() {
+    this.values.cascadeDelete = true;
+    return this;
   }
 
   minSelected(min: number) {

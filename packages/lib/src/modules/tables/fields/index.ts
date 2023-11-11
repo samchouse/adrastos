@@ -1,70 +1,162 @@
 import { z } from 'zod';
 
+import { Field } from '../../../types';
 import {
-  TBoolean,
-  TDate,
-  TEmail,
-  TNumber,
-  TRelationMany,
-  TRelationSingle,
-  TSelect,
-  TString,
-  TUrl,
+  TFBoolean,
+  TFDate,
+  TFEmail,
+  TFNumber,
+  TFRelationMany,
+  TFRelationSingle,
+  TFSelect,
+  TFString,
+  TFUrl,
 } from './fields';
-import { TOptional, TUnique } from './shared';
+import { TFOptional, TFUnique } from './shared';
 
-export * from './fields';
-export * from './shared';
+type ZExtend<T> = T extends TFOptional<infer U>
+  ? z.ZodOptional<ZExtend<U>>
+  : T extends TFUnique<infer U>
+  ? ZExtend<U>
+  : T extends TFString
+  ? z.ZodString
+  : T extends TFNumber
+  ? z.ZodNumber
+  : T extends TFBoolean
+  ? z.ZodBoolean
+  : T extends TFDate
+  ? z.ZodDate
+  : T extends TFEmail
+  ? z.ZodString
+  : T extends TFUrl
+  ? z.ZodString
+  : T extends TFSelect
+  ? z.ZodArray<z.ZodString, 'many'>
+  : T extends TFRelationSingle
+  ? z.ZodString
+  : T extends TFRelationMany
+  ? z.ZodArray<z.ZodString, 'many'>
+  : never;
+
+type TField =
+  | TFString
+  | TFNumber
+  | TFBoolean
+  | TFDate
+  | TFEmail
+  | TFUrl
+  | TFSelect
+  | TFRelationSingle
+  | TFRelationMany;
+
+export type TFWithModifiers =
+  | TField
+  | TFOptional<Exclude<TField, TFBoolean>>
+  | TFUnique<Exclude<TField, TFBoolean>>;
 
 export type TInfer<T> = T extends Table<infer _>
   ? z.infer<ReturnType<T['schema']>>
   : never;
 
-type RelationBuilderReturn<T extends { target: 'single' | 'many' }> =
-  T['target'] extends 'single' ? TRelationSingle : TRelationMany;
+export class Table<T extends Record<string, TFWithModifiers>> {
+  constructor(
+    private name: string,
+    private shape: T,
+  ) {}
 
-type ZExtend<T> = T extends TOptional<infer U>
-  ? z.ZodOptional<ZExtend<U>>
-  : T extends TUnique<infer U>
-  ? ZExtend<U>
-  : T extends TString
-  ? z.ZodString
-  : T extends TNumber
-  ? z.ZodNumber
-  : T extends TBoolean
-  ? z.ZodBoolean
-  : T extends TDate
-  ? z.ZodDate
-  : T extends TEmail
-  ? z.ZodString
-  : T extends TUrl
-  ? z.ZodString
-  : T extends TSelect
-  ? z.ZodArray<z.ZodString, 'many'>
-  : T extends TRelationSingle
-  ? z.ZodString
-  : T extends TRelationMany
-  ? z.ZodArray<z.ZodString, 'many'>
-  : never;
+  requestBody() {
+    return Object.keys(this.shape).reduce(
+      (acc, key) => {
+        const field = this.shape[key];
+        switch (field.type) {
+          case 'string':
+            acc.fields.push({
+              name: key,
+              type: 'string',
+              minLength: field.values.minLength as number,
+              maxLength: field.values.maxLength as number,
+              isUnique: field.modifiers.includes('unique'),
+              isRequired: !field.modifiers.includes('optional'),
+            });
+            break;
+          case 'number':
+            acc.fields.push({
+              name: key,
+              type: 'number',
+              min: field.values.min as number,
+              max: field.values.max as number,
+              isUnique: field.modifiers.includes('unique'),
+              isRequired: !field.modifiers.includes('optional'),
+            });
+            break;
+          case 'boolean':
+            acc.fields.push({
+              name: key,
+              type: 'boolean',
+            });
+            break;
+          case 'date':
+            acc.fields.push({
+              name: key,
+              type: 'date',
+              isUnique: field.modifiers.includes('unique'),
+              isRequired: !field.modifiers.includes('optional'),
+            });
+            break;
+          case 'email':
+            acc.fields.push({
+              name: key,
+              type: 'email',
+              except: field.values.except as string[],
+              only: field.values.only as string[],
+              isUnique: field.modifiers.includes('unique'),
+              isRequired: !field.modifiers.includes('optional'),
+            });
+            break;
+          case 'url':
+            acc.fields.push({
+              name: key,
+              type: 'url',
+              except: field.values.except as string[],
+              only: field.values.only as string[],
+              isUnique: field.modifiers.includes('unique'),
+              isRequired: !field.modifiers.includes('optional'),
+            });
+            break;
+          case 'select':
+            acc.fields.push({
+              name: key,
+              type: 'select',
+              options: field.values.options as string[],
+              minSelected: field.values.minSelected as number,
+              maxSelected: field.values.maxSelected as number,
+              isUnique: field.modifiers.includes('unique'),
+              isRequired: !field.modifiers.includes('optional'),
+            });
+            break;
+          case 'relationSingle':
+          case 'relationMany':
+            acc.fields.push({
+              name: key,
+              type: 'relation',
+              table: field.values.table as string,
+              cascadeDelete: field.values.cascadeDelete as boolean,
+              target: field.type === 'relationSingle' ? 'single' : 'many',
+              isRequired: !field.modifiers.includes('optional'),
+              isUnique: field.modifiers.includes('unique'),
+              ...(field.type === 'relationSingle' && {
+                maxSelected: field.values.maxSelected as number,
+                minSelected: field.values.minSelected as number,
+              }),
+            });
+            break;
+        }
 
-type TT =
-  | TString
-  | TNumber
-  | TBoolean
-  | TDate
-  | TEmail
-  | TUrl
-  | TSelect
-  | TRelationSingle
-  | TRelationMany;
-
-export type TTE =
-  | TT
-  | TOptional<Exclude<TT, TBoolean>>
-  | TUnique<Exclude<TT, TBoolean>>;
-
-export class Table<T extends Record<string, TTE>> {
-  constructor(private shape: T) {}
+        return acc;
+      },
+      { name: this.name, fields: [] as Field[] },
+    );
+  }
 
   schema(): z.ZodObject<{
     [Key in keyof T]: ZExtend<T[Key]>;
@@ -73,7 +165,6 @@ export class Table<T extends Record<string, TTE>> {
       Object.keys(this.shape).reduce(
         (acc, key) => {
           const field = this.shape[key];
-          if (field.type === 'email') field.values;
           switch (field.type) {
             case 'string':
             case 'relationSingle':
@@ -100,7 +191,7 @@ export class Table<T extends Record<string, TTE>> {
               break;
           }
 
-          if (field.modifiers.includes('optional'))
+          if (field.type !== 'boolean' && field.modifiers.includes('optional'))
             acc[key] = acc[key].optional();
 
           return acc;
@@ -114,42 +205,42 @@ export class Table<T extends Record<string, TTE>> {
 }
 
 export class TBuilder {
-  string(): TString {
-    return new TString();
+  string() {
+    return new TFString();
   }
-  number(): TNumber {
-    return new TNumber();
+  number() {
+    return new TFNumber();
   }
-  boolean(): TBoolean {
-    return new TBoolean();
+  boolean() {
+    return new TFBoolean();
   }
-  date(): TDate {
-    return new TDate();
+  date() {
+    return new TFDate();
   }
-  email(): TEmail {
-    return new TEmail();
+  email() {
+    return new TFEmail();
   }
-  url(): TUrl {
-    return new TUrl();
+  url() {
+    return new TFUrl();
   }
-  select({ options }: { options: string[] }): TSelect {
-    return new TSelect({ options });
+  select({ options }: { options: string[] }) {
+    return new TFSelect({ options });
   }
   relation<T extends { target: 'single' | 'many' }>({
     table,
     target,
   }: {
     table: string;
-  } & T): RelationBuilderReturn<T> {
+  } & T) {
     return (
       target === 'single'
-        ? new TRelationSingle({ table })
-        : new TRelationMany({ table })
-    ) as RelationBuilderReturn<T>;
+        ? new TFRelationSingle({ table, cascadeDelete: false })
+        : new TFRelationMany({ table, cascadeDelete: false })
+    ) as T['target'] extends 'single' ? TFRelationSingle : TFRelationMany;
   }
 }
 
-export const table = <T extends Record<string, TTE>>(
+export const table = <T extends Record<string, TFWithModifiers>>(
   name: string,
   shape: (builder: TBuilder) => T,
-): Table<T> => new Table(shape(new TBuilder()));
+): Table<T> => new Table(name, shape(new TBuilder()));

@@ -9,7 +9,7 @@
     }
   },
   "parserOptions": {
-    "project": ["./tsconfig.json", "./packages/**/tsconfig.json"]
+    "project": ["./packages/**/tsconfig.json"]
   },
   "extends": [
     "eslint:recommended",
@@ -21,6 +21,7 @@
   "rules": {
     "arrow-body-style": ["error"],
     "prefer-arrow-callback": ["error"],
+    "@next/next/no-html-link-for-pages": ["off"],
     "@typescript-eslint/no-unused-vars": [
       "error",
       { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
