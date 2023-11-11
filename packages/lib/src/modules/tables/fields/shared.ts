@@ -13,36 +13,48 @@ export abstract class TFBase {
   ) {}
 }
 
-export class TFExtended extends TFBase {
+export class TFExtended<T extends Record<string, unknown>> extends TFBase {
   constructor(
     public type: TFBase['type'],
-    public values: Record<string, unknown> = {},
+    public values: T,
     public modifiers: readonly ('optional' | 'unique')[] = [],
   ) {
     super(type);
   }
 
   optional() {
-    return new TFOptional(this.type, this.values, this.modifiers);
+    return new TFOptional<this>(this.type, this.values, this.modifiers);
   }
 
   unique() {
-    return new TFUnique(this.type, this.values, this.modifiers);
+    return new TFUnique<this>(this.type, this.values, this.modifiers);
   }
 }
 
-export class TFOptional<T extends TFExtended> extends TFExtended {
+export class TFOptional<
+  U extends TFExtended<Record<string, unknown>>,
+> extends TFExtended<U['values']> {
   private _name = 'optional';
 
-  constructor(type: T['type'], values: T['values'], modifiers: T['modifiers']) {
+  constructor(
+    public type: U['type'],
+    values: U['values'],
+    modifiers: U['modifiers'],
+  ) {
     super(type, values, [...modifiers, 'optional']);
   }
 }
 
-export class TFUnique<T extends TFExtended> extends TFExtended {
+export class TFUnique<
+  U extends TFExtended<Record<string, unknown>>,
+> extends TFExtended<U['values']> {
   private _name = 'unique';
 
-  constructor(type: T['type'], values: T['values'], modifiers: T['modifiers']) {
+  constructor(
+    public type: U['type'],
+    values: U['values'],
+    modifiers: U['modifiers'],
+  ) {
     super(type, values, [...modifiers, 'unique']);
   }
 }

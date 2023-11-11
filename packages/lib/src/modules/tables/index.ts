@@ -9,8 +9,14 @@ import {
   UpdateField,
   UrlField,
 } from '../../types';
-import { Table, TFWithModifiers } from '../tables/fields';
 import { BaseModule } from '../util';
+import { Table, table, TFWithModifiers } from './fields';
+
+const t = table('test', (b) => ({
+  sdf: b.string().optional().unique(),
+}));
+
+t.schema();
 
 export class TablesModule extends BaseModule {
   public create<T extends Record<string, TFWithModifiers>>(table: Table<T>) {

@@ -1,6 +1,10 @@
 import { TFBase, TFExtended } from './shared';
 
-export class TFString extends TFExtended {
+export class TFString extends TFExtended<{
+  maxLength?: number;
+  minLength?: number;
+  pattern?: RegExp;
+}> {
   public type = 'string' as const;
 
   constructor(
@@ -29,7 +33,7 @@ export class TFString extends TFExtended {
   }
 }
 
-export class TFNumber extends TFExtended {
+export class TFNumber extends TFExtended<{ max?: number; min?: number }> {
   public type = 'number' as const;
 
   constructor(public values: { max?: number; min?: number } = {}) {
@@ -49,22 +53,21 @@ export class TFNumber extends TFExtended {
 
 export class TFBoolean extends TFBase {
   public type = 'boolean' as const;
-  public static modifiers = [] as const;
 
   constructor() {
     super('boolean' satisfies TFBoolean['type']);
   }
 }
 
-export class TFDate extends TFExtended {
+export class TFDate extends TFExtended<Record<string, never>> {
   public type = 'date' as const;
 
   constructor() {
-    super('date' satisfies TFDate['type']);
+    super('date' satisfies TFDate['type'], {});
   }
 }
 
-export class TFEmail extends TFExtended {
+export class TFEmail extends TFExtended<{ except: string[]; only: string[] }> {
   public type = 'email' as const;
 
   constructor(
@@ -87,7 +90,7 @@ export class TFEmail extends TFExtended {
   }
 }
 
-export class TFUrl extends TFExtended {
+export class TFUrl extends TFExtended<{ except: string[]; only: string[] }> {
   public type = 'url' as const;
 
   constructor(
@@ -110,7 +113,11 @@ export class TFUrl extends TFExtended {
   }
 }
 
-export class TFSelect extends TFExtended {
+export class TFSelect extends TFExtended<{
+  options: string[];
+  maxSelected?: number;
+  minSelected?: number;
+}> {
   public type = 'select' as const;
 
   constructor(
@@ -136,10 +143,10 @@ export class TFSelect extends TFExtended {
 
 interface TFRelationValues extends Record<string, unknown> {
   table: string;
-  cascadeDelete?: boolean;
+  cascadeDelete: boolean;
 }
 
-export class TFRelationSingle extends TFExtended {
+export class TFRelationSingle extends TFExtended<TFRelationValues> {
   public type = 'relationSingle' as const;
 
   constructor(public values: TFRelationValues) {
@@ -152,7 +159,12 @@ export class TFRelationSingle extends TFExtended {
   }
 }
 
-export class TFRelationMany extends TFExtended {
+export class TFRelationMany extends TFExtended<
+  TFRelationValues & {
+    minSelected?: number;
+    maxSelected?: number;
+  }
+> {
   public type = 'relationMany' as const;
 
   constructor(

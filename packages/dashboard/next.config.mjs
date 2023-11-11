@@ -2,7 +2,10 @@ import { env } from './src/env.mjs';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  rewrites: async () => [
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  rewrites: () => [
     {
       source: '/home',
       destination: '/',

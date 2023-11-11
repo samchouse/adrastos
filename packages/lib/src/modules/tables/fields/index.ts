@@ -49,10 +49,26 @@ type TField =
   | TFRelationSingle
   | TFRelationMany;
 
+type TFOptionalWrapper<
+  T extends
+    | Exclude<TField, TFBoolean>
+    | TFUniqueWrapper<Exclude<TField, TFBoolean>>,
+> = T extends unknown ? TFOptional<T> : never;
+
+type TFUniqueWrapper<
+  T extends
+    | Exclude<TField, TFBoolean>
+    | TFOptionalWrapper<Exclude<TField, TFBoolean>>,
+> = T extends unknown ? TFUnique<T> : never;
+
 export type TFWithModifiers =
   | TField
-  | TFOptional<Exclude<TField, TFBoolean>>
-  | TFUnique<Exclude<TField, TFBoolean>>;
+  | TFOptionalWrapper<
+      Exclude<TField, TFBoolean> | TFUniqueWrapper<Exclude<TField, TFBoolean>>
+    >
+  | TFUniqueWrapper<
+      Exclude<TField, TFBoolean> | TFOptionalWrapper<Exclude<TField, TFBoolean>>
+    >;
 
 export type TInfer<T> = T extends Table<infer _>
   ? z.infer<ReturnType<T['schema']>>
@@ -73,8 +89,9 @@ export class Table<T extends Record<string, TFWithModifiers>> {
             acc.fields.push({
               name: key,
               type: 'string',
-              minLength: field.values.minLength as number,
-              maxLength: field.values.maxLength as number,
+              minLength: field.values.minLength,
+              maxLength: field.values.maxLength,
+              pattern: field.values.pattern?.toString(),
               isUnique: field.modifiers.includes('unique'),
               isRequired: !field.modifiers.includes('optional'),
             });
@@ -83,8 +100,8 @@ export class Table<T extends Record<string, TFWithModifiers>> {
             acc.fields.push({
               name: key,
               type: 'number',
-              min: field.values.min as number,
-              max: field.values.max as number,
+              min: field.values.min,
+              max: field.values.max,
               isUnique: field.modifiers.includes('unique'),
               isRequired: !field.modifiers.includes('optional'),
             });
@@ -107,8 +124,8 @@ export class Table<T extends Record<string, TFWithModifiers>> {
             acc.fields.push({
               name: key,
               type: 'email',
-              except: field.values.except as string[],
-              only: field.values.only as string[],
+              only: field.values.only,
+              except: field.values.except,
               isUnique: field.modifiers.includes('unique'),
               isRequired: !field.modifiers.includes('optional'),
             });
@@ -117,8 +134,8 @@ export class Table<T extends Record<string, TFWithModifiers>> {
             acc.fields.push({
               name: key,
               type: 'url',
-              except: field.values.except as string[],
-              only: field.values.only as string[],
+              only: field.values.only,
+              except: field.values.except,
               isUnique: field.modifiers.includes('unique'),
               isRequired: !field.modifiers.includes('optional'),
             });
@@ -127,27 +144,35 @@ export class Table<T extends Record<string, TFWithModifiers>> {
             acc.fields.push({
               name: key,
               type: 'select',
-              options: field.values.options as string[],
-              minSelected: field.values.minSelected as number,
-              maxSelected: field.values.maxSelected as number,
+              options: field.values.options,
+              minSelected: field.values.minSelected,
+              maxSelected: field.values.maxSelected,
               isUnique: field.modifiers.includes('unique'),
               isRequired: !field.modifiers.includes('optional'),
             });
             break;
           case 'relationSingle':
-          case 'relationMany':
             acc.fields.push({
               name: key,
               type: 'relation',
-              table: field.values.table as string,
-              cascadeDelete: field.values.cascadeDelete as boolean,
-              target: field.type === 'relationSingle' ? 'single' : 'many',
-              isRequired: !field.modifiers.includes('optional'),
+              target: 'single',
+              table: field.values.table,
+              cascadeDelete: field.values.cascadeDelete,
               isUnique: field.modifiers.includes('unique'),
-              ...(field.type === 'relationSingle' && {
-                maxSelected: field.values.maxSelected as number,
-                minSelected: field.values.minSelected as number,
-              }),
+              isRequired: !field.modifiers.includes('optional'),
+            });
+            break;
+          case 'relationMany':
+            acc.fields.push({
+              name: key,
+              target: 'many',
+              type: 'relation',
+              table: field.values.table,
+              maxSelected: field.values.maxSelected,
+              minSelected: field.values.minSelected,
+              cascadeDelete: field.values.cascadeDelete,
+              isUnique: field.modifiers.includes('unique'),
+              isRequired: !field.modifiers.includes('optional'),
             });
             break;
         }
