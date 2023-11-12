@@ -10,14 +10,14 @@ import { clientAtom } from '~/lib/state';
 export const Auth: React.FC<React.PropsWithChildren> = ({ children }) => {
   const client = useAtomValue(clientAtom);
 
-  const { data } = useTokenRefreshQuery();
+  const { data: accessToken } = useTokenRefreshQuery();
 
   useEffect(() => {
-    if (data?.accessToken) {
-      oldClient.defaults.headers.common.Authorization = `Bearer ${data.accessToken}`;
-      client.authToken = data.accessToken;
+    if (accessToken) {
+      oldClient.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+      client.authToken = accessToken;
     }
-  }, [data, client]);
+  }, [accessToken, client]);
 
   return children;
 };

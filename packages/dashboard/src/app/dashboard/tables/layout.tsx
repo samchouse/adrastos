@@ -9,7 +9,7 @@ import { useTablesQuery } from '~/hooks';
 import { TableSheet } from './_components';
 
 const TablesLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
-  const { data } = useTablesQuery();
+  const { data: tables } = useTablesQuery();
 
   return (
     <section className="flex h-full w-full flex-row">
@@ -18,7 +18,7 @@ const TablesLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
           <TableSheet />
 
           <h2 className="mb-2 ml-3 text-lg font-semibold">Tables</h2>
-          {data?.tables.map((table) => (
+          {tables?.map((table) => (
             <Link key={table.id} href={`/dashboard/tables/${table.name}`}>
               <Button variant="ghost" className="w-full justify-start">
                 {title(table.name)}

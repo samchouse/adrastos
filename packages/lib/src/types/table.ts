@@ -1,4 +1,6 @@
-export type Field =
+import { AndNullable } from '../types';
+
+export type Field = AndNullable<
   | StringField
   | NumberField
   | BooleanField
@@ -7,7 +9,8 @@ export type Field =
   | UrlField
   | SelectField
   | RelationSingleField
-  | RelationManyField;
+  | RelationManyField
+>;
 
 interface BaseField {
   name: string;

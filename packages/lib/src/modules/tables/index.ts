@@ -21,12 +21,14 @@ export class TablesModule extends BaseModule {
   }
 
   public async create<T extends Record<string, TFWithModifiers>>(
-    table: Table<T>,
+    table: Table<T> | ReturnType<Table<T>['requestBody']>,
   ) {
     return this.client.request<CustomTable>({
       path: '/tables/create',
       method: 'POST',
-      body: JSON.stringify(table.requestBody()),
+      body: JSON.stringify(
+        table instanceof Table ? table.requestBody() : table,
+      ),
     });
   }
 

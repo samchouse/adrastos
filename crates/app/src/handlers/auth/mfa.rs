@@ -204,13 +204,7 @@ pub async fn regenerate(
     };
 
     let mfa = Mfa::new(Mfa::secret_from_string(mfa_secret), user.email.clone());
-    if !mfa
-        .verify(
-            &body.code,
-            VerificationMethod::Code,
-        )
-        .await?
-    {
+    if !mfa.verify(&body.code, VerificationMethod::Code).await? {
         return Err(Error::BadRequest("Invalid MFA code".into()));
     }
 

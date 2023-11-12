@@ -20,3 +20,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
 }
+
+export type AndNullable<T> = {
+  [P in keyof T]: undefined extends T[P] ? T[P] | null : T[P];
+};

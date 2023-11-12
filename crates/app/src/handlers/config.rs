@@ -113,13 +113,15 @@ pub async fn smtp(
     conn.execute(&system.set(), &[]).await.unwrap();
     config.lock().await.attach_system(&system);
 
-    Ok(HttpResponse::Ok().json(system.smtp_config.map(|c| json!({
-        "host": c.host,
-        "port": c.port,
-        "username": c.username,
-        "senderName": c.sender_name,
-        "senderEmail": c.sender_email,
-    }))))
+    Ok(HttpResponse::Ok().json(system.smtp_config.map(|c| {
+        json!({
+            "host": c.host,
+            "port": c.port,
+            "username": c.username,
+            "senderName": c.sender_name,
+            "senderEmail": c.sender_email,
+        })
+    })))
 }
 
 #[post("/oauth2")]
