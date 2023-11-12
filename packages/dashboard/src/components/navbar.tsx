@@ -6,9 +6,9 @@ import { Button } from '~/components/ui';
 import { useMeQuery } from '~/hooks';
 
 export const Buttons: React.FC = () => {
-  const { data } = useMeQuery();
+  const { data: user } = useMeQuery();
 
-  return data?.user ? (
+  return user ? (
     <Button asChild>
       <Link href="/dashboard">Dashboard</Link>
     </Button>
