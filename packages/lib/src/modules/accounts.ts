@@ -1,31 +1,94 @@
+import { User } from '../types';
 import { BaseModule } from './util';
 
 export class AccountsModule extends BaseModule {
-  public async create(body: {
+  public async signup(body: {
     firstName: string;
     lastName: string;
     email: string;
     username: string;
     password: string;
   }) {
-    return this.client.request({
+    return this.client.request<User>({
       path: '/auth/signup',
       method: 'POST',
       body: JSON.stringify(body),
     });
   }
 
-  public async authWithPassword(body: { email: string; password: string }) {
-    return this.client.request<{ token: string }>({
+  public async login(body: { email: string; password: string }) {
+    return this.client.request<User>({
       path: '/auth/login',
       method: 'POST',
       body: JSON.stringify(body),
     });
   }
 
-  public authWithOAuth2(
+  public loginUsingOAuth2(
     provider: 'google' | 'facebook' | 'github' | 'twitter' | 'discord',
   ) {
-    return this.client.buildUrl(`/auth/oauth2/${provider}`).toString();
+    return this.client
+      .buildUrl(`/auth/oauth2/login?provider=${provider}`)
+      .toString();
+  }
+
+  public async logout() {
+    return this.client.request<undefined>({
+      path: '/auth/logout',
+      method: 'GET',
+    });
+  }
+
+  public async resendVerification() {
+    return this.client.request<undefined>({
+      path: '/auth/resend-verification',
+      method: 'POST',
+    });
+  }
+
+  public async enableMfa() {
+    return this.client.request<{ secret: string; qrCode: string }>({
+      path: '/auth/mfa/enable',
+      method: 'GET',
+    });
+  }
+
+  public async confirmMfa(body: { code: string }) {
+    return this.client.request<string[]>({
+      path: '/auth/mfa/confirm',
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  public async verifyMfa(body: { code: string }) {
+    return this.client.request<User>({
+      path: '/auth/mfa/verify',
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  public async disableMfa(body: { code: string }) {
+    return this.client.request<undefined>({
+      path: '/auth/mfa/disable',
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  public async regenerateMfaCodes(body: { code: string }) {
+    return this.client.request<string[]>({
+      path: '/auth/mfa/codes/regenerate',
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  public async refreshToken() {
+    return this.client.request<string>({
+      path: '/auth/token/refresh',
+      method: 'GET',
+    });
   }
 }

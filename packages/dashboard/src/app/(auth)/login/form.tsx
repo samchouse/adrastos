@@ -76,11 +76,11 @@ export const LoginForm: React.FC = () => {
   return (
     <Form {...form}>
       <form
-        onSubmit={
+        onSubmit={(e) =>
           void form.handleSubmit(async (values) => {
             await mutateAsync(values);
             router.push(searchParams.get('to') ?? '/dashboard');
-          })
+          })(e)
         }
       >
         <CardContent>

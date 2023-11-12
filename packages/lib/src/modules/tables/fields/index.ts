@@ -38,7 +38,7 @@ type ZExtend<T> = T extends TFOptional<infer U>
   ? z.ZodArray<z.ZodString, 'many'>
   : never;
 
-type TField =
+export type TField =
   | TFString
   | TFNumber
   | TFBoolean
@@ -229,7 +229,7 @@ export class Table<T extends Record<string, TFWithModifiers>> {
   }
 }
 
-export class TBuilder {
+class TBuilder {
   string() {
     return new TFString();
   }

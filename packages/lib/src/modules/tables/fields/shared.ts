@@ -13,7 +13,9 @@ export abstract class TFBase {
   ) {}
 }
 
-export class TFExtended<T extends Record<string, unknown>> extends TFBase {
+export abstract class TFExtended<
+  T extends Record<string, unknown>,
+> extends TFBase {
   constructor(
     public type: TFBase['type'],
     public values: T,

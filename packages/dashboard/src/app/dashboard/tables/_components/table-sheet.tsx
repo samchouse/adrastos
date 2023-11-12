@@ -1,3 +1,4 @@
+import { table, TFWithModifiers } from '@adrastos/lib';
 import { PopoverContent, PopoverTrigger } from '@radix-ui/react-popover';
 import {
   Calendar,
@@ -499,13 +500,54 @@ export const TableSheet: React.FC = () => {
           </SheetClose>
           <Button
             onClick={() => {
+              mutate(
+                table(name, (b) =>
+                  fields.reduce(
+                    (acc, curr) => {
+                      switch (curr.type) {
+                        case 'string': {
+                          let field = b.string();
+                          if (curr.maxLength)
+                            field = field.maxLength(curr.maxLength);
+                          if (curr.minLength)
+                            field = field.minLength(curr.minLength);
+
+                          acc[curr.name] = field;
+                          break;
+                        }
+                        case 'number': {
+                          let field = b.number();
+                          if (curr.max) field = field.max(curr.max);
+                          if (curr.min) field = field.min(curr.min);
+
+                          acc[curr.name] = field;
+                          break;
+                        }
+                        default:
+                          break;
+                      }
+
+                      let field = acc[curr.name];
+
+                      if (field.type === 'boolean') return acc;
+                      if (!curr.isRequired)
+                        field = field.optional() as TFWithModifiers;
+
+                      if (field.type === 'boolean') return acc;
+                      if (curr.isUnique)
+                        field = field.unique() as TFWithModifiers;
+
+                      acc[curr.name] = field;
+                      return acc;
+                    },
+                    {} as Record<string, TFWithModifiers>,
+                  ),
+                ),
+              );
+
               setIsOpen(false);
               setName('');
               setFields([]);
-              mutate({
-                name,
-                fields,
-              });
             }}
           >
             Submit

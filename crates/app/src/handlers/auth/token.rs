@@ -10,7 +10,6 @@ use adrastos_core::{
     util,
 };
 use chrono::Utc;
-use serde_json::json;
 use tokio::sync::Mutex;
 
 #[get("/token/refresh")]
@@ -86,8 +85,5 @@ pub async fn refresh(
                 .expires(Expiration::from(cookie_expiration))
                 .finish(),
         )
-        .json(json!({
-            "success": true,
-            "accessToken": access_token.clone().token,
-        })))
+        .json(access_token.clone().token))
 }

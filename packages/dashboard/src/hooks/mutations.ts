@@ -1,4 +1,7 @@
+'use client';
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAtomValue } from 'jotai';
 
 import {
   client,
@@ -8,11 +11,11 @@ import {
   postConfigOAuth2,
   postConfigSmtp,
   postCreateRow,
-  postCreateTable,
   postLogin,
   postResendVerification,
   postSignup,
 } from '~/lib';
+import { clientAtom } from '~/lib/state';
 
 import { queryKeys } from './queries';
 
@@ -88,12 +91,14 @@ export const useResendVerificationMutation = () => {
 };
 
 export const useCreateTableMutation = () => {
+  const client = useAtomValue(clientAtom);
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationKey: ['customTable', 'create'],
-    mutationFn: async (data: Parameters<typeof postCreateTable>[0]) =>
-      await postCreateTable(data),
+    mutationFn: async (
+      table: Parameters<(typeof client)['tables']['create']>[0],
+    ) => await client.tables.create(table),
     onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.tables }),
   });
 };

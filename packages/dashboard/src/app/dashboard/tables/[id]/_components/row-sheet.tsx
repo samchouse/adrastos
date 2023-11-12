@@ -112,14 +112,14 @@ export const RowSheet: React.FC<{
         <Form {...form}>
           <form
             className="flex h-full flex-col justify-between"
-            onSubmit={
+            onSubmit={(e) =>
               void form.handleSubmit(async (values) => {
                 if (row) await updateMutateAsync({ id: row.id, data: values });
                 else await createMutateAsync(values);
 
                 form.reset();
                 setIsOpen(false);
-              })
+              })(e)
             }
           >
             <div>

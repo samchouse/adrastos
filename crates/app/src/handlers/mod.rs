@@ -1,6 +1,5 @@
 use std::ops::Deref;
 
-use serde_json::json;
 use tokio::sync::Mutex;
 
 use actix_web::{get, web, HttpResponse, Responder};
@@ -25,8 +24,5 @@ pub async fn index(config: web::Data<Mutex<Config>>) -> actix_web::Result<impl R
 
 #[get("/me")]
 pub async fn me(user: RequiredUser) -> actix_web::Result<impl Responder, Error> {
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "user": user.deref(),
-    })))
+    Ok(HttpResponse::Ok().json(user.deref()))
 }

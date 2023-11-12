@@ -125,7 +125,7 @@ export const OAuth2Card: React.FC = () => {
 
       <Form {...form}>
         <form
-          onSubmit={
+          onSubmit={(e) =>
             void form.handleSubmit((values) =>
               mutate(
                 providers.reduce(
@@ -139,7 +139,7 @@ export const OAuth2Card: React.FC = () => {
                   >,
                 ),
               ),
-            )
+            )(e)
           }
         >
           <CardContent>

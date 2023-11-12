@@ -153,10 +153,7 @@ pub async fn signup(
         };
     }
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "user": user
-    })))
+    Ok(HttpResponse::Ok().json(user))
 }
 
 #[post("/login")]
@@ -208,10 +205,7 @@ pub async fn login(
                 .expires(auth.cookie.expires().unwrap())
                 .finish(),
         )
-        .json(json!({
-            "success": true,
-            "user": user
-        })))
+        .json(user))
 }
 
 #[get("/logout")]
@@ -244,9 +238,7 @@ pub async fn logout(
     Ok(HttpResponse::Ok()
         .cookie(cookies.is_logged_in)
         .cookie(cookies.refresh_token)
-        .json(json!({
-            "success": true
-        })))
+        .finish())
 }
 
 #[get("/verify")]
@@ -299,10 +291,7 @@ pub async fn verify(
     .await
     .map_err(|_| Error::InternalServerError("Unable to update user".to_string()))?;
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Email was successfully verified"
-    })))
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[post("/resend-verification")]
@@ -383,8 +372,5 @@ pub async fn resend_verification(
         ));
     };
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Resent verification email"
-    })))
+    Ok(HttpResponse::Ok().finish())
 }

@@ -14,7 +14,6 @@ use heck::AsSnakeCase;
 use regex::Regex;
 use sea_query::{Alias, PostgresQueryBuilder, Table, TableCreateStatement};
 use serde::Deserialize;
-use serde_json::json;
 use utoipa::ToSchema;
 
 use crate::middleware::user::RequiredUser;
@@ -56,12 +55,7 @@ pub async fn list(
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let tables = CustomTableSchema::find().all(&db_pool).await?;
-
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Tables fetched successfully",
-        "tables": tables
-    })))
+    Ok(HttpResponse::Ok().json(tables))
 }
 
 #[utoipa::path(path = "/tables")]
@@ -148,11 +142,7 @@ pub async fn create(
             .unwrap();
     }
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Table created successfully",
-        "table": custom_table
-    })))
+    Ok(HttpResponse::Ok().json(custom_table))
 }
 
 #[patch("/update/{name}")]
@@ -258,10 +248,12 @@ pub async fn update(
             .unwrap();
     }
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Table updated successfully",
-    })))
+    let custom_table = CustomTableSchema::find()
+        .by_name(path.clone())
+        .one(&db_pool)
+        .await?;
+
+    Ok(HttpResponse::Ok().json(custom_table))
 }
 
 #[delete("/delete/{name}")]
@@ -291,8 +283,5 @@ pub async fn delete(
         .await
         .unwrap();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Table deleted successfully",
-    })))
+    Ok(HttpResponse::Ok().finish())
 }

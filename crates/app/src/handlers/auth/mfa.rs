@@ -18,7 +18,7 @@ use tokio::sync::Mutex;
 use crate::{middleware::user, session::SessionKey};
 
 #[derive(Deserialize)]
-pub struct CVDBody {
+pub struct CVDRBody {
     code: String,
 }
 
@@ -45,8 +45,6 @@ pub async fn enable(
         })?;
 
     Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "MFA process successfully started",
         "secret": mfa.get_secret(),
         "qr_code": mfa.get_qr().unwrap(),
     })))
@@ -55,7 +53,7 @@ pub async fn enable(
 #[post("/confirm")]
 pub async fn confirm(
     user: user::RequiredUser,
-    body: web::Json<CVDBody>,
+    body: web::Json<CVDRBody>,
     db_pool: web::Data<deadpool_postgres::Pool>,
     redis_pool: web::Data<deadpool_redis::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
@@ -96,17 +94,13 @@ pub async fn confirm(
     .await
     .map_err(|_| Error::InternalServerError("Error updating user".into()))?;
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "MFA successfully enabled",
-        "codes": backup_codes.codes,
-    })))
+    Ok(HttpResponse::Ok().json(backup_codes.codes))
 }
 
 #[post("/verify")]
 pub async fn verify(
     session: Session,
-    body: web::Json<CVDBody>,
+    body: web::Json<CVDRBody>,
     config: web::Data<Mutex<Config>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
@@ -144,25 +138,26 @@ pub async fn verify(
     };
 
     let mfa = Mfa::new(Mfa::secret_from_string(mfa_secret), user.email.clone());
-    mfa.verify(
-        &body.code,
-        VerificationMethod::All {
-            db_pool: db_pool.clone(),
-            user: Box::new(user.clone()),
-        },
-    )
-    .await?;
+    if !mfa
+        .verify(
+            &body.code,
+            VerificationMethod::All {
+                db_pool: db_pool.clone(),
+                user: Box::new(user.clone()),
+            },
+        )
+        .await?
+    {
+        return Err(Error::BadRequest("Invalid MFA code".into()));
+    }
 
     let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
-    Ok(HttpResponse::Ok().cookie(auth.cookie).json(json!({
-        "success": true,
-        "user": user,
-    })))
+    Ok(HttpResponse::Ok().cookie(auth.cookie).json(user))
 }
 
 #[post("/disable")]
 pub async fn disable(
-    body: web::Json<CVDBody>,
+    body: web::Json<CVDRBody>,
     user: user::RequiredUser,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
@@ -171,14 +166,18 @@ pub async fn disable(
     };
 
     let mfa = Mfa::new(Mfa::secret_from_string(mfa_secret), user.email.clone());
-    mfa.verify(
-        &body.code,
-        VerificationMethod::All {
-            db_pool: db_pool.clone(),
-            user: Box::new(user.clone()),
-        },
-    )
-    .await?;
+    if !mfa
+        .verify(
+            &body.code,
+            VerificationMethod::All {
+                db_pool: db_pool.clone(),
+                user: Box::new(user.clone()),
+            },
+        )
+        .await?
+    {
+        return Err(Error::BadRequest("Invalid MFA code".into()));
+    }
 
     user.update(
         &db_pool,
@@ -191,20 +190,29 @@ pub async fn disable(
     .await
     .map_err(|_| Error::InternalServerError("Error updating user".into()))?;
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "MFA successfully disabled",
-    })))
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[post("/codes/regenerate")]
 pub async fn regenerate(
+    body: web::Json<CVDRBody>,
     user: user::RequiredUser,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    if user.mfa_secret.is_none() {
+    let Some(mfa_secret) = user.mfa_secret.clone() else {
         return Err(Error::BadRequest("MFA is disabled".into()));
     };
+
+    let mfa = Mfa::new(Mfa::secret_from_string(mfa_secret), user.email.clone());
+    if !mfa
+        .verify(
+            &body.code,
+            VerificationMethod::Code,
+        )
+        .await?
+    {
+        return Err(Error::BadRequest("Invalid MFA code".into()));
+    }
 
     let backup_codes = Mfa::generate_codes()
         .await
@@ -220,9 +228,5 @@ pub async fn regenerate(
     .await
     .map_err(|_| Error::InternalServerError("Error updating user".into()))?;
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "MFA backup codes successfully regenerated",
-        "codes": backup_codes.codes,
-    })))
+    Ok(HttpResponse::Ok().json(backup_codes.codes))
 }

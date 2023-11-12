@@ -77,11 +77,11 @@ export const SignupForm: React.FC = () => {
   return (
     <Form {...form}>
       <form
-        onSubmit={
+        onSubmit={(e) =>
           void form.handleSubmit(async (values) => {
             await mutateAsync(values);
             router.push('/dashboard');
-          })
+          })(e)
         }
       >
         <CardContent>

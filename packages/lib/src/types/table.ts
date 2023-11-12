@@ -6,7 +6,8 @@ export type Field =
   | EmailField
   | UrlField
   | SelectField
-  | RelationField;
+  | RelationSingleField
+  | RelationManyField;
 
 interface BaseField {
   name: string;
@@ -57,17 +58,24 @@ export interface SelectField extends ExtendedField {
   maxSelected?: number;
 }
 
-export interface RelationField extends ExtendedField {
+interface RelationFieldBase extends ExtendedField {
   type: 'relation';
   table: string;
-  target: 'single' | 'many';
-  minSelected?: number;
-  maxSelected?: number;
   cascadeDelete: boolean;
 }
 
-export interface UpdateField<T extends BaseField> {
+export interface RelationSingleField extends RelationFieldBase {
+  target: 'single';
+}
+
+export interface RelationManyField extends RelationFieldBase {
+  target: 'many';
+  minSelected?: number;
+  maxSelected?: number;
+}
+
+export interface FieldUpdate {
   name: string;
   action: 'create' | 'update' | 'delete';
-  field: T;
+  field: Field;
 }

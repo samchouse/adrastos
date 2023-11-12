@@ -94,8 +94,10 @@ export const SmtpCard: React.FC = () => {
 
       <Form {...form}>
         <form
-          onSubmit={
-            void form.handleSubmit((values) => mutate(enabled ? values : null))
+          onSubmit={(e) =>
+            void form.handleSubmit((values) => mutate(enabled ? values : null))(
+              e,
+            )
           }
         >
           {enabled && (
