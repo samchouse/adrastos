@@ -1,12 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
+import { useAtomValue } from 'jotai';
 
-import {
-  getConfigDetails,
-  getMe,
-  getTableData,
-  getTables,
-  getTokenRefresh,
-} from '~/lib';
+import { getTableData } from '~/lib';
+import { clientAtom } from '~/lib/state';
 
 export const queryKeys = {
   tokenRefresh: ['auth', 'token', 'refresh'] as const,
@@ -16,40 +12,46 @@ export const queryKeys = {
   tableData: (table: string) => [...queryKeys.tables, table, 'data'] as const,
 };
 
-export const useTokenRefreshQuery = () =>
-  useQuery({
+export const useTokenRefreshQuery = () => {
+  const client = useAtomValue(clientAtom);
+
+  return useQuery({
     queryKey: queryKeys.tokenRefresh,
-    queryFn: async () => await getTokenRefresh(),
+    queryFn: async () => await client.accounts.refreshToken(),
     refetchInterval: 1000 * 60 * 10,
     retry: false,
   });
+};
 
 export const useMeQuery = () => {
+  const client = useAtomValue(clientAtom);
   const { isSuccess } = useTokenRefreshQuery();
 
   return useQuery({
     queryKey: queryKeys.me,
-    queryFn: async () => await getMe(),
+    queryFn: async () => await client.accounts.currentUser(),
     enabled: isSuccess,
   });
 };
 
 export const useConfigDetailsQuery = () => {
+  const client = useAtomValue(clientAtom);
   const { isSuccess } = useTokenRefreshQuery();
 
   return useQuery({
     queryKey: queryKeys.configDetails,
-    queryFn: async () => await getConfigDetails(),
+    queryFn: async () => await client.config.details(),
     enabled: isSuccess,
   });
 };
 
 export const useTablesQuery = () => {
+  const client = useAtomValue(clientAtom);
   const { isSuccess } = useTokenRefreshQuery();
 
   return useQuery({
     queryKey: queryKeys.tables,
-    queryFn: async () => await getTables(),
+    queryFn: async () => await client.tables.list(),
     enabled: isSuccess,
   });
 };

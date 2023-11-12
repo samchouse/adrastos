@@ -1,25 +1,26 @@
 import { ResponseError } from './errors';
-import { AccountsModule, TablesModule } from './modules';
+import { AccountsModule, ConfigModule, TablesModule } from './modules';
 import { Request } from './types';
 
-export { table, TFWithModifiers, TInfer, TField } from './modules';
+export { table, TFWithModifiers, TInfer, TField, CustomTable } from './modules';
 
 export class Client {
-  #authToken = '';
+  #authToken?: string;
 
   public accounts: AccountsModule;
   public tables: TablesModule;
+  public config: ConfigModule;
 
   constructor(
-    // eslint-disable-next-line no-unused-vars
     private baseUrl: string,
     private _projectId: string,
   ) {
     this.accounts = new AccountsModule(this);
     this.tables = new TablesModule(this);
+    this.config = new ConfigModule(this);
   }
 
-  public set authToken(token: string) {
+  public set authToken(token: string | undefined) {
     this.#authToken = token;
   }
 
@@ -28,7 +29,7 @@ export class Client {
   }
 
   public buildUrl(path: string) {
-    return `${this.baseUrl.replace(/\/$/, '')}${path}`;
+    return `${this.baseUrl.replace(/\/$/, '')}/api${path}`;
   }
 
   async request<T>({ method, path, body, options }: Request): Promise<T> {
@@ -38,8 +39,8 @@ export class Client {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.#authToken}`,
         ...options?.headers,
+        ...(this.#authToken && { Authorization: `Bearer ${this.#authToken}` }),
       },
     });
 

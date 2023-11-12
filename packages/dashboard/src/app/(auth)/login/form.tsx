@@ -8,6 +8,7 @@ import {
   SiGoogle,
   SiTwitter,
 } from '@icons-pack/react-simple-icons';
+import { useAtomValue } from 'jotai';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -29,7 +30,8 @@ import {
   useToast,
 } from '~/components';
 import { useLoginMutation } from '~/hooks';
-import { getOauth2LoginUrl, providers } from '~/lib';
+import { providers } from '~/lib';
+import { clientAtom } from '~/lib/state';
 
 const providerIcons = {
   google: <SiGoogle className="h-4 w-4" />,
@@ -51,6 +53,8 @@ const formSchema = z.object({
 });
 
 export const LoginForm: React.FC = () => {
+  const client = useAtomValue(clientAtom);
+
   const router = useRouter();
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -141,7 +145,7 @@ export const LoginForm: React.FC = () => {
                   className="w-full"
                 >
                   <Link
-                    href={getOauth2LoginUrl(provider, {
+                    href={client.accounts.loginUsingOAuth2(provider, {
                       to: searchParams.get('to') ?? undefined,
                     })}
                   >

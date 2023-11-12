@@ -3,40 +3,33 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAtomValue } from 'jotai';
 
-import {
-  client,
-  deleteRow,
-  getLogout,
-  patchUpdateRow,
-  postConfigOAuth2,
-  postConfigSmtp,
-  postCreateRow,
-  postLogin,
-  postResendVerification,
-  postSignup,
-} from '~/lib';
+import { deleteRow, patchUpdateRow, postCreateRow } from '~/lib';
 import { clientAtom } from '~/lib/state';
 
 import { queryKeys } from './queries';
 
 export const useSignupMutation = () => {
+  const client = useAtomValue(clientAtom);
   const { mutateAsync } = useLoginMutation();
 
   return useMutation({
     mutationKey: ['auth', 'signup'],
-    mutationFn: async (data: Parameters<typeof postSignup>[0]) =>
-      await postSignup(data),
+    mutationFn: async (
+      data: Parameters<(typeof client)['accounts']['signup']>[0],
+    ) => await client.accounts.signup(data),
     onSuccess: async (_, vars) => mutateAsync(vars),
   });
 };
 
 export const useLoginMutation = () => {
   const queryClient = useQueryClient();
+  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['auth', 'login'],
-    mutationFn: async (data: Parameters<typeof postLogin>[0]) =>
-      await postLogin(data),
+    mutationFn: async (
+      data: Parameters<(typeof client)['accounts']['login']>[0],
+    ) => await client.accounts.login(data),
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.tokenRefresh }),
   });
@@ -44,12 +37,13 @@ export const useLoginMutation = () => {
 
 export const useLogoutMutation = () => {
   const queryClient = useQueryClient();
+  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['auth', 'logout'],
-    mutationFn: async () => await getLogout(),
+    mutationFn: async () => await client.accounts.logout(),
     onSuccess: () => {
-      client.defaults.headers.common.Authorization = undefined;
+      client.authToken = undefined;
       void queryClient.resetQueries({ queryKey: queryKeys.tokenRefresh });
       void queryClient.resetQueries({ queryKey: queryKeys.me });
     },
@@ -58,11 +52,13 @@ export const useLogoutMutation = () => {
 
 export const useConfigSmtpMutation = () => {
   const queryClient = useQueryClient();
+  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['config', 'smtp'],
-    mutationFn: async (data: Parameters<typeof postConfigSmtp>[0]) =>
-      await postConfigSmtp(data),
+    mutationFn: async (
+      data: Parameters<(typeof client)['config']['updateSmtp']>[0],
+    ) => await client.config.updateSmtp(data),
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.configDetails }),
   });
@@ -70,11 +66,13 @@ export const useConfigSmtpMutation = () => {
 
 export const useConfigOAuth2Mutation = () => {
   const queryClient = useQueryClient();
+  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['config', 'oauth2'],
-    mutationFn: async (data: Parameters<typeof postConfigOAuth2>[0]) =>
-      await postConfigOAuth2(data),
+    mutationFn: async (
+      data: Parameters<(typeof client)['config']['updateOAuth2']>[0],
+    ) => await client.config.updateOAuth2(data),
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.configDetails }),
   });
@@ -82,17 +80,18 @@ export const useConfigOAuth2Mutation = () => {
 
 export const useResendVerificationMutation = () => {
   const queryClient = useQueryClient();
+  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['auth', 'resendVerification'],
-    mutationFn: async () => await postResendVerification(),
+    mutationFn: async () => await client.accounts.resendVerification(),
     onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.me }),
   });
 };
 
 export const useCreateTableMutation = () => {
-  const client = useAtomValue(clientAtom);
   const queryClient = useQueryClient();
+  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['customTable', 'create'],

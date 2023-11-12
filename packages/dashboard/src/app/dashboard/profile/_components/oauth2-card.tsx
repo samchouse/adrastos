@@ -5,6 +5,7 @@ import {
   SiGoogle,
   SiTwitter,
 } from '@icons-pack/react-simple-icons';
+import { useAtomValue } from 'jotai';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -17,7 +18,8 @@ import {
   CardTitle,
 } from '~/components';
 import { useTokenRefreshQuery } from '~/hooks';
-import { getOauth2LoginUrl, providers } from '~/lib';
+import { providers } from '~/lib';
+import { clientAtom } from '~/lib/state';
 
 const providerIcons = {
   google: <SiGoogle className="h-4 w-4" />,
@@ -29,7 +31,8 @@ const providerIcons = {
 
 export const OAuth2Card: React.FC = () => {
   const pathname = usePathname();
-  const { data } = useTokenRefreshQuery();
+  const client = useAtomValue(clientAtom);
+  const { data: accessToken } = useTokenRefreshQuery();
 
   return (
     <Card>
@@ -45,8 +48,8 @@ export const OAuth2Card: React.FC = () => {
           {providers.map((provider) => (
             <Button key={provider} asChild variant="outline" className="w-full">
               <Link
-                href={getOauth2LoginUrl(provider, {
-                  auth: data?.accessToken,
+                href={client.accounts.loginUsingOAuth2(provider, {
+                  auth: accessToken,
                   to: pathname,
                 })}
               >

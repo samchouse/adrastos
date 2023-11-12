@@ -1,3 +1,4 @@
+import { CustomTable, Field } from '@adrastos/lib';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ChevronRight, Trash2 } from 'lucide-react';
 import { title } from 'radash';
@@ -27,7 +28,7 @@ import {
   useDeleteRowMutation,
   useUpdateRowMutation,
 } from '~/hooks';
-import { cn, Field, Table } from '~/lib';
+import { cn } from '~/lib';
 
 import { Row } from '../page';
 
@@ -64,7 +65,7 @@ const createFormSchema = (fields: Field[]) =>
 
 export const RowSheet: React.FC<{
   row?: Row;
-  table: Table;
+  table: CustomTable;
 }> = ({ row, table }) => {
   const [isOpen, setIsOpen] = useState(false);
 

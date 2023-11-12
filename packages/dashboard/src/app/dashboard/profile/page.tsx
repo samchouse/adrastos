@@ -8,12 +8,12 @@ import { useMeQuery, useResendVerificationMutation } from '~/hooks';
 import { OAuth2Card } from './_components';
 
 const Page: React.FC = () => {
-  const { data } = useMeQuery();
+  const { data: user } = useMeQuery();
   const { mutate, isPending } = useResendVerificationMutation();
 
   return (
     <div className="flex flex-col gap-y-5 p-5">
-      {!data?.user.verified && (
+      {!user?.verified && (
         <Alert
           variant="default"
           className="flex flex-row items-center justify-between"

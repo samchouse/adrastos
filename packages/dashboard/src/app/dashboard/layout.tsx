@@ -23,13 +23,13 @@ const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
   const pathname = usePathname();
   const [isLoggingOff, setIsLoggingOff] = useState(false);
 
-  const { data } = useMeQuery();
+  const { data: user } = useMeQuery();
   const { isError } = useTokenRefreshQuery();
 
   useEffect(() => {
     if (isError && !isLoggingOff && pathname.includes('/dashboard'))
       router.push(`/login?to=${pathname}`);
-  }, [data, isError, isLoggingOff, pathname, router]);
+  }, [isError, isLoggingOff, pathname, router]);
 
   return (
     <section className="flex h-full flex-col">
@@ -71,7 +71,7 @@ const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
           </NavigationMenu>
         </div>
 
-        <User user={data?.user} setIsLoggingOff={setIsLoggingOff} />
+        <User user={user} setIsLoggingOff={setIsLoggingOff} />
       </div>
 
       <div className="bg-background z-20 h-full">{children}</div>

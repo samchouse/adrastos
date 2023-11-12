@@ -1,4 +1,4 @@
-import { table, TFWithModifiers } from '@adrastos/lib';
+import { Field, table, TFWithModifiers } from '@adrastos/lib';
 import { PopoverContent, PopoverTrigger } from '@radix-ui/react-popover';
 import {
   Calendar,
@@ -29,7 +29,7 @@ import {
   Switch,
 } from '~/components';
 import { useCreateTableMutation } from '~/hooks';
-import { Field, mkId } from '~/lib';
+import { mkId } from '~/lib';
 
 export const TableSheet: React.FC = () => {
   const [name, setName] = useState('');

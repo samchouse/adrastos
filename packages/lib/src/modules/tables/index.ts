@@ -4,7 +4,7 @@ import { Table, TFWithModifiers } from './fields';
 
 export { table, TFWithModifiers, TInfer, TField } from './fields';
 
-interface CustomTable {
+export interface CustomTable {
   id: string;
   name: string;
   fields: Field[];
@@ -13,6 +13,13 @@ interface CustomTable {
 }
 
 export class TablesModule extends BaseModule {
+  public async list() {
+    return this.client.request<CustomTable[]>({
+      path: '/tables/list',
+      method: 'GET',
+    });
+  }
+
   public async create<T extends Record<string, TFWithModifiers>>(
     table: Table<T>,
   ) {

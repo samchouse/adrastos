@@ -1,4 +1,5 @@
 import { User } from '../types';
+import { merge } from '../util';
 import { BaseModule } from './util';
 
 export class AccountsModule extends BaseModule {
@@ -26,9 +27,16 @@ export class AccountsModule extends BaseModule {
 
   public loginUsingOAuth2(
     provider: 'google' | 'facebook' | 'github' | 'twitter' | 'discord',
+    { auth, to }: { auth?: string; to?: string } = {},
   ) {
     return this.client
-      .buildUrl(`/auth/oauth2/login?provider=${provider}`)
+      .buildUrl(
+        merge(
+          `/auth/oauth2/login?provider=${provider}`,
+          to && `&to=${to}`,
+          auth && `&auth=${auth}`,
+        ),
+      )
       .toString();
   }
 
@@ -88,6 +96,13 @@ export class AccountsModule extends BaseModule {
   public async refreshToken() {
     return this.client.request<string>({
       path: '/auth/token/refresh',
+      method: 'GET',
+    });
+  }
+
+  public async currentUser() {
+    return this.client.request<User>({
+      path: '/me',
       method: 'GET',
     });
   }

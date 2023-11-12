@@ -20,7 +20,7 @@ const Page: React.FC<{ params: { id: string } }> = ({ params }) => {
   const { data } = useTableDataQuery<Row>(params.id);
 
   const table = useMemo(
-    () => tables?.tables.find((t) => t.name === params.id),
+    () => tables?.find((t) => t.name === params.id),
     [tables, params.id],
   );
 

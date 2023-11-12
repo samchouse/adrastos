@@ -1,3 +1,4 @@
+import { User as UserType } from '@adrastos/lib';
 import { ExternalLink, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,7 +18,6 @@ import {
   Skeleton,
 } from '~/components/ui';
 import { useLogoutMutation } from '~/hooks';
-import { User as UserType } from '~/types';
 
 export const User: React.FC<{
   user?: UserType;
