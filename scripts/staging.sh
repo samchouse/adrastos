@@ -60,7 +60,7 @@ networks:
 EOF
   fi
 
-  docker compose -f "staging/docker-compose.pr-$PR.yml" up -d
+  su -- sam -c "docker compose -f \"staging/docker-compose.pr-$PR.yml\" up -d"
   docker compose --profile deploy restart staging-nginx
   docker exec adrastos-nginx-1 /usr/sbin/nginx -s reload
   ;;
@@ -71,7 +71,7 @@ destroy)
   rm -rf "staging/docker-compose.pr-$PR.yml"
   rm -rf "data/nginx/staging/conf.d/adrastos-api-pr-$PR.xenfo.dev.conf"
   docker compose --profile deploy restart staging-nginx
-  docker system prune -af
+  docker rmi $(docker images -q --filter "reference=ghcr.io/xenfo/adrastos-*:*")
 
   exit 0
   ;;
