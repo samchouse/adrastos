@@ -77,15 +77,22 @@ jobs:
           file: .github/deploy/Dockerfile.emails
           tags: ghcr.io/xenfo/adrastos-emails:staging-pr-${{ github.event.issue.number }}
 
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.0.0
+      - name: Tailscale
+        uses: tailscale/github-action@v2
         with:
-          username: ${{ secrets.SSH_USER }}
-          host: ${{ secrets.SSH_HOST }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd adrastos
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          version: 1.54.0
+
+      - name: Deploy to VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no root@arch "
+            cd /home/sam/Documents/deployments/personal/adrastos
             ./scripts/staging.sh cou ${{ github.event.issue.number }} $(gh pr view ${{ github.event.issue.number }} --json headRefName -q .headRefName)
+          "
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Add to Cloudflare
         run: |
@@ -94,9 +101,9 @@ jobs:
             -H "Content-Type:application/json" \
             --data '{
               "name": "adrastos-api-pr-${{ github.event.issue.number }}",
-              "content": "${{ secrets.SSH_HOST }}",
+              "content": "${{ secrets.PUBLIC_IP }}",
               "proxied": true,
-              "type": "A"
+              "type": "AAAA"
             }'
 
       - name: Update comment
@@ -116,15 +123,22 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
 
     steps:
-      - name: Remove from VPS
-        uses: appleboy/ssh-action@v1.0.0
+      - name: Tailscale
+        uses: tailscale/github-action@v2
         with:
-          username: ${{ secrets.SSH_USER }}
-          host: ${{ secrets.SSH_HOST }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd adrastos
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          version: 1.54.0
+
+      - name: Remove from VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no root@arch "
+            cd /home/sam/Documents/deployments/personal/adrastos
             ./scripts/staging.sh destroy ${{ github.event.pull_request.number }}
+          "
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Remove from Cloudflare
         run: |
@@ -170,17 +184,24 @@ jobs:
           file: .github/deploy/Dockerfile.emails
           tags: ghcr.io/xenfo/adrastos-emails:git
 
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.0.0
+      - name: Tailscale
+        uses: tailscale/github-action@v2
         with:
-          username: ${{ secrets.SSH_USER }}
-          host: ${{ secrets.SSH_HOST }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd adrastos
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          version: 1.54.0
+
+      - name: Deploy to VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no sam@arch "
+            cd /home/sam/Documents/deployments/personal/adrastos
             git pull
             docker compose --profile deploy up -d
-            docker system prune -af
+            docker rmi \$(docker images -q --filter \"reference=ghcr.io/xenfo/adrastos-*:*\") || true
+          "
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release:
     name: Release
