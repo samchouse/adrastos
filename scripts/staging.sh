@@ -68,13 +68,15 @@ destroy)
   PR=$2
 
   yq -yi 'del(.ingress[] | select(.hostname == "adrastos-api-pr-29.xenfo.dev"))' /home/sam/.cloudflared/config.yml
+  systemctl restart cloudflared
 
   sed -i ":a;N;\$!ba; s/adrastos-api-pr-$PR\.xenfo\.dev {[^{}]*}//g" ../../Caddyfile
   sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' ../../Caddyfile
+  docker compose -f ../../docker-compose.yml exec -w /etc/caddy caddy caddy reload
 
   docker compose -f "staging/docker-compose.pr-$PR.yml" down -v
   rm -rf "staging/docker-compose.pr-$PR.yml"
-  docker compose -f ../../docker-compose.yml exec -w /etc/caddy caddy caddy reload
+
   docker rmi $(docker images -q --filter "reference=ghcr.io/xenfo/adrastos-*:staging-pr-*")
 
   exit 0
