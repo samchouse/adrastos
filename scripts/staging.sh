@@ -6,24 +6,12 @@ cou)
   BRANCH=$3
 
   mkdir -p staging
-  mkdir -p data/nginx/staging/conf.d
 
   if [ ! -f "staging/docker-compose.pr-$PR.yml" ]; then
-    cat <<EOF >"data/nginx/staging/conf.d/adrastos-api-pr-$PR.xenfo.dev.conf"
-server {
-  listen 80;
-  listen [::]:80;
-  server_name adrastos-api-pr-$PR.xenfo.dev;
+    cat <<EOF >>../../Caddyfile
 
-  # reverse proxy
-  location / {
-    proxy_pass http://adrastos-staging-pr-$PR-app-1.adrastos_default:8000;
-    proxy_set_header Host \$host;
-    include nginxconfig.io/proxy.conf;
-  }
-
-  # additional config
-  include nginxconfig.io/general.conf;
+adrastos-api-pr-$PR.xenfo.dev {
+	reverse_proxy adrastos-staging-pr-$PR-app-1:8000
 }
 EOF
 
@@ -50,28 +38,44 @@ services:
     environment:
       - CLIENT_URL=https://adrastos-git-$(echo "$BRANCH" | sed 's/\//-/')-xenfo.vercel.app
     networks:
-      - adrastos_default
+      - deployments_default
     volumes:
       - ~/.postgresql/root.crt:/work/certs/cockroach.crt
 
 networks:
-  adrastos_default:
+  deployments_default:
     external: true
 EOF
+
+    cat <<EOF >/home/sam/.cloudflared/config.yml
+$(head -n-1 /home/sam/.cloudflared/config.yml)
+  - hostname: adrastos-api-pr-$PR.xenfo.dev
+    service: https://localhost
+    originRequest:
+      originServerName: adrastos-api-pr-$PR.xenfo.dev
+      httpHostHeader: adrastos-api-pr-$PR.xenfo.dev
+$(tail -n1 /home/sam/.cloudflared/config.yml)
+EOF
+
+    systemctl restart cloudflared
+    su -- sam -c "cloudflared tunnel route dns '7d6af8ba-5ea2-4136-b245-27b513646807' \"adrastos-api-pr-$PR\""
   fi
 
   su -- sam -c "docker compose -f \"staging/docker-compose.pr-$PR.yml\" up -d"
-  docker compose --profile deploy restart staging-nginx
-  docker exec adrastos-nginx-1 /usr/sbin/nginx -s reload
+  docker compose -f ../../docker-compose.yml exec -w /etc/caddy caddy caddy reload
   ;;
 destroy)
   PR=$2
 
+  yq -yi 'del(.ingress[] | select(.hostname == "adrastos-api-pr-29.xenfo.dev"))' /home/sam/.cloudflared/config.yml
+
+  sed -i ":a;N;\$!ba; s/adrastos-api-pr-$PR\.xenfo\.dev {[^{}]*}//g" ../../Caddyfile
+  sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' ../../Caddyfile
+
   docker compose -f "staging/docker-compose.pr-$PR.yml" down -v
   rm -rf "staging/docker-compose.pr-$PR.yml"
-  rm -rf "data/nginx/staging/conf.d/adrastos-api-pr-$PR.xenfo.dev.conf"
-  docker compose --profile deploy restart staging-nginx
-  docker rmi $(docker images -q --filter "reference=ghcr.io/xenfo/adrastos-*:*")
+  docker compose -f ../../docker-compose.yml exec -w /etc/caddy caddy caddy reload
+  docker rmi $(docker images -q --filter "reference=ghcr.io/xenfo/adrastos-*:staging-pr-*")
 
   exit 0
   ;;

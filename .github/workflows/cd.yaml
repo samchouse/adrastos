@@ -94,18 +94,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Add to Cloudflare
-        run: |
-          curl -s -o /dev/null -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records" \
-            -H "Authorization: Bearer ${{ secrets.CF_TOKEN }}" \
-            -H "Content-Type:application/json" \
-            --data '{
-              "name": "adrastos-api-pr-${{ github.event.issue.number }}",
-              "content": "${{ secrets.PUBLIC_IP }}",
-              "proxied": true,
-              "type": "AAAA"
-            }'
-
       - name: Update comment
         uses: peter-evans/create-or-update-comment@v3
         if: always()
