@@ -16,6 +16,8 @@ RUN curl -sf https://gobinaries.com/tj/node-prune | sh && cd ../.. && node-prune
 FROM node:alpine as runner
 
 WORKDIR /work
-COPY --from=builder ["/work/packages/emails/package.json", "/work/packages/emails/out", "work/node_modules", "./"]
+COPY --from=builder /work/packages/emails/package.json .
+COPY --from=builder /work/packages/emails/out ./out
+COPY --from=builder /work/node_modules ./node_modules
 
 CMD [ "yarn", "start" ]
