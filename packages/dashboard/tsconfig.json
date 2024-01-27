@@ -17,13 +17,13 @@
     "incremental": true,
     "plugins": [
       {
-        "name": "next"
-      }
+        "name": "next",
+      },
     ],
     "paths": {
       "~/*": ["./src/*"],
-      "~/env": ["./src/env.mjs"]
-    }
+      "~/env": ["./src/env.mjs"],
+    },
   },
   "include": [
     "next-env.d.ts",
@@ -36,5 +36,5 @@
     "postcss.config.js",
     ".eslintrc.js",
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
 }

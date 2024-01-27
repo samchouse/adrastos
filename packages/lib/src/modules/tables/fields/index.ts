@@ -14,29 +14,30 @@ import {
 } from './fields';
 import { TFOptional, TFUnique } from './shared';
 
-type ZExtend<T> = T extends TFOptional<infer U>
-  ? z.ZodOptional<ZExtend<U>>
-  : T extends TFUnique<infer U>
-  ? ZExtend<U>
-  : T extends TFString
-  ? z.ZodString
-  : T extends TFNumber
-  ? z.ZodNumber
-  : T extends TFBoolean
-  ? z.ZodBoolean
-  : T extends TFDate
-  ? z.ZodDate
-  : T extends TFEmail
-  ? z.ZodString
-  : T extends TFUrl
-  ? z.ZodString
-  : T extends TFSelect
-  ? z.ZodArray<z.ZodString, 'many'>
-  : T extends TFRelationSingle
-  ? z.ZodString
-  : T extends TFRelationMany
-  ? z.ZodArray<z.ZodString, 'many'>
-  : never;
+type ZExtend<T> =
+  T extends TFOptional<infer U>
+    ? z.ZodOptional<ZExtend<U>>
+    : T extends TFUnique<infer U>
+      ? ZExtend<U>
+      : T extends TFString
+        ? z.ZodString
+        : T extends TFNumber
+          ? z.ZodNumber
+          : T extends TFBoolean
+            ? z.ZodBoolean
+            : T extends TFDate
+              ? z.ZodDate
+              : T extends TFEmail
+                ? z.ZodString
+                : T extends TFUrl
+                  ? z.ZodString
+                  : T extends TFSelect
+                    ? z.ZodArray<z.ZodString, 'many'>
+                    : T extends TFRelationSingle
+                      ? z.ZodString
+                      : T extends TFRelationMany
+                        ? z.ZodArray<z.ZodString, 'many'>
+                        : never;
 
 export type TField =
   | TFString
@@ -70,9 +71,8 @@ export type TFWithModifiers =
       Exclude<TField, TFBoolean> | TFOptionalWrapper<Exclude<TField, TFBoolean>>
     >;
 
-export type TInfer<T> = T extends Table<infer _>
-  ? z.infer<ReturnType<T['schema']>>
-  : never;
+export type TInfer<T> =
+  T extends Table<infer _> ? z.infer<ReturnType<T['schema']>> : never;
 
 export class Table<T extends Record<string, TFWithModifiers>> {
   constructor(

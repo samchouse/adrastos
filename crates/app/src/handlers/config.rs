@@ -86,7 +86,7 @@ pub async fn smtp(
             let password = body
                 .password
                 .clone()
-                .or(system.smtp_config.as_ref().map(|c| c.password.clone()));
+                .or(system.smtp_config.map(|c: SmtpConfig| c.password.clone()));
             let Some(password) = password else {
                 return Err(Error::BadRequest(
                     "A password is required to enable SMTP".to_string(),

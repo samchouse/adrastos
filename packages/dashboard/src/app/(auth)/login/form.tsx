@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import * as z from 'zod';
 
 import {
@@ -27,7 +28,6 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  useToast,
 } from '~/components';
 import { useLoginMutation } from '~/hooks';
 import { providers } from '~/lib';
@@ -56,7 +56,6 @@ export const LoginForm: React.FC = () => {
   const client = useAtomValue(clientAtom);
 
   const router = useRouter();
-  const { toast } = useToast();
   const searchParams = useSearchParams();
 
   const { mutateAsync, isPending, isError, error } = useLoginMutation();
@@ -71,11 +70,10 @@ export const LoginForm: React.FC = () => {
 
   useEffect(() => {
     if (isError)
-      toast({
-        title: 'Login failed',
+      toast('Login failed', {
         description: (error as { message: string }).message,
       });
-  }, [isError, error, toast]);
+  }, [isError, error]);
 
   return (
     <Form {...form}>

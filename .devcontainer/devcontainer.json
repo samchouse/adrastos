@@ -3,7 +3,7 @@
   "forwardPorts": [3000, 8000],
   "build": { "dockerfile": "Dockerfile" },
   "features": {
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
   },
   "customizations": {
     "vscode": {
@@ -55,12 +55,12 @@
           "vite",
           "vitejs",
           "Xenfo",
-          "zapcore"
+          "zapcore",
         ],
         "editor.lineHeight": 1.55,
         "files.associations": {
           "Justfile": "makefile",
-          "*.secrets": "dotenv"
+          "*.secrets": "dotenv",
         },
         "eslint.format.enable": true,
         "editor.suggestSelection": "first",
@@ -70,7 +70,7 @@
         "editor.bracketPairColorization.enabled": true,
         "terminal.integrated.enableMultiLinePasteWarning": false,
         "github.copilot.enable": {
-          "*": true
+          "*": true,
         },
         "shellcheck.customArgs": ["-x"],
         "notebook.lineNumbers": "on",
@@ -81,7 +81,7 @@
           ".gitignore": ".prettierignore,.eslintignore,.dockerignore",
           "*.mjs": "${capture}.mjs.map, ${capture}.min.mjs, ${capture}.d.ts",
           "tsconfig.json": "tsconfig.*.json",
-          ".env": "*.env"
+          ".env": "*.env",
         },
         "explorer.fileNesting.enabled": true,
         "gitlens.hovers.currentLine.over": "line",
@@ -93,30 +93,30 @@
         "gitlens.currentLine.enabled": false,
         "terminal.integrated.sendKeybindingsToShell": true,
         "[typescriptreact]": {
-          "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+          "editor.defaultFormatter": "dbaeumer.vscode-eslint",
         },
         "[jsonc]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
         },
         "[typescript]": {
-          "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+          "editor.defaultFormatter": "dbaeumer.vscode-eslint",
         },
         "workbench.colorTheme": "Moonlight II Italic",
         "[javascript]": {
-          "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+          "editor.defaultFormatter": "dbaeumer.vscode-eslint",
         },
         "[json]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
         },
         "[toml]": {
-          "editor.defaultFormatter": "tamasfe.even-better-toml"
+          "editor.defaultFormatter": "tamasfe.even-better-toml",
         },
         "[dockerfile]": {
-          "editor.defaultFormatter": "ms-azuretools.vscode-docker"
+          "editor.defaultFormatter": "ms-azuretools.vscode-docker",
         },
         "[yaml]": {
-          "editor.defaultFormatter": "redhat.vscode-yaml"
-        }
+          "editor.defaultFormatter": "redhat.vscode-yaml",
+        },
       },
       "extensions": [
         "formulahendry.auto-rename-tag",
@@ -145,8 +145,8 @@
         "ZixuanChen.vitest-explorer",
         "WakaTime.vscode-wakatime",
         "redhat.vscode-yaml",
-        "GitHub.copilot"
-      ]
-    }
-  }
+        "GitHub.copilot",
+      ],
+    },
+  },
 }
