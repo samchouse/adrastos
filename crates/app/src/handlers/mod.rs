@@ -1,28 +1,24 @@
-use std::{ops::Deref, path::PathBuf};
+use std::ops::Deref;
 
-use actix_files::NamedFile;
 use actix_web::{
-    get,
-    http::header::{CacheControl, CacheDirective},
-    web, HttpRequest, HttpResponse, Responder,
+    get, http::header::{CacheControl, CacheDirective}, web, HttpRequest, HttpResponse, Responder
 };
 use adrastos_core::{config::Config, error::Error};
 use tokio::sync::Mutex;
 
-use crate::middleware::user::RequiredUser;
+use crate::{assets::handle_embedded_file, middleware::user::RequiredUser};
 
 pub mod auth;
 pub mod config;
 pub mod tables;
 
 pub async fn default(req: HttpRequest) -> actix_web::Result<impl Responder, Error> {
-    if let Some(path) = req.path().split('/').last() {
-        if PathBuf::from(path).extension().is_some() {
-            return Err(Error::NotFound);
-        }
-    }
+    handle_embedded_file(req.path())
+}
 
-    Ok(NamedFile::open("./packages/dashboard/dist/index.html"))
+#[get("/")]
+pub async fn index() -> actix_web::Result<impl Responder, Error> {
+    handle_embedded_file("index.html")
 }
 
 #[get("/api")]

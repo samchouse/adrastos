@@ -1,7 +1,6 @@
 #![feature(let_chains)]
 
 use actix_cors::Cors;
-use actix_files::Files;
 use actix_session::{storage::RedisSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, error::InternalError, web, App, HttpResponse, HttpServer};
 use adrastos_core::{
@@ -36,6 +35,7 @@ mod openapi;
 mod session;
 mod telemetry;
 mod util;
+mod assets;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -195,11 +195,8 @@ async fn main() -> std::io::Result<()> {
                             ))),
                     ),
             )
-            .service(
-                Files::new("/", "./packages/dashboard/dist")
-                    .index_file("./packages/dashboard/dist/index.html")
-                    .default_handler(web::route().to(handlers::default)),
-            )
+            .service(handlers::index)
+            .default_service(web::route().to(handlers::default))
     });
 
     let server = if use_tls {
@@ -255,4 +252,8 @@ async fn server_started(use_tls: bool, url: &str) {
     };
 
     info!("server started at {url}");
+
+    if url.contains("0.0.0.0") {
+        info!("you can access the server at {}", url.replace("0.0.0.0", "127.0.0.1"));
+    }
 }

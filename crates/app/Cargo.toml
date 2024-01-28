@@ -8,7 +8,6 @@ edition = "2021"
 
 [dependencies]
 actix-cors = "0.6.5"
-actix-files = "0.6.5"
 actix-session = { version = "0.7.2", features = ["redis-rs-session"] }
 actix-web = { version = "4.4.1", features = ["rustls", "cookies"] }
 actix-web-httpauth = "0.8.1"
@@ -31,9 +30,11 @@ lettre = { version = "0.10.4", default-features = false, features = [
 	"builder",
 ] }
 mailchecker = "5.0.9"
+mime_guess = "2.0.4"
 oauth2 = "4.4.2"
 regex = "1.10.3"
 reqwest = { version = "0.11.23", features = ["json"] }
+rust-embed = { version = "8.2.0", features = ["actix", "compression"] }
 rustls = "0.20"
 rustls-pemfile = "1.0.4"
 sea-query = { version = "0.30.7", features = [
