@@ -1,5 +1,6 @@
 # files
 *.env
+**/*.gen.ts
 **/next-env.d.ts
 
 # directories

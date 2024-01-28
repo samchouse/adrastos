@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
 
 export const client = axios.create({
-  baseURL: '/api',
+  baseURL: `${import.meta.env.VITE_BACKEND_URL ?? ''}/api`,
   headers: {
     'Content-Type': 'application/json',
   },

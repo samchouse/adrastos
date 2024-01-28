@@ -1,4 +1,4 @@
-'use client';
+// @ts-nocheck
 
 import Link from 'next/link';
 import { title } from 'radash';

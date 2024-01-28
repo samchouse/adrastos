@@ -126,7 +126,7 @@ impl Config {
                 .unwrap_or_log(),
             certs_path: env::var(ConfigKey::CertsPath.to_string()).ok(),
             client_url: env::var(ConfigKey::ClientUrl.to_string())
-                .unwrap_or("http://127.0.0.1:3000".into()),
+                .unwrap_or("/".into()),
             server_url: env::var(ConfigKey::ServerUrl.to_string())
                 .unwrap_or("127.0.0.1:8000".into()),
             postgres_url: env::var(ConfigKey::PostgresUrl.to_string()).unwrap_or_log(),

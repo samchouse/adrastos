@@ -2,12 +2,12 @@
   "name": "@adrastos/dashboard",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "NODE_EXTRA_CA_CERTS=../../certs/rootCA.pem next dev -H 0.0.0.0",
-    "dev:no-certs": "next dev -H 0.0.0.0",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "vite",
+    "build": "run -T tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@adrastos/lib": "workspace:^",
@@ -27,18 +27,17 @@
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-switch": "^1.0.3",
     "@radix-ui/react-toast": "^1.1.5",
-    "@t3-oss/env-nextjs": "^0.8.0",
     "@tanstack/react-query": "^5.17.19",
     "@tanstack/react-query-devtools": "^5.17.21",
+    "@tanstack/react-router": "^1.14.0",
     "@tanstack/react-table": "^8.11.7",
+    "@tanstack/router-devtools": "^1.14.0",
     "axios": "^1.6.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "jotai": "^2.6.3",
     "jotai-devtools": "^0.7.1",
     "lucide-react": "^0.316.0",
-    "next": "^14.1.0",
-    "next-themes": "^0.2.1",
     "radash": "^11.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -49,9 +48,13 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@tanstack/router-vite-plugin": "^1.12.16",
     "@total-typescript/ts-reset": "^0.5.1",
+    "@vitejs/plugin-react-swc": "^3.5.0",
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.33",
-    "tailwindcss": "^3.4.1"
+    "tailwindcss": "^3.4.1",
+    "vite": "^5.0.8",
+    "vite-tsconfig-paths": "^4.3.1"
   }
 }

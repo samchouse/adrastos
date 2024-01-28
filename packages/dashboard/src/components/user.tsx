@@ -1,7 +1,8 @@
+// @ts-nocheck
+
 import { User as UserType } from '@adrastos/lib';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { ExternalLink, LogOut, Settings, User as UserIcon } from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Dispatch, SetStateAction } from 'react';
 
 import {
@@ -23,7 +24,7 @@ export const User: React.FC<{
   user?: UserType;
   setIsLoggingOff: Dispatch<SetStateAction<boolean>>;
 }> = ({ user, setIsLoggingOff }) => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { mutateAsync } = useLogoutMutation();
 
   return user ? (
@@ -52,20 +53,20 @@ export const User: React.FC<{
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <Link href="/dashboard/profile">
+        <Link to="/dashboard/profile">
           <DropdownMenuItem className="cursor-pointer">
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile</span>
           </DropdownMenuItem>
         </Link>
-        <Link href="/dashboard/settings">
+        <Link to="/dashboard/settings">
           <DropdownMenuItem className="cursor-pointer">
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
           </DropdownMenuItem>
         </Link>
         <DropdownMenuSeparator />
-        <Link href="/home">
+        <Link to="/home">
           <DropdownMenuItem className="cursor-pointer">
             <ExternalLink className="mr-2 h-4 w-4" />
             <span>Home</span>
@@ -77,7 +78,7 @@ export const User: React.FC<{
             void (async () => {
               setIsLoggingOff(true);
               await mutateAsync();
-              router.push('/');
+              await navigate({ to: '/' });
             })()
           }
           className="cursor-pointer"

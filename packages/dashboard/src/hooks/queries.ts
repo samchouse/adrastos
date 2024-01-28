@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAtomValue } from 'jotai';
 
-import { getTableData } from '~/lib';
-import { clientAtom } from '~/lib/state';
+import { clientAtom, getTableData } from '~/lib';
 
 export const queryKeys = {
   tokenRefresh: ['auth', 'token', 'refresh'] as const,

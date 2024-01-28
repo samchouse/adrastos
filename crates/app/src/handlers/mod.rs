@@ -1,9 +1,13 @@
-use std::ops::Deref;
+use std::{ops::Deref, path::PathBuf};
 
-use tokio::sync::Mutex;
-
-use actix_web::{get, web, HttpResponse, Responder};
+use actix_files::NamedFile;
+use actix_web::{
+    get,
+    http::header::{CacheControl, CacheDirective},
+    web, HttpRequest, HttpResponse, Responder,
+};
 use adrastos_core::{config::Config, error::Error};
+use tokio::sync::Mutex;
 
 use crate::middleware::user::RequiredUser;
 
@@ -11,14 +15,23 @@ pub mod auth;
 pub mod config;
 pub mod tables;
 
-pub async fn not_found() -> actix_web::Result<String, Error> {
-    Err(Error::NotFound)
+pub async fn default(req: HttpRequest) -> actix_web::Result<impl Responder, Error> {
+    if let Some(path) = req.path().split('/').last() {
+        if PathBuf::from(path).extension().is_some() {
+            return Err(Error::NotFound);
+        }
+    }
+
+    Ok(NamedFile::open("./packages/dashboard/dist/index.html"))
 }
 
-#[get("/")]
-pub async fn index(config: web::Data<Mutex<Config>>) -> actix_web::Result<impl Responder, Error> {
+#[get("/api")]
+pub async fn api_index(
+    config: web::Data<Mutex<Config>>,
+) -> actix_web::Result<impl Responder, Error> {
     Ok(HttpResponse::PermanentRedirect()
         .append_header(("Location", config.lock().await.client_url.clone()))
+        .append_header(CacheControl(vec![CacheDirective::NoCache]))
         .finish())
 }
 

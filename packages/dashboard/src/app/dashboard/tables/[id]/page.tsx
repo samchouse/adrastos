@@ -1,5 +1,3 @@
-'use client';
-
 import { ColumnDef, createColumnHelper } from '@tanstack/react-table';
 import { Settings2 } from 'lucide-react';
 import { title } from 'radash';

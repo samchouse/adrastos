@@ -1,6 +1,7 @@
 #![feature(let_chains)]
 
 use actix_cors::Cors;
+use actix_files::Files;
 use actix_session::{storage::RedisSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, error::InternalError, web, App, HttpResponse, HttpServer};
 use adrastos_core::{
@@ -93,6 +94,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(TracingLogger::default())
             .wrap(sentry_actix::Sentry::new())
+            .wrap(actix_web::middleware::NormalizePath::trim())
             .wrap(middleware::user::GetUser {
                 config: config.clone(),
                 db_pool: db_pool.clone(),
@@ -145,7 +147,7 @@ async fn main() -> std::io::Result<()> {
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", ApiDoc::openapi()),
             )
-            .service(handlers::index)
+            .service(handlers::api_index)
             .service(
                 web::scope("/api")
                     .service(handlers::me)
@@ -193,7 +195,11 @@ async fn main() -> std::io::Result<()> {
                             ))),
                     ),
             )
-            .default_service(web::route().to(handlers::not_found))
+            .service(
+                Files::new("/", "./packages/dashboard/dist")
+                    .index_file("./packages/dashboard/dist/index.html")
+                    .default_handler(web::route().to(handlers::default)),
+            )
     });
 
     let server = if use_tls {

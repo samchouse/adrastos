@@ -1,9 +1,12 @@
-'use client';
+// @ts-nocheck
 
-import { StaticImport } from 'next/dist/shared/lib/get-img-props';
-import Image from 'next/image';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import {
+  createLazyFileRoute,
+  Link,
+  Outlet,
+  useNavigate,
+  useRouterState,
+} from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
 import {
@@ -16,20 +19,29 @@ import {
 import { useMeQuery, useTokenRefreshQuery } from '~/hooks';
 import { cn } from '~/lib/utils';
 
-import logo from '../../../public/logo.svg';
+export const Route = createLazyFileRoute('/dashboard')({
+  component: RouteComponent,
+});
 
-const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
-  const router = useRouter();
-  const pathname = usePathname();
+function RouteComponent() {
+  const navigate = useNavigate();
+  const routerState = useRouterState();
   const [isLoggingOff, setIsLoggingOff] = useState(false);
 
   const { data: user } = useMeQuery();
   const { isError } = useTokenRefreshQuery();
 
   useEffect(() => {
-    if (isError && !isLoggingOff && pathname.includes('/dashboard'))
-      router.push(`/login?to=${pathname}`);
-  }, [isError, isLoggingOff, pathname, router]);
+    if (
+      isError &&
+      !isLoggingOff &&
+      routerState.location.pathname.includes('/dashboard')
+    )
+      void navigate({
+        to: '/login',
+        search: { to: routerState.location.pathname },
+      });
+  }, [isError, isLoggingOff, routerState.location.pathname, navigate]);
 
   return (
     <section className="flex h-full flex-col">
@@ -39,9 +51,9 @@ const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
         )}
       >
         <div className="flex flex-row">
-          <Link href="/dashboard">
-            <Image
-              src={logo as StaticImport}
+          <Link to="/dashboard">
+            <img
+              src="/logo.svg"
               alt="logo"
               width={40}
               height={40}
@@ -56,7 +68,7 @@ const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
                   asChild
                   className="focus:bg-accent focus:text-accent-foreground bg-background hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent/50 data-[active]:bg-accent/50 group inline-flex h-10 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none disabled:pointer-events-none disabled:opacity-50"
                 >
-                  <Link href="/dashboard/tables">Tables</Link>
+                  <Link to="/dashboard/tables">Tables</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
@@ -64,7 +76,7 @@ const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
                   asChild
                   className="focus:bg-accent focus:text-accent-foreground bg-background hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent/50 data-[active]:bg-accent/50 group inline-flex h-10 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none disabled:pointer-events-none disabled:opacity-50"
                 >
-                  <Link href="/dashboard/auth">Auth</Link>
+                  <Link to="/dashboard/auth">Auth</Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
             </NavigationMenuList>
@@ -74,9 +86,9 @@ const DashboardLayout: React.FC<React.PropsWithChildren> = ({ children }) => {
         <User user={user} setIsLoggingOff={setIsLoggingOff} />
       </div>
 
-      <div className="bg-background z-20 h-full">{children}</div>
+      <div className="bg-background z-20 h-full">
+        <Outlet />
+      </div>
     </section>
   );
-};
-
-export default DashboardLayout;
+}
