@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { User as UserType } from '@adrastos/lib';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ExternalLink, LogOut, Settings, User as UserIcon } from 'lucide-react';

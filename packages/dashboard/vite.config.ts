@@ -5,4 +5,10 @@ import tsPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
   plugins: [tsPaths(), react(), TanStackRouterVite()],
+  server: {
+    https: {
+      cert: '../../certs/cert.pem',
+      key: '../../certs/key.pem',
+    },
+  },
 });

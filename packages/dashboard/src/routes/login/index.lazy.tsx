@@ -33,7 +33,7 @@ import { useLoginMutation } from '~/hooks';
 import { providers } from '~/lib';
 import { clientAtom } from '~/lib/state';
 
-export const Route = createLazyFileRoute('/_layout/login/')({
+export const Route = createLazyFileRoute('/login/')({
   component: LoginComponent,
 });
 

@@ -12,7 +12,7 @@ use adrastos_core::{
 };
 
 use actix_session::Session;
-use actix_web::{cookie::Cookie, get, http::header, web, HttpResponse, Responder};
+use actix_web::{cookie::{Cookie, SameSite}, get, http::header, web, HttpResponse, Responder};
 use chrono::Utc;
 use serde::Deserialize;
 use tracing::error;
@@ -177,7 +177,7 @@ pub async fn callback(
         .cookie(
             Cookie::build("isLoggedIn", true.to_string())
                 .secure(true)
-                .http_only(true)
+                .same_site(SameSite::None)
                 .path("/")
                 .expires(auth.cookie.expires().unwrap())
                 .finish(),

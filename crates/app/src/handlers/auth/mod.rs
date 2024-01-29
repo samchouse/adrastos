@@ -11,7 +11,7 @@ use adrastos_core::{
 };
 use tokio::{sync::Mutex, time::timeout};
 
-use actix_web::{cookie::Cookie, get, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{cookie::{Cookie, SameSite}, get, post, web, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
 use deadpool_redis::redis::{self, AsyncCommands};
 use futures_util::StreamExt;
@@ -200,7 +200,7 @@ pub async fn login(
         .cookie(
             Cookie::build("isLoggedIn", true.to_string())
                 .secure(true)
-                .http_only(true)
+                .same_site(SameSite::None)
                 .path("/")
                 .expires(auth.cookie.expires().unwrap())
                 .finish(),

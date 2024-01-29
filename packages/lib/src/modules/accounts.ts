@@ -21,6 +21,9 @@ export class AccountsModule extends BaseModule {
     return this.client.request<User>({
       path: '/auth/login',
       method: 'POST',
+      options: {
+        credentials: 'include',
+      },
       body: JSON.stringify(body),
     });
   }
@@ -44,6 +47,9 @@ export class AccountsModule extends BaseModule {
     return this.client.request<undefined>({
       path: '/auth/logout',
       method: 'GET',
+      options: {
+        credentials: 'include',
+      },
     });
   }
 
@@ -97,6 +103,9 @@ export class AccountsModule extends BaseModule {
     return this.client.request<string>({
       path: '/auth/token/refresh',
       method: 'GET',
+      options: {
+        credentials: 'include',
+      },
     });
   }
 

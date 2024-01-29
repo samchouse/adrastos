@@ -1,5 +1,5 @@
 use actix_web::{
-    cookie::{time::OffsetDateTime, Cookie, Expiration},
+    cookie::{time::OffsetDateTime, Cookie, Expiration, SameSite},
     get, web, HttpRequest, HttpResponse, Responder,
 };
 use adrastos_core::{
@@ -73,6 +73,7 @@ pub async fn refresh(
             Cookie::build("refreshToken", refresh_token.token)
                 .secure(true)
                 .http_only(true)
+                .same_site(SameSite::None)
                 .path("/api/auth")
                 .expires(Expiration::from(cookie_expiration))
                 .finish(),
@@ -80,7 +81,7 @@ pub async fn refresh(
         .cookie(
             Cookie::build("isLoggedIn", true.to_string())
                 .secure(true)
-                .http_only(true)
+                .same_site(SameSite::None)
                 .path("/")
                 .expires(Expiration::from(cookie_expiration))
                 .finish(),

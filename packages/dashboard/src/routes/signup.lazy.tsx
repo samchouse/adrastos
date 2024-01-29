@@ -22,7 +22,7 @@ import {
 } from '~/components';
 import { useSignupMutation } from '~/hooks';
 
-export const Route = createLazyFileRoute('/_layout/signup')({
+export const Route = createLazyFileRoute('/signup')({
   component: SignupComponent,
 });
 

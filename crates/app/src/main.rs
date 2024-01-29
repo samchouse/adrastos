@@ -28,6 +28,7 @@ use tracing_unwrap::{OptionExt, ResultExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+mod assets;
 mod cli;
 mod handlers;
 mod middleware;
@@ -35,7 +36,6 @@ mod openapi;
 mod session;
 mod telemetry;
 mod util;
-mod assets;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -105,9 +105,10 @@ async fn main() -> std::io::Result<()> {
             ))
             .wrap(
                 Cors::default()
-                    .allow_any_header()
+                    .allow_any_origin()
                     .allow_any_method()
-                    .allow_any_origin(),
+                    .allow_any_header()
+                    .supports_credentials(),
             )
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(OAuth2::new(&config)))
@@ -254,6 +255,9 @@ async fn server_started(use_tls: bool, url: &str) {
     info!("server started at {url}");
 
     if url.contains("0.0.0.0") {
-        info!("you can access the server at {}", url.replace("0.0.0.0", "127.0.0.1"));
+        info!(
+            "you can access the server at {}",
+            url.replace("0.0.0.0", "127.0.0.1")
+        );
     }
 }

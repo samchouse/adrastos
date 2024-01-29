@@ -1,6 +1,14 @@
 import { CustomTable, Field } from '@adrastos/lib';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ChevronRight, Trash2 } from 'lucide-react';
+import { createLazyFileRoute } from '@tanstack/react-router';
+import {
+  ColumnDef,
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from '@tanstack/react-table';
+import { ChevronRight, Settings2, Trash2 } from 'lucide-react';
 import { title } from 'radash';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -8,6 +16,7 @@ import { z } from 'zod';
 
 import {
   Button,
+  Checkbox,
   Form,
   FormControl,
   FormField,
@@ -22,15 +31,29 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '~/components';
 import {
   useCreateRowMutation,
   useDeleteRowMutation,
+  useTableDataQuery,
+  useTablesQuery,
   useUpdateRowMutation,
 } from '~/hooks';
 import { cn } from '~/lib';
 
-import { Row } from '../page';
+export const Route = createLazyFileRoute('/dashboard/tables/$tableId')({
+  component: TableIdComponent,
+});
+
+type Row = { id: string } & Record<string, unknown>;
+
+const columnHelper = createColumnHelper<Row>();
 
 const createFormSchema = (fields: Field[]) =>
   z.object(
@@ -204,3 +227,140 @@ export const RowSheet: React.FC<{
     </Sheet>
   );
 };
+
+const DataTable: React.FC<{
+  data: Row[];
+  columns: ColumnDef<Row>[];
+}> = ({ columns, data }) => {
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  className={cn(
+                    header.column.columnDef.meta?.style?.width === 'min' &&
+                      'w-[1%]',
+                  )}
+                >
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row) => (
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() && 'selected'}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell
+                    key={cell.id}
+                    className={cn(
+                      cell.column.columnDef.meta?.style?.textAlign &&
+                        `text-${cell.column.columnDef.meta.style.textAlign}`,
+                      cell.column.columnDef.meta?.style?.width === 'min' &&
+                        'w-[1%]',
+                    )}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={columns.length} className="h-24 text-center">
+                No results.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+
+function TableIdComponent() {
+  const { tableId } = Route.useParams();
+  const [cols, setCols] = useState<ColumnDef<Row>[]>([]);
+  const { data: tables } = useTablesQuery();
+  const { data } = useTableDataQuery<Row>(tableId);
+
+  const table = useMemo(
+    () => tables?.find((t) => t.name === tableId),
+    [tables, tableId],
+  );
+
+  useEffect(() => {
+    setCols(
+      [
+        columnHelper.display({
+          id: 'checkbox',
+          meta: {
+            style: {
+              width: 'min',
+            },
+          },
+          header: () => <Checkbox />,
+          cell: () => <Checkbox />,
+        }),
+        columnHelper.accessor('id', { header: 'Id' }) as ColumnDef<Row>,
+      ]
+        .concat(
+          table?.fields.map((f) =>
+            columnHelper.accessor(f.name, {
+              header: title(f.name),
+            }),
+          ) ?? [],
+        )
+        .concat([
+          columnHelper.display({
+            id: 'actions',
+            meta: {
+              style: {
+                width: 'min',
+                textAlign: 'right',
+              },
+            },
+            cell: ({ row }) =>
+              table && <RowSheet table={table} row={row.original} />,
+          }),
+        ]),
+    );
+  }, [table]);
+
+  return (
+    <div className="p-5">
+      <div className="flex w-full flex-row justify-between pb-4">
+        <div className="flex flex-row space-x-3">
+          <h2 className="text-2xl font-semibold">{title(tableId)}</h2>
+          <Button size="icon" variant="ghost">
+            <Settings2 className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {table && <RowSheet table={table} />}
+      </div>
+
+      <DataTable data={data?.data ?? []} columns={cols} />
+    </div>
+  );
+}
