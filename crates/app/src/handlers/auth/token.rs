@@ -81,6 +81,7 @@ pub async fn refresh(
         .cookie(
             Cookie::build("isLoggedIn", true.to_string())
                 .secure(true)
+                .http_only(true)
                 .same_site(SameSite::None)
                 .path("/")
                 .expires(Expiration::from(cookie_expiration))

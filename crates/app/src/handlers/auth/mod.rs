@@ -203,6 +203,7 @@ pub async fn login(
         .cookie(
             Cookie::build("isLoggedIn", true.to_string())
                 .secure(true)
+                .http_only(true)
                 .same_site(SameSite::None)
                 .path("/")
                 .expires(auth.cookie.expires().unwrap())

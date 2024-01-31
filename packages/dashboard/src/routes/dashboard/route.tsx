@@ -1,11 +1,5 @@
-import {
-  createFileRoute,
-  Link,
-  Outlet,
-  useNavigate,
-  useRouterState,
-} from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useSuspenseQueries } from '@tanstack/react-query';
+import { createFileRoute, Link, Outlet } from '@tanstack/react-router';
 
 import {
   NavigationMenu,
@@ -14,7 +8,7 @@ import {
   NavigationMenuList,
   User,
 } from '~/components';
-import { useMeQuery, useTokenRefreshQuery } from '~/hooks';
+import { meQueryOptions } from '~/hooks';
 import { cn } from '~/lib/utils';
 
 export const Route = createFileRoute('/dashboard')({
@@ -22,24 +16,11 @@ export const Route = createFileRoute('/dashboard')({
 });
 
 function RouteComponent() {
-  const navigate = useNavigate();
-  const routerState = useRouterState();
-  const [isLoggingOff, setIsLoggingOff] = useState(false);
+  const { client } = Route.useRouteContext();
 
-  const { data: user } = useMeQuery();
-  const { isError } = useTokenRefreshQuery();
-
-  useEffect(() => {
-    if (
-      isError &&
-      !isLoggingOff &&
-      routerState.location.pathname.includes('/dashboard')
-    )
-      void navigate({
-        to: '/login',
-        search: { to: routerState.location.pathname },
-      });
-  }, [isError, isLoggingOff, routerState.location.pathname, navigate]);
+  const [{ data: user }] = useSuspenseQueries({
+    queries: [meQueryOptions(Route.useRouteContext())],
+  });
 
   return (
     <section className="flex h-full flex-col">
@@ -81,7 +62,7 @@ function RouteComponent() {
           </NavigationMenu>
         </div>
 
-        <User user={user} setIsLoggingOff={setIsLoggingOff} />
+        <User user={user} client={client} />
       </div>
 
       <div className="bg-background z-20 h-full">

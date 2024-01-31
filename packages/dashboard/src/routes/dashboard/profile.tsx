@@ -29,12 +29,6 @@ import { providers } from '~/lib';
 
 export const Route = createFileRoute('/dashboard/profile')({
   component: ProfileComponent,
-  loader: async ({ context: { client, queryClient } }) => ({
-    accessToken: await queryClient.ensureQueryData(
-      tokenRefreshQueryOptions(client),
-    ),
-    user: await queryClient.ensureQueryData(meQueryOptions(client)),
-  }),
 });
 
 const providerIcons = {

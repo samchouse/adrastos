@@ -1,3 +1,4 @@
+import { Client } from '@adrastos/lib';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAtomValue } from 'jotai';
 
@@ -33,9 +34,8 @@ export const useLoginMutation = () => {
   });
 };
 
-export const useLogoutMutation = () => {
+export const useLogoutMutation = (client: Client) => {
   const queryClient = useQueryClient();
-  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['auth', 'logout'],

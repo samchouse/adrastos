@@ -1,16 +1,16 @@
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { User } from '@adrastos/lib';
 import {
   createRootRouteWithContext,
   Link,
   Outlet,
   redirect,
 } from '@tanstack/react-router';
+import { useAtomValue } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
-import Cookies from 'universal-cookie';
 
 import { Button } from '~/components/ui';
-import { tokenRefreshQueryOptions, useMeQuery } from '~/hooks';
-import { client as oldClient } from '~/lib';
+import { meQueryOptions, tokenRefreshQueryOptions } from '~/hooks';
+import { clientAtom, client as oldClient } from '~/lib';
 import { RouterContext } from '~/typings';
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -19,27 +19,30 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     accessToken: await queryClient
       .ensureQueryData(tokenRefreshQueryOptions(client))
       .catch(() => undefined),
+    user: await queryClient
+      .ensureQueryData(meQueryOptions(client))
+      .catch(() => undefined),
   }),
   beforeLoad: async ({ location, context: { client, queryClient } }) => {
-    const cookies = new Cookies();
-    const isLoggedIn = cookies.get('isLoggedIn') as boolean | undefined;
+    client.authToken = await queryClient
+      .ensureQueryData(tokenRefreshQueryOptions(client))
+      .catch(() => undefined);
 
-    if (['/', '/login', '/signup'].includes(location.pathname) && isLoggedIn)
+    if (
+      ['/', '/login', '/signup'].includes(location.pathname) &&
+      client.hasAuthToken
+    )
       throw redirect({
         to: '/dashboard',
       });
 
-    if (location.pathname.startsWith('/dashboard') && !isLoggedIn)
+    if (location.pathname.startsWith('/dashboard') && !client.hasAuthToken)
       throw redirect({
         to: '/login',
         search: {
           to: location.pathname,
         },
       });
-
-    client.authToken = await queryClient
-      .ensureQueryData(tokenRefreshQueryOptions(client))
-      .catch(() => undefined);
   },
 });
 
@@ -52,15 +55,18 @@ const TanStackRouterDevtools = import.meta.env.PROD
     );
 
 function RootComponent() {
-  const { data: user } = useMeQuery();
-  const { data: accessToken } = useSuspenseQuery(
-    tokenRefreshQueryOptions(Route.useRouteContext().client),
-  );
+  const anotherOldClient = useAtomValue(clientAtom);
+  const { accessToken, user } = Route.useLoaderData<{
+    accessToken: string | undefined;
+    user: User | undefined;
+  }>();
 
   useEffect(() => {
-    if (accessToken)
+    if (accessToken) {
+      anotherOldClient.authToken = accessToken;
       oldClient.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-  }, [accessToken]);
+    }
+  }, [accessToken, anotherOldClient]);
 
   return (
     <div className="bg-background text-primary flex h-screen flex-col font-['Work_Sans']">

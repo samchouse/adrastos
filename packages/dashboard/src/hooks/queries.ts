@@ -16,6 +16,7 @@ export const tokenRefreshQueryOptions = (client: Client) =>
   queryOptions({
     queryKey: queryKeys.tokenRefresh,
     queryFn: async () => await client.accounts.refreshToken(),
+    throwOnError: false,
     refetchInterval: 1000 * 60 * 10,
     retry: false,
   });
@@ -34,17 +35,6 @@ export const useTokenRefreshQuery = () => {
     queryFn: async () => await client.accounts.refreshToken(),
     refetchInterval: 1000 * 60 * 10,
     retry: false,
-  });
-};
-
-export const useMeQuery = () => {
-  const client = useAtomValue(clientAtom);
-  const { isSuccess } = useTokenRefreshQuery();
-
-  return useQuery({
-    queryKey: queryKeys.me,
-    queryFn: async () => await client.accounts.currentUser(),
-    enabled: isSuccess,
   });
 };
 

@@ -1,7 +1,6 @@
-import { User as UserType } from '@adrastos/lib';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Client, User as UserType } from '@adrastos/lib';
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { ExternalLink, LogOut, Settings, User as UserIcon } from 'lucide-react';
-import { Dispatch, SetStateAction } from 'react';
 
 import {
   Avatar,
@@ -14,18 +13,18 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Skeleton,
 } from '~/components/ui';
 import { useLogoutMutation } from '~/hooks';
 
 export const User: React.FC<{
-  user?: UserType;
-  setIsLoggingOff: Dispatch<SetStateAction<boolean>>;
-}> = ({ user, setIsLoggingOff }) => {
+  client: Client;
+  user: UserType;
+}> = ({ user, client }) => {
   const navigate = useNavigate();
-  const { mutateAsync } = useLogoutMutation();
+  const routerState = useRouterState();
+  const { mutateAsync } = useLogoutMutation(client);
 
-  return user ? (
+  return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
@@ -74,9 +73,11 @@ export const User: React.FC<{
         <DropdownMenuItem
           onSelect={() =>
             void (async () => {
-              setIsLoggingOff(true);
               await mutateAsync();
-              await navigate({ to: '/' });
+              await navigate({
+                to: '/login',
+                search: { to: routerState.location.pathname },
+              });
             })()
           }
           className="cursor-pointer"
@@ -86,7 +87,5 @@ export const User: React.FC<{
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  ) : (
-    <Skeleton className="h-[40px] w-[40px] rounded-full" />
   );
 };
