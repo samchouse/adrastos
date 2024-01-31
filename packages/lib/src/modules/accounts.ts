@@ -44,7 +44,7 @@ export class AccountsModule extends BaseModule {
   }
 
   public async logout() {
-    return this.client.request<undefined>({
+    return this.client.request<null>({
       path: '/auth/logout',
       method: 'GET',
       options: {
@@ -54,7 +54,7 @@ export class AccountsModule extends BaseModule {
   }
 
   public async resendVerification() {
-    return this.client.request<undefined>({
+    return this.client.request<null>({
       path: '/auth/resend-verification',
       method: 'POST',
     });
@@ -84,7 +84,7 @@ export class AccountsModule extends BaseModule {
   }
 
   public async disableMfa(body: { code: string }) {
-    return this.client.request<undefined>({
+    return this.client.request<null>({
       path: '/auth/mfa/disable',
       method: 'POST',
       body: JSON.stringify(body),

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createLazyFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -22,7 +22,7 @@ import {
 } from '~/components';
 import { useSignupMutation } from '~/hooks';
 
-export const Route = createLazyFileRoute('/signup')({
+export const Route = createFileRoute('/signup')({
   component: SignupComponent,
 });
 

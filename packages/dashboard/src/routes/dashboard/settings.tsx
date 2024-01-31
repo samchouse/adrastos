@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createLazyFileRoute } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { Edit2, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -29,7 +29,7 @@ import {
 } from '~/hooks';
 import { providers } from '~/lib';
 
-export const Route = createLazyFileRoute('/dashboard/settings')({
+export const Route = createFileRoute('/dashboard/settings')({
   component: SettingsComponent,
 });
 

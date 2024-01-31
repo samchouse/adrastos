@@ -1,6 +1,6 @@
 import { Field } from '@adrastos/lib';
 import { PopoverContent, PopoverTrigger } from '@radix-ui/react-popover';
-import { createLazyFileRoute, Link, Outlet } from '@tanstack/react-router';
+import { createFileRoute, Link, Outlet } from '@tanstack/react-router';
 import {
   Calendar,
   Database,
@@ -32,7 +32,7 @@ import {
 import { useCreateTableMutation, useTablesQuery } from '~/hooks';
 import { mkId } from '~/lib';
 
-export const Route = createLazyFileRoute('/dashboard/tables')({
+export const Route = createFileRoute('/dashboard/tables')({
   component: RouteComponent,
 });
 

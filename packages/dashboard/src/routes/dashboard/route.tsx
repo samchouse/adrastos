@@ -1,5 +1,5 @@
 import {
-  createLazyFileRoute,
+  createFileRoute,
   Link,
   Outlet,
   useNavigate,
@@ -17,7 +17,7 @@ import {
 import { useMeQuery, useTokenRefreshQuery } from '~/hooks';
 import { cn } from '~/lib/utils';
 
-export const Route = createLazyFileRoute('/dashboard')({
+export const Route = createFileRoute('/dashboard')({
   component: RouteComponent,
 });
 

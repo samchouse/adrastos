@@ -1,20 +1,26 @@
+import { useSuspenseQuery } from '@tanstack/react-query';
 import {
-  createRootRoute,
+  createRootRouteWithContext,
   Link,
   Outlet,
   redirect,
 } from '@tanstack/react-router';
-import { useAtomValue } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
 import Cookies from 'universal-cookie';
 
 import { Button } from '~/components/ui';
-import { useMeQuery, useTokenRefreshQuery } from '~/hooks';
-import { clientAtom, client as oldClient } from '~/lib';
+import { tokenRefreshQueryOptions, useMeQuery } from '~/hooks';
+import { client as oldClient } from '~/lib';
+import { RouterContext } from '~/typings';
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent,
-  beforeLoad: ({ location }) => {
+  loader: async ({ context: { client, queryClient } }) => ({
+    accessToken: await queryClient
+      .ensureQueryData(tokenRefreshQueryOptions(client))
+      .catch(() => undefined),
+  }),
+  beforeLoad: async ({ location, context: { client, queryClient } }) => {
     const cookies = new Cookies();
     const isLoggedIn = cookies.get('isLoggedIn') as boolean | undefined;
 
@@ -30,6 +36,10 @@ export const Route = createRootRoute({
           to: location.pathname,
         },
       });
+
+    client.authToken = await queryClient
+      .ensureQueryData(tokenRefreshQueryOptions(client))
+      .catch(() => undefined);
   },
 });
 
@@ -42,17 +52,15 @@ const TanStackRouterDevtools = import.meta.env.PROD
     );
 
 function RootComponent() {
-  const client = useAtomValue(clientAtom);
-
   const { data: user } = useMeQuery();
-  const { data: accessToken } = useTokenRefreshQuery();
+  const { data: accessToken } = useSuspenseQuery(
+    tokenRefreshQueryOptions(Route.useRouteContext().client),
+  );
 
   useEffect(() => {
-    if (accessToken) {
+    if (accessToken)
       oldClient.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-      client.authToken = accessToken;
-    }
-  }, [accessToken, client]);
+  }, [accessToken]);
 
   return (
     <div className="bg-background text-primary flex h-screen flex-col font-['Work_Sans']">

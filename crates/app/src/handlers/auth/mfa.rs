@@ -12,7 +12,7 @@ use adrastos_core::{
 use chrono::Duration;
 use deadpool_redis::redis;
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value};
 use tokio::sync::Mutex;
 
 use crate::{middleware::user, session::SessionKey};
@@ -190,7 +190,7 @@ pub async fn disable(
     .await
     .map_err(|_| Error::InternalServerError("Error updating user".into()))?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(Value::Null))
 }
 
 #[post("/codes/regenerate")]

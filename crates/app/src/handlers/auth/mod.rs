@@ -11,7 +11,10 @@ use adrastos_core::{
 };
 use tokio::{sync::Mutex, time::timeout};
 
-use actix_web::{cookie::{Cookie, SameSite}, get, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{
+    cookie::{Cookie, SameSite},
+    get, post, web, HttpRequest, HttpResponse, Responder,
+};
 use chrono::{Duration, Utc};
 use deadpool_redis::redis::{self, AsyncCommands};
 use futures_util::StreamExt;
@@ -19,7 +22,7 @@ use lettre::{
     message::header::ContentType, AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value};
 use tracing::{error, warn};
 
 use crate::{middleware::user::RequiredUser, session::SessionKey};
@@ -238,7 +241,7 @@ pub async fn logout(
     Ok(HttpResponse::Ok()
         .cookie(cookies.is_logged_in)
         .cookie(cookies.refresh_token)
-        .finish())
+        .json(Value::Null))
 }
 
 #[get("/verify")]
@@ -372,5 +375,5 @@ pub async fn resend_verification(
         ));
     };
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(Value::Null))
 }

@@ -1,6 +1,6 @@
 import { CustomTable, Field } from '@adrastos/lib';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createLazyFileRoute } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import {
   ColumnDef,
   createColumnHelper,
@@ -47,7 +47,7 @@ import {
 } from '~/hooks';
 import { cn } from '~/lib';
 
-export const Route = createLazyFileRoute('/dashboard/tables/$tableId')({
+export const Route = createFileRoute('/dashboard/tables/$tableId')({
   component: TableIdComponent,
 });
 

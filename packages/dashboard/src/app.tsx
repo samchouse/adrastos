@@ -12,8 +12,16 @@ import { routeTree } from './routeTree.gen';
 
 import './index.css';
 
+import { Client } from '@adrastos/lib';
+
 const queryClient = new QueryClient();
-const router = createRouter({ routeTree });
+const router = createRouter({
+  routeTree,
+  context: {
+    queryClient,
+    client: new Client(import.meta.env.VITE_BACKEND_URL ?? '', ''),
+  },
+});
 
 declare module '@tanstack/react-router' {
   interface Register {

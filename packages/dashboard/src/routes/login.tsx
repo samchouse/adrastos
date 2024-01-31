@@ -6,7 +6,7 @@ import {
   SiGoogle,
   SiTwitter,
 } from '@icons-pack/react-simple-icons';
-import { createLazyFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { useAtomValue } from 'jotai';
 import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
@@ -33,8 +33,14 @@ import { useLoginMutation } from '~/hooks';
 import { providers } from '~/lib';
 import { clientAtom } from '~/lib/state';
 
-export const Route = createLazyFileRoute('/login/')({
+export const Route = createFileRoute('/login')({
   component: LoginComponent,
+  validateSearch: (search) =>
+    z
+      .object({
+        to: z.string().optional(),
+      })
+      .parse(search),
 });
 
 const providerIcons = {
@@ -59,7 +65,7 @@ const formSchema = z.object({
 function LoginComponent() {
   const client = useAtomValue(clientAtom);
 
-  const navigate = useNavigate();
+  const router = useRouter();
   const { to } = Route.useSearch();
 
   const { mutateAsync, isPending, isError, error } = useLoginMutation();
@@ -91,9 +97,9 @@ function LoginComponent() {
             onSubmit={(e) =>
               void form.handleSubmit(async (values) => {
                 await mutateAsync(values);
-                await navigate({
-                  to: to ?? '/dashboard',
-                });
+
+                if (to) router.history.push(to);
+                else await router.navigate({ to: '/dashboard' });
               })(e)
             }
           >

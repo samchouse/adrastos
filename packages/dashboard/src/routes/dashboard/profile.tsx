@@ -5,8 +5,8 @@ import {
   SiGoogle,
   SiTwitter,
 } from '@icons-pack/react-simple-icons';
-import { createLazyFileRoute, useRouterState } from '@tanstack/react-router';
-import { useAtomValue } from 'jotai';
+import { useSuspenseQueries } from '@tanstack/react-query';
+import { createFileRoute, useRouterState } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 
 import {
@@ -21,15 +21,20 @@ import {
   CardTitle,
 } from '~/components';
 import {
-  useMeQuery,
+  meQueryOptions,
+  tokenRefreshQueryOptions,
   useResendVerificationMutation,
-  useTokenRefreshQuery,
 } from '~/hooks';
 import { providers } from '~/lib';
-import { clientAtom } from '~/lib/state';
 
-export const Route = createLazyFileRoute('/dashboard/profile')({
+export const Route = createFileRoute('/dashboard/profile')({
   component: ProfileComponent,
+  loader: async ({ context: { client, queryClient } }) => ({
+    accessToken: await queryClient.ensureQueryData(
+      tokenRefreshQueryOptions(client),
+    ),
+    user: await queryClient.ensureQueryData(meQueryOptions(client)),
+  }),
 });
 
 const providerIcons = {
@@ -42,10 +47,15 @@ const providerIcons = {
 
 function ProfileComponent() {
   const routerState = useRouterState();
-  const client = useAtomValue(clientAtom);
+  const client = Route.useRouteContext().client;
 
-  const { data: user } = useMeQuery();
-  const { data: accessToken } = useTokenRefreshQuery();
+  const [{ data: accessToken }, { data: user }] = useSuspenseQueries({
+    queries: [
+      tokenRefreshQueryOptions(Route.useRouteContext().client),
+      meQueryOptions(Route.useRouteContext()),
+    ],
+  });
+
   const { mutate, isPending } = useResendVerificationMutation();
 
   return (
