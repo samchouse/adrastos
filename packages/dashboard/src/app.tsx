@@ -21,6 +21,17 @@ const router = createRouter({
     queryClient,
     client: new Client(import.meta.env.VITE_BACKEND_URL ?? '', ''),
   },
+  Wrap: ({ children }) => (
+    <Provider>
+      <QueryClientProvider client={queryClient}>
+        <Toaster />
+        <JotaiDevtools theme="dark" />
+        <ReactQueryDevtools position="bottom" />
+
+        {children}
+      </QueryClientProvider>
+    </Provider>
+  ),
 });
 
 declare module '@tanstack/react-router' {
@@ -31,14 +42,6 @@ declare module '@tanstack/react-router' {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Provider>
-      <QueryClientProvider client={queryClient}>
-        <Toaster />
-        <JotaiDevtools theme="dark" />
-        <ReactQueryDevtools position="bottom" />
-
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </Provider>
+    <RouterProvider router={router} />
   </StrictMode>,
 );

@@ -318,6 +318,8 @@ pub async fn update(
         .await?;
 
     let mut db_query = sea_query::Query::update();
+    // TODO(@Xenfo): Add support for multiple rows
+    db_query.limit(1);
 
     query.iter().for_each(|(field, equals)| {
         db_query.and_where(Expr::col(Alias::new(AsSnakeCase(field).to_string())).eq(equals));
@@ -426,6 +428,8 @@ pub async fn delete(
         .await?;
 
     let mut db_query = sea_query::Query::delete();
+    // TODO(@Xenfo): Add support for multiple rows
+    db_query.limit(1);
 
     query.iter().for_each(|(field, equals)| {
         db_query.and_where(Expr::col(Alias::new(AsSnakeCase(field).to_string())).eq(equals));

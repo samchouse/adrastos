@@ -13,13 +13,15 @@ import { cn } from '~/lib/utils';
 
 export const Route = createFileRoute('/dashboard')({
   component: RouteComponent,
+  loader: ({ context: { client, queryClient } }) =>
+    queryClient.ensureQueryData(meQueryOptions(client)),
 });
 
 function RouteComponent() {
   const { client } = Route.useRouteContext();
 
   const [{ data: user }] = useSuspenseQueries({
-    queries: [meQueryOptions(Route.useRouteContext())],
+    queries: [meQueryOptions(client)],
   });
 
   return (

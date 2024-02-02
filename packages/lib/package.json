@@ -21,7 +21,8 @@
   "scripts": {
     "prepack": "cp ../../LICENSE .",
     "postpack": "rm LICENSE",
-    "build": "tsup"
+    "build": "tsup",
+    "watch": "tsup --watch"
   },
   "peerDependencies": {
     "zod": ">=3.22"

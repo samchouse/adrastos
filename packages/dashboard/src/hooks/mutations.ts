@@ -2,14 +2,13 @@ import { Client } from '@adrastos/lib';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAtomValue } from 'jotai';
 
-import { deleteRow, patchUpdateRow, postCreateRow } from '~/lib';
 import { clientAtom } from '~/lib/state';
 
 import { queryKeys } from './queries';
 
 export const useSignupMutation = () => {
   const client = useAtomValue(clientAtom);
-  const { mutateAsync } = useLoginMutation();
+  const { mutateAsync } = useLoginMutation(client);
 
   return useMutation({
     mutationKey: ['auth', 'signup'],
@@ -20,9 +19,8 @@ export const useSignupMutation = () => {
   });
 };
 
-export const useLoginMutation = () => {
+export const useLoginMutation = (client: Client) => {
   const queryClient = useQueryClient();
-  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['auth', 'login'],
@@ -43,7 +41,6 @@ export const useLogoutMutation = (client: Client) => {
     onSuccess: () => {
       client.authToken = undefined;
       void queryClient.resetQueries({ queryKey: queryKeys.tokenRefresh });
-      void queryClient.resetQueries({ queryKey: queryKeys.me });
     },
   });
 };

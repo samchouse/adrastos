@@ -68,7 +68,9 @@ function LoginComponent() {
   const router = useRouter();
   const { to } = Route.useSearch();
 
-  const { mutateAsync, isPending, isError, error } = useLoginMutation();
+  const { mutateAsync, isPending, isError, error } = useLoginMutation(
+    Route.useRouteContext().client,
+  );
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

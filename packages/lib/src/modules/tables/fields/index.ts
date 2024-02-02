@@ -72,11 +72,20 @@ export type TFWithModifiers =
     >;
 
 export type TInfer<T> =
-  T extends Table<infer _> ? z.infer<ReturnType<T['schema']>> : never;
+  T extends Table<infer _, string>
+    ? z.infer<ReturnType<T['schema']>> & {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+      }
+    : never;
 
-export class Table<T extends Record<string, TFWithModifiers>> {
+export class Table<
+  T extends Record<string, TFWithModifiers>,
+  U extends string,
+> {
   constructor(
-    private name: string,
+    public name: U,
     private shape: T,
   ) {}
 
@@ -265,7 +274,10 @@ class TBuilder {
   }
 }
 
-export const table = <T extends Record<string, TFWithModifiers>>(
-  name: string,
+export const table = <
+  T extends Record<string, TFWithModifiers>,
+  U extends string,
+>(
+  name: U,
   shape: (builder: TBuilder) => T,
-): Table<T> => new Table(name, shape(new TBuilder()));
+): Table<T, U> => new Table(name, shape(new TBuilder()));

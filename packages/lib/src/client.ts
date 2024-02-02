@@ -2,7 +2,14 @@ import { ResponseError } from './errors';
 import { AccountsModule, ConfigModule, TablesModule } from './modules';
 import { Request } from './types';
 
-export { table, TFWithModifiers, TInfer, TField, CustomTable } from './modules';
+export {
+  table,
+  Table,
+  TFWithModifiers,
+  TInfer,
+  TField,
+  CustomTable,
+} from './modules';
 
 export class Client {
   #authToken?: string;
