@@ -13,9 +13,9 @@
     "@react-email/components": "0.0.7",
     "@t3-oss/env-core": "^0.8.0",
     "dotenv": "^16.4.1",
-    "pino": "^8.17.2",
+    "pino": "^8.18.0",
     "react-email": "1.9.4",
-    "redis": "^4.6.12",
+    "redis": "^4.6.13",
     "zod": "^3.22.4"
   }
 }

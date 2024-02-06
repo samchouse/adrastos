@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 actix-cors = "0.6.5"
 actix-session = { version = "0.7.2", features = ["redis-rs-session"] }
-actix-web = { version = "4.4.1", features = ["rustls", "cookies"] }
+actix-web = { version = "4.5.1", features = ["rustls", "cookies"] }
 actix-web-httpauth = "0.8.1"
 adrastos_core = { path = "../core" }
 argon2 = "0.5.3"
@@ -33,7 +33,7 @@ mailchecker = "5.0.9"
 mime_guess = "2.0.4"
 oauth2 = "4.4.2"
 regex = "1.10.3"
-reqwest = { version = "0.11.23", features = ["json"] }
+reqwest = { version = "0.11.24", features = ["json"] }
 rust-embed = { version = "8.2.0", features = ["actix", "compression"] }
 rustls = "0.20"
 rustls-pemfile = "1.0.4"
@@ -48,8 +48,8 @@ sentry = "0.31.8"
 sentry-actix = "0.31.8"
 sentry-tracing = "0.31.8"
 serde = { version = "1.0.196", features = ["derive"] }
-serde_json = "1.0.112"
-tokio = { version = "1.35.1", features = ["macros"] }
+serde_json = "1.0.113"
+tokio = { version = "1.36.0", features = ["macros"] }
 tracing = "0.1.40"
 tracing-actix-web = "0.7.9"
 tracing-axiom = "0.4.0"
