@@ -51,10 +51,7 @@ pub async fn rows(
         .join();
 
     let rows = builder.finish(&db_pool).await?;
-    let mut response = json!({
-        "success": true,
-        "data": rows
-    });
+    let mut response = json!({ "rows": rows });
 
     if let Some(page) = page
         && let Some(limit) = limit
@@ -95,10 +92,7 @@ pub async fn row(
         .finish(&db_pool)
         .await?;
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "data": row.as_array().unwrap().first()
-    })))
+    Ok(HttpResponse::Ok().json(row.as_array().unwrap().first()))
 }
 
 #[post("/create")]
@@ -293,10 +287,7 @@ pub async fn create(
         })
         .for_each(|patch| json_patch::merge(&mut data, &patch));
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "data": data
-    })))
+    Ok(HttpResponse::Ok().json(json!(data)))
 }
 
 #[patch("/update")]
@@ -408,11 +399,7 @@ pub async fn update(
         })
         .for_each(|patch| json_patch::merge(&mut data, &patch));
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Row updated successfully",
-        "data": data
-    })))
+    Ok(HttpResponse::Ok().json(json!(data)))
 }
 
 #[delete("/delete")]
@@ -449,8 +436,5 @@ pub async fn delete(
         .await
         .unwrap();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Row deleted successfully"
-    })))
+    Ok(HttpResponse::Ok().json(serde_json::Value::Null))
 }

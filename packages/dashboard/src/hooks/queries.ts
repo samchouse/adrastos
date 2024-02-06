@@ -44,13 +44,14 @@ export const useTablesQuery = () => {
   });
 };
 
-export const useTableDataQuery = <T>(
+export const useTableDataQuery = <T, U extends boolean>(
   table: T extends Table<infer _, infer U> ? U : string,
+  one: U = true as U,
 ) => {
   const client = useAtomValue(clientAtom);
 
   return useQuery({
     queryKey: queryKeys.tableData(table),
-    queryFn: async () => await client.tables.get<T>(table, { one: false }),
+    queryFn: async () => await client.tables.get<T, U>(table, one),
   });
 };

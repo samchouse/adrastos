@@ -138,7 +138,11 @@ export const RowSheet: React.FC<{
             className="flex h-full flex-col justify-between"
             onSubmit={(e) =>
               void form.handleSubmit(async (values) => {
-                if (row) await updateMutateAsync({ id: row.id, data: values });
+                if (row)
+                  await updateMutateAsync({
+                    match: { id: row.id },
+                    data: values,
+                  });
                 else await createMutateAsync(values);
 
                 form.reset();
@@ -204,7 +208,7 @@ export const RowSheet: React.FC<{
                   variant="destructive"
                   onClick={() =>
                     void (async () => {
-                      await deleteMutateAsync(row.id);
+                      await deleteMutateAsync({ id: row.id });
                       setIsOpen(false);
                     })()
                   }
@@ -302,7 +306,7 @@ function TableIdComponent() {
   const { tableId } = Route.useParams();
   const [cols, setCols] = useState<ColumnDef<Row>[]>([]);
   const { data: tables } = useTablesQuery();
-  const { data } = useTableDataQuery<Row>(tableId);
+  const { data } = useTableDataQuery<Row, false>(tableId, false);
 
   const table = useMemo(
     () => tables?.find((t) => t.name === tableId),
@@ -360,7 +364,7 @@ function TableIdComponent() {
         {table && <RowSheet table={table} />}
       </div>
 
-      <DataTable data={data?.data ?? []} columns={cols} />
+      <DataTable data={data?.rows ?? []} columns={cols} />
     </div>
   );
 }

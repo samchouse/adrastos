@@ -10,7 +10,7 @@ import React, { Suspense, useEffect } from 'react';
 
 import { Button } from '~/components/ui';
 import { meQueryOptions, tokenRefreshQueryOptions } from '~/hooks';
-import { clientAtom, client as oldClient } from '~/lib';
+import { clientAtom } from '~/lib';
 import { RouterContext } from '~/typings';
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -64,7 +64,6 @@ function RootComponent() {
   useEffect(() => {
     if (accessToken) {
       anotherOldClient.authToken = accessToken;
-      oldClient.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
     }
   }, [accessToken, anotherOldClient]);
 

@@ -13,6 +13,16 @@ export interface CustomTable {
   updatedAt: string;
 }
 
+interface BaseData {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface UnknownData
+  extends BaseData,
+    Record<string, string | number | boolean | string[] | Date | undefined> {}
+
 export class TablesModule extends BaseModule {
   public async list() {
     return this.client.request<CustomTable[]>({
@@ -58,24 +68,37 @@ export class TablesModule extends BaseModule {
     });
   }
 
-  public async get<T>(
+  public async get<T, U extends boolean>(
     name: T extends Table<infer _, infer U> ? U : string,
-    options?: (
-      | { one: true }
-      | {
+    one: U = true as U,
+    options?: U extends true
+      ? {
+          match?: T extends Table<infer _, string>
+            ? Partial<TInfer<T>>
+            : Partial<BaseData>;
+        }
+      : {
           one: false;
           page?: number;
           limit?: number;
-        }
-    ) & {
-      match?: T extends Table<infer _, string>
-        ? Partial<TInfer<T>>
-        : Record<string, string>;
-    },
+        } & {
+          match?: T extends Table<infer _, string>
+            ? Partial<TInfer<T>>
+            : Partial<BaseData>;
+        },
   ) {
-    return this.client.request<CustomTable>({
+    return this.client.request<
+      T extends Table<infer _, string>
+        ? TInfer<T>
+        : U extends true
+          ? UnknownData
+          : {
+              rows: UnknownData[];
+              pagination: { records: number; pages: number };
+            }
+    >({
       path: merge(
-        options?.one === true ? `/tables/${name}/row` : `/tables/${name}/rows`,
+        one === true ? `/tables/${name}/row` : `/tables/${name}/rows`,
         options?.match &&
           `?${Object.entries<
             string | number | boolean | string[] | Date | undefined
@@ -91,14 +114,9 @@ export class TablesModule extends BaseModule {
     table: T extends Table<infer _, infer U> ? U : string,
     data: T extends Table<infer _, string>
       ? TInfer<T>
-      : {
-          id?: string;
-          createdAt?: Date;
-          updatedAt?: Date;
-          [key: string]: unknown;
-        },
+      : Omit<UnknownData, keyof BaseData> & Partial<BaseData>,
   ) {
-    return this.client.request<CustomTable>({
+    return this.client.request<Required<typeof data>>({
       path: `/tables/${table}/create`,
       method: 'POST',
       body: JSON.stringify(data),
@@ -109,17 +127,12 @@ export class TablesModule extends BaseModule {
     table: T extends Table<infer _, infer U> ? U : string,
     match: T extends Table<infer _, string>
       ? Partial<TInfer<T>>
-      : Record<string, string>,
+      : Partial<BaseData>,
     data: T extends Table<infer _, string>
-      ? TInfer<T>
-      : {
-          id?: string;
-          createdAt?: Date;
-          updatedAt?: Date;
-          [key: string]: unknown;
-        },
+      ? Partial<TInfer<T>>
+      : Partial<UnknownData>,
   ) {
-    return this.client.request<typeof data>({
+    return this.client.request<Required<typeof data>>({
       path: merge(
         `/tables/${table}/update?`,
         Object.entries<string | number | boolean | string[] | Date | undefined>(
@@ -137,7 +150,7 @@ export class TablesModule extends BaseModule {
     table: T extends Table<infer _, infer U> ? U : string,
     match: T extends Table<infer _, string>
       ? Partial<TInfer<T>>
-      : Record<string, string>,
+      : Partial<BaseData>,
   ) {
     return this.client.request({
       path: merge(

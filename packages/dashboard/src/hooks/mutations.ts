@@ -99,11 +99,13 @@ export const useCreateTableMutation = () => {
 
 export const useCreateRowMutation = (table: string) => {
   const queryClient = useQueryClient();
+  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['customRow', 'create'],
-    mutationFn: async (data: Parameters<typeof postCreateRow>[1]) =>
-      await postCreateRow(table, data),
+    mutationFn: async (
+      data: Parameters<(typeof client)['tables']['createRow']>[1],
+    ) => await client.tables.createRow(table, data),
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.tableData(table) }),
   });
@@ -111,16 +113,17 @@ export const useCreateRowMutation = (table: string) => {
 
 export const useUpdateRowMutation = (table: string) => {
   const queryClient = useQueryClient();
+  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['customRow', 'update'],
     mutationFn: async ({
-      id,
+      match,
       data,
     }: {
-      id: Parameters<typeof patchUpdateRow>[1];
-      data: Parameters<typeof patchUpdateRow>[2];
-    }) => await patchUpdateRow(table, id, data),
+      match: Parameters<(typeof client)['tables']['updateRow']>[1];
+      data: Parameters<(typeof client)['tables']['updateRow']>[2];
+    }) => await client.tables.updateRow(table, match, data),
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.tableData(table) }),
   });
@@ -128,11 +131,13 @@ export const useUpdateRowMutation = (table: string) => {
 
 export const useDeleteRowMutation = (table: string) => {
   const queryClient = useQueryClient();
+  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['customRow', 'delete'],
-    mutationFn: async (id: Parameters<typeof deleteRow>[1]) =>
-      await deleteRow(table, id),
+    mutationFn: async (
+      match: Parameters<(typeof client)['tables']['deleteRow']>[1],
+    ) => await client.tables.deleteRow(table, match),
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.tableData(table) }),
   });
