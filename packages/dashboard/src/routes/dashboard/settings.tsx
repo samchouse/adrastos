@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useSuspenseQueries } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { Edit2, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -23,7 +24,7 @@ import {
   Switch,
 } from '~/components';
 import {
-  useConfigDetailsQuery,
+  configDetailsQueryOptions,
   useConfigOAuth2Mutation,
   useConfigSmtpMutation,
 } from '~/hooks';
@@ -31,6 +32,8 @@ import { providers } from '~/lib';
 
 export const Route = createFileRoute('/dashboard/settings')({
   component: SettingsComponent,
+  loader: async ({ context: { queryClient, client } }) =>
+    await queryClient.ensureQueryData(configDetailsQueryOptions(client)),
 });
 
 const smtpFormSchema = z.object({
@@ -49,10 +52,15 @@ const smtpFormSchema = z.object({
 });
 
 export const SmtpCard: React.FC = () => {
+  const { client } = Route.useRouteContext();
   const [enabled, setEnabled] = useState(false);
 
-  const { data, isLoading } = useConfigDetailsQuery();
-  const { mutate, isPending: mutationIsPending } = useConfigSmtpMutation();
+  const [{ data }] = useSuspenseQueries({
+    queries: [configDetailsQueryOptions(client)],
+  });
+
+  const { mutate, isPending: mutationIsPending } =
+    useConfigSmtpMutation(client);
 
   const form = useForm<z.infer<typeof smtpFormSchema>>({
     resolver: zodResolver(smtpFormSchema),
@@ -227,7 +235,6 @@ export const SmtpCard: React.FC = () => {
                 (!form.formState.isDirty &&
                   enabled === !!data?.smtpConfig &&
                   form.watch('password') === null) ||
-                isLoading ||
                 mutationIsPending
               }
               onClick={() => {
@@ -245,11 +252,10 @@ export const SmtpCard: React.FC = () => {
               type="submit"
               disabled={
                 (!form.formState.isDirty && enabled === !!data?.smtpConfig) ||
-                isLoading ||
                 mutationIsPending
               }
             >
-              {(isLoading || mutationIsPending) && (
+              {mutationIsPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Save
@@ -303,6 +309,8 @@ const oauth2FormSchema = z.object({
 });
 
 const OAuth2Card: React.FC = () => {
+  const { client } = Route.useRouteContext();
+
   const [enabled, setEnabled] = useState({
     google: false,
     facebook: false,
@@ -311,8 +319,11 @@ const OAuth2Card: React.FC = () => {
     discord: false,
   });
 
-  const { data, isLoading } = useConfigDetailsQuery();
-  const { mutate, isPending: mutationIsPending } = useConfigOAuth2Mutation();
+  const [{ data }] = useSuspenseQueries({
+    queries: [configDetailsQueryOptions(client)],
+  });
+  const { mutate, isPending: mutationIsPending } =
+    useConfigOAuth2Mutation(client);
 
   const form = useForm<z.infer<typeof oauth2FormSchema>>({
     resolver: zodResolver(oauth2FormSchema),
@@ -446,7 +457,6 @@ const OAuth2Card: React.FC = () => {
                     (provider) =>
                       enabled[provider] === !!data?.oauth2Config[provider],
                   )) ||
-                isLoading ||
                 mutationIsPending
               }
               onClick={() => {
@@ -471,11 +481,10 @@ const OAuth2Card: React.FC = () => {
                     (provider) =>
                       enabled[provider] === !!data?.oauth2Config[provider],
                   )) ||
-                isLoading ||
                 mutationIsPending
               }
             >
-              {(isLoading || mutationIsPending) && (
+              {mutationIsPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Save

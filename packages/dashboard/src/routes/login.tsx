@@ -7,7 +7,6 @@ import {
   SiTwitter,
 } from '@icons-pack/react-simple-icons';
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
-import { useAtomValue } from 'jotai';
 import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
@@ -31,7 +30,6 @@ import {
 } from '~/components/ui';
 import { useLoginMutation } from '~/hooks';
 import { providers } from '~/lib';
-import { clientAtom } from '~/lib/state';
 
 export const Route = createFileRoute('/login')({
   component: LoginComponent,
@@ -63,14 +61,11 @@ const formSchema = z.object({
 });
 
 function LoginComponent() {
-  const client = useAtomValue(clientAtom);
-
+  const { client } = Route.useRouteContext();
   const router = useRouter();
   const { to } = Route.useSearch();
 
-  const { mutateAsync, isPending, isError, error } = useLoginMutation(
-    Route.useRouteContext().client,
-  );
+  const { mutateAsync, isPending, isError, error } = useLoginMutation(client);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

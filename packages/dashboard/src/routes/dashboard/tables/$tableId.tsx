@@ -1,5 +1,6 @@
 import { CustomTable, Field } from '@adrastos/lib';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useSuspenseQueries } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   ColumnDef,
@@ -8,7 +9,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { ChevronRight, Settings2, Trash2 } from 'lucide-react';
+import { ChevronRight, MoreHorizontal, Settings2, Trash2 } from 'lucide-react';
 import { title } from 'radash';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -17,6 +18,12 @@ import { z } from 'zod';
 import {
   Button,
   Checkbox,
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Form,
   FormControl,
   FormField,
@@ -39,16 +46,25 @@ import {
   TableRow,
 } from '~/components';
 import {
+  tableDataQueryOptions,
+  tablesQueryOptions,
   useCreateRowMutation,
   useDeleteRowMutation,
-  useTableDataQuery,
-  useTablesQuery,
   useUpdateRowMutation,
 } from '~/hooks';
 import { cn } from '~/lib';
 
 export const Route = createFileRoute('/dashboard/tables/$tableId')({
   component: TableIdComponent,
+  loader: async ({
+    context: { client, queryClient },
+    params: { tableId },
+  }) => ({
+    tables: await queryClient.ensureQueryData(tablesQueryOptions(client)),
+    data: queryClient.ensureQueryData(
+      tableDataQueryOptions(client, tableId, false),
+    ),
+  }),
 });
 
 type Row = { id: string } & Record<string, unknown>;
@@ -91,10 +107,20 @@ export const RowSheet: React.FC<{
   table: CustomTable;
 }> = ({ row, table }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { client } = Route.useRouteContext();
 
-  const { mutateAsync: createMutateAsync } = useCreateRowMutation(table.name);
-  const { mutateAsync: updateMutateAsync } = useUpdateRowMutation(table.name);
-  const { mutateAsync: deleteMutateAsync } = useDeleteRowMutation(table.name);
+  const { mutateAsync: createMutateAsync } = useCreateRowMutation(
+    client,
+    table.name,
+  );
+  const { mutateAsync: updateMutateAsync } = useUpdateRowMutation(
+    client,
+    table.name,
+  );
+  const { mutateAsync: deleteMutateAsync } = useDeleteRowMutation(
+    client,
+    table.name,
+  );
 
   const formSchema = useMemo(
     () => createFormSchema(table.fields),
@@ -129,7 +155,9 @@ export const RowSheet: React.FC<{
             <ChevronRight className="h-4 w-4" />
           </Button>
         ) : (
-          <Button className="mb-3 w-full">New Row</Button>
+          <Button size="sm" className="w-full">
+            New Row
+          </Button>
         )}
       </SheetTrigger>
       <SheetContent className="w-[500px] lg:max-w-[500px]">
@@ -303,10 +331,16 @@ const DataTable: React.FC<{
 };
 
 function TableIdComponent() {
+  const { client } = Route.useRouteContext();
   const { tableId } = Route.useParams();
   const [cols, setCols] = useState<ColumnDef<Row>[]>([]);
-  const { data: tables } = useTablesQuery();
-  const { data } = useTableDataQuery<Row, false>(tableId, false);
+
+  const [{ data: tables }, { data }] = useSuspenseQueries({
+    queries: [
+      tablesQueryOptions(client),
+      tableDataQueryOptions<Row, false>(client, tableId, false),
+    ],
+  });
 
   const table = useMemo(
     () => tables?.find((t) => t.name === tableId),
@@ -314,41 +348,88 @@ function TableIdComponent() {
   );
 
   useEffect(() => {
-    setCols(
-      [
-        columnHelper.display({
-          id: 'checkbox',
-          meta: {
-            style: {
-              width: 'min',
-            },
+    setCols([
+      columnHelper.display({
+        id: 'checkbox',
+        meta: {
+          style: {
+            width: 'min',
           },
-          header: () => <Checkbox />,
-          cell: () => <Checkbox />,
+        },
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && 'indeterminate')
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+      }),
+      columnHelper.accessor('id', {
+        header: 'Id',
+        enableHiding: false,
+      }) as ColumnDef<Row>,
+      ...(table?.fields.map((f) =>
+        columnHelper.accessor(f.name, {
+          header: title(f.name),
         }),
-        columnHelper.accessor('id', { header: 'Id' }) as ColumnDef<Row>,
-      ]
-        .concat(
-          table?.fields.map((f) =>
-            columnHelper.accessor(f.name, {
-              header: title(f.name),
-            }),
-          ) ?? [],
-        )
-        .concat([
-          columnHelper.display({
-            id: 'actions',
-            meta: {
-              style: {
-                width: 'min',
-                textAlign: 'right',
-              },
-            },
-            cell: ({ row }) =>
-              table && <RowSheet table={table} row={row.original} />,
-          }),
-        ]),
-    );
+      ) ?? []),
+      columnHelper.display({
+        id: 'actions',
+        meta: {
+          style: {
+            width: 'min',
+            textAlign: 'right',
+          },
+        },
+        header: ({ table }) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4 text-white" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[150px]">
+              <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {table
+                .getAllColumns()
+                .filter(
+                  (column) =>
+                    typeof column.accessorFn !== 'undefined' &&
+                    column.getCanHide(),
+                )
+                .map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
+        cell: ({ row }) =>
+          table && <RowSheet table={table} row={row.original} />,
+      }),
+    ]);
   }, [table]);
 
   return (

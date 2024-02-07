@@ -41,7 +41,7 @@ const providerIcons = {
 
 function ProfileComponent() {
   const routerState = useRouterState();
-  const client = Route.useRouteContext().client;
+  const { client } = Route.useRouteContext();
 
   const [{ data: accessToken }, { data: user }] = useSuspenseQueries({
     queries: [
@@ -50,7 +50,7 @@ function ProfileComponent() {
     ],
   });
 
-  const { mutate, isPending } = useResendVerificationMutation();
+  const { mutate, isPending } = useResendVerificationMutation(client);
 
   return (
     <div className="flex flex-col gap-y-5 p-5">

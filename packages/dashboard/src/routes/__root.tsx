@@ -1,16 +1,14 @@
-import { User } from '@adrastos/lib';
+import { useQuery } from '@tanstack/react-query';
 import {
   createRootRouteWithContext,
   Link,
   Outlet,
   redirect,
 } from '@tanstack/react-router';
-import { useAtomValue } from 'jotai';
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense } from 'react';
 
 import { Button } from '~/components/ui';
 import { meQueryOptions, tokenRefreshQueryOptions } from '~/hooks';
-import { clientAtom } from '~/lib';
 import { RouterContext } from '~/typings';
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -55,17 +53,8 @@ const TanStackRouterDevtools = import.meta.env.PROD
     );
 
 function RootComponent() {
-  const anotherOldClient = useAtomValue(clientAtom);
-  const { accessToken, user } = Route.useLoaderData<{
-    accessToken: string | undefined;
-    user: User | undefined;
-  }>();
-
-  useEffect(() => {
-    if (accessToken) {
-      anotherOldClient.authToken = accessToken;
-    }
-  }, [accessToken, anotherOldClient]);
+  const { client } = Route.useRouteContext();
+  const { data: user } = useQuery(meQueryOptions(client));
 
   return (
     <div className="bg-background text-primary flex h-screen flex-col font-['Work_Sans']">

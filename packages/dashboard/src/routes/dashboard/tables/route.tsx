@@ -1,5 +1,6 @@
 import { Field } from '@adrastos/lib';
 import { PopoverContent, PopoverTrigger } from '@radix-ui/react-popover';
+import { useSuspenseQueries } from '@tanstack/react-query';
 import { createFileRoute, Link, Outlet } from '@tanstack/react-router';
 import clsx from 'clsx';
 import {
@@ -30,14 +31,18 @@ import {
   SheetTrigger,
   Switch,
 } from '~/components';
-import { useCreateTableMutation, useTablesQuery } from '~/hooks';
+import { tablesQueryOptions, useCreateTableMutation } from '~/hooks';
 import { mkId } from '~/lib';
 
 export const Route = createFileRoute('/dashboard/tables')({
   component: RouteComponent,
+  loader: async ({ context: { client, queryClient } }) =>
+    await queryClient.ensureQueryData(tablesQueryOptions(client)),
 });
 
 function RouteComponent() {
+  const { client } = Route.useRouteContext();
+
   const [name, setName] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [fields, setFields] = useState<
@@ -46,8 +51,10 @@ function RouteComponent() {
     })[]
   >([]);
 
-  const { data: tables } = useTablesQuery();
-  const { mutate } = useCreateTableMutation();
+  const [{ data: tables }] = useSuspenseQueries({
+    queries: [tablesQueryOptions(client)],
+  });
+  const { mutate } = useCreateTableMutation(client);
 
   return (
     <section className="flex h-full w-full flex-row">
@@ -66,7 +73,7 @@ function RouteComponent() {
                     variant="ghost"
                     className={clsx(
                       'w-full justify-start',
-                      isActive && 'bg-accent',
+                      isActive ? 'bg-muted' : 'hover:bg-muted/50',
                     )}
                   >
                     {title(table.name)}

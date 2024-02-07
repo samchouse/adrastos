@@ -1,8 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
-import { Provider } from 'jotai';
-import { DevTools as JotaiDevtools } from 'jotai-devtools';
 import { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -22,15 +20,12 @@ const router = createRouter({
     client: new Client(import.meta.env.VITE_BACKEND_URL ?? '', ''),
   },
   Wrap: ({ children }) => (
-    <Provider>
-      <QueryClientProvider client={queryClient}>
-        <Toaster />
-        <JotaiDevtools theme="dark" />
-        <ReactQueryDevtools position="bottom" />
+    <QueryClientProvider client={queryClient}>
+      <Toaster />
+      <ReactQueryDevtools position="bottom" />
 
-        {children}
-      </QueryClientProvider>
-    </Provider>
+      {children}
+    </QueryClientProvider>
   ),
 });
 

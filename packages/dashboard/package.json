@@ -35,8 +35,6 @@
     "axios": "^1.6.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
-    "jotai": "^2.6.4",
-    "jotai-devtools": "^0.7.1",
     "lucide-react": "^0.323.0",
     "radash": "^11.0.0",
     "react": "^18.2.0",

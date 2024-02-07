@@ -8,13 +8,17 @@ import {
   NavigationMenuList,
   User,
 } from '~/components';
-import { meQueryOptions } from '~/hooks';
+import { meQueryOptions, tokenRefreshQueryOptions } from '~/hooks';
 import { cn } from '~/lib/utils';
 
 export const Route = createFileRoute('/dashboard')({
   component: RouteComponent,
-  loader: ({ context: { client, queryClient } }) =>
-    queryClient.ensureQueryData(meQueryOptions(client)),
+  loader: async ({ context: { queryClient, client } }) => ({
+    accessToken: await queryClient.ensureQueryData(
+      tokenRefreshQueryOptions(client),
+    ),
+    user: await queryClient.ensureQueryData(meQueryOptions(client)),
+  }),
 });
 
 function RouteComponent() {
@@ -23,6 +27,18 @@ function RouteComponent() {
   const [{ data: user }] = useSuspenseQueries({
     queries: [meQueryOptions(client)],
   });
+
+  // const user = {
+  //   id: 'wEuoQpNrXdCfTlbZ3fTi',
+  //   firstName: 'Samuel',
+  //   lastName: 'Corsi-House',
+  //   email: 'chouse.samuel@gmail.com',
+  //   username: 'Xenfo',
+  //   verified: false,
+  //   banned: false,
+  //   createdAt: '2024-01-27T03:19:15Z',
+  //   updatedAt: null,
+  // };
 
   return (
     <section className="flex h-full flex-col">

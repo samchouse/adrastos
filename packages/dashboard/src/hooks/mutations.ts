@@ -1,13 +1,9 @@
 import { Client } from '@adrastos/lib';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAtomValue } from 'jotai';
-
-import { clientAtom } from '~/lib/state';
 
 import { queryKeys } from './queries';
 
-export const useSignupMutation = () => {
-  const client = useAtomValue(clientAtom);
+export const useSignupMutation = (client: Client) => {
   const { mutateAsync } = useLoginMutation(client);
 
   return useMutation({
@@ -32,22 +28,17 @@ export const useLoginMutation = (client: Client) => {
   });
 };
 
-export const useLogoutMutation = (client: Client) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
+export const useLogoutMutation = (client: Client) =>
+  useMutation({
     mutationKey: ['auth', 'logout'],
     mutationFn: async () => await client.accounts.logout(),
     onSuccess: () => {
       client.authToken = undefined;
-      void queryClient.resetQueries({ queryKey: queryKeys.tokenRefresh });
     },
   });
-};
 
-export const useConfigSmtpMutation = () => {
+export const useConfigSmtpMutation = (client: Client) => {
   const queryClient = useQueryClient();
-  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['config', 'smtp'],
@@ -59,9 +50,8 @@ export const useConfigSmtpMutation = () => {
   });
 };
 
-export const useConfigOAuth2Mutation = () => {
+export const useConfigOAuth2Mutation = (client: Client) => {
   const queryClient = useQueryClient();
-  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['config', 'oauth2'],
@@ -73,9 +63,8 @@ export const useConfigOAuth2Mutation = () => {
   });
 };
 
-export const useResendVerificationMutation = () => {
+export const useResendVerificationMutation = (client: Client) => {
   const queryClient = useQueryClient();
-  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['auth', 'resendVerification'],
@@ -84,9 +73,8 @@ export const useResendVerificationMutation = () => {
   });
 };
 
-export const useCreateTableMutation = () => {
+export const useCreateTableMutation = (client: Client) => {
   const queryClient = useQueryClient();
-  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['customTable', 'create'],
@@ -97,9 +85,8 @@ export const useCreateTableMutation = () => {
   });
 };
 
-export const useCreateRowMutation = (table: string) => {
+export const useCreateRowMutation = (client: Client, table: string) => {
   const queryClient = useQueryClient();
-  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['customRow', 'create'],
@@ -111,9 +98,8 @@ export const useCreateRowMutation = (table: string) => {
   });
 };
 
-export const useUpdateRowMutation = (table: string) => {
+export const useUpdateRowMutation = (client: Client, table: string) => {
   const queryClient = useQueryClient();
-  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['customRow', 'update'],
@@ -129,9 +115,8 @@ export const useUpdateRowMutation = (table: string) => {
   });
 };
 
-export const useDeleteRowMutation = (table: string) => {
+export const useDeleteRowMutation = (client: Client, table: string) => {
   const queryClient = useQueryClient();
-  const client = useAtomValue(clientAtom);
 
   return useMutation({
     mutationKey: ['customRow', 'delete'],

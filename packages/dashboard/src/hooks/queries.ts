@@ -1,8 +1,5 @@
 import { Client, Table } from '@adrastos/lib';
-import { queryOptions, useQuery } from '@tanstack/react-query';
-import { useAtomValue } from 'jotai';
-
-import { clientAtom } from '~/lib';
+import { queryOptions } from '@tanstack/react-query';
 
 export const queryKeys = {
   tokenRefresh: ['auth', 'token', 'refresh'] as const,
@@ -26,32 +23,24 @@ export const meQueryOptions = (client: Client) =>
     queryFn: () => client.accounts.currentUser(),
   });
 
-export const useConfigDetailsQuery = () => {
-  const client = useAtomValue(clientAtom);
-
-  return useQuery({
+export const configDetailsQueryOptions = (client: Client) =>
+  queryOptions({
     queryKey: queryKeys.configDetails,
     queryFn: async () => await client.config.details(),
   });
-};
 
-export const useTablesQuery = () => {
-  const client = useAtomValue(clientAtom);
-
-  return useQuery({
+export const tablesQueryOptions = (client: Client) =>
+  queryOptions({
     queryKey: queryKeys.tables,
-    queryFn: async () => await client.tables.list(),
+    queryFn: () => client.tables.list(),
   });
-};
 
-export const useTableDataQuery = <T, U extends boolean>(
+export const tableDataQueryOptions = <T, U extends boolean>(
+  client: Client,
   table: T extends Table<infer _, infer U> ? U : string,
   one: U = true as U,
-) => {
-  const client = useAtomValue(clientAtom);
-
-  return useQuery({
+) =>
+  queryOptions({
     queryKey: queryKeys.tableData(table),
-    queryFn: async () => await client.tables.get<T, U>(table, one),
+    queryFn: () => client.tables.get<T, U>(table, one),
   });
-};
