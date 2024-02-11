@@ -1,6 +1,10 @@
 import { useSuspenseQueries } from '@tanstack/react-query';
 import { createFileRoute, notFound } from '@tanstack/react-router';
-import { ColumnDef, createColumnHelper } from '@tanstack/react-table';
+import {
+  ColumnDef,
+  createColumnHelper,
+  SortingState,
+} from '@tanstack/react-table';
 import { format } from 'date-fns';
 import {
   ChevronDown,
@@ -9,7 +13,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { title } from 'radash';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   Badge,
@@ -51,6 +55,18 @@ const columnHelper = createColumnHelper<Row>();
 function TableIdComponent() {
   const { client } = Route.useRouteContext();
   const { tableId } = Route.useParams();
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: 'createdAt', desc: true },
+  ]);
+
+  const [lastTableId, setLastTableId] = useState(tableId);
+
+  useEffect(() => {
+    if (lastTableId !== tableId) {
+      setSorting([{ id: 'createdAt', desc: true }]);
+      setLastTableId(tableId);
+    }
+  }, [tableId, lastTableId]);
 
   const [{ data: tables }, { data }] = useSuspenseQueries({
     queries: [
@@ -110,7 +126,9 @@ function TableIdComponent() {
               variant="ghost"
               className="group"
               onClick={() =>
-                column.toggleSorting(column.getIsSorted() === 'asc')
+                column.toggleSorting(
+                  column.getIsSorted() ? column.getIsSorted() === 'asc' : true,
+                )
               }
             >
               {title(f.name)}
@@ -152,7 +170,12 @@ function TableIdComponent() {
         header: ({ column }) => (
           <Button
             variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="group"
+            onClick={() =>
+              column.toggleSorting(
+                column.getIsSorted() ? column.getIsSorted() === 'asc' : true,
+              )
+            }
           >
             Created At
             {column.getIsSorted() === 'asc' ? (
@@ -196,7 +219,12 @@ function TableIdComponent() {
         header: ({ column }) => (
           <Button
             variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="group"
+            onClick={() =>
+              column.toggleSorting(
+                column.getIsSorted() ? column.getIsSorted() === 'asc' : true,
+              )
+            }
           >
             Updated At
             {column.getIsSorted() === 'asc' ? (
@@ -299,6 +327,10 @@ function TableIdComponent() {
         customTable={table}
         data={data?.rows ?? []}
         columns={columns}
+        sorting={
+          lastTableId === tableId ? sorting : [{ id: 'createdAt', desc: true }]
+        }
+        setSorting={setSorting}
       />
     </div>
   );

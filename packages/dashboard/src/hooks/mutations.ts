@@ -100,7 +100,8 @@ export const useDeleteTableMutation = (client: Client) => {
     mutationFn: async (
       table: Parameters<(typeof client)['tables']['delete']>[0],
     ) => await client.tables.delete(table),
-    onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.tables }),
+    onSuccess: async () =>
+      queryClient.refetchQueries({ queryKey: queryKeys.tables }),
   });
 };
 

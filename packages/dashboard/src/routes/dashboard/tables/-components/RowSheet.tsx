@@ -47,16 +47,22 @@ const createFormSchema = (fields: Field[]) =>
             if (f.maxLength) type = type.max(f.maxLength);
             if (f.minLength) type = type.min(f.minLength);
 
-            finalType = type;
-            if (!f.isRequired) finalType = finalType.optional();
+            finalType = z
+              .string()
+              .transform((v) => (v ? v : undefined))
+              .pipe(f.isRequired ? type : type.optional());
             break;
           }
           case 'number': {
-            let type = z.coerce.number();
+            let type = z.number();
             if (f.max) type = type.max(f.max);
             if (f.min) type = type.min(f.min);
 
-            finalType = type;
+            finalType = z
+              .string()
+              .transform((v) => (v ? parseFloat(v) : undefined))
+              .pipe(f.isRequired ? type : type.optional());
+
             break;
           }
           default:
@@ -64,7 +70,12 @@ const createFormSchema = (fields: Field[]) =>
 
         return { [f.name]: finalType };
       })
-      .reduce((a, b) => ({ ...a, ...b }), { id: z.string().optional() }),
+      .reduce((a, b) => ({ ...a, ...b }), {
+        id: z
+          .string()
+          .optional()
+          .transform((v) => (v ? v : undefined)),
+      }),
   );
 
 export const RowSheet: React.FC<{
@@ -96,11 +107,6 @@ export const RowSheet: React.FC<{
   const form = useForm<z.infer<typeof formSchema>>({
     mode: 'onChange',
     resolver: zodResolver(formSchema),
-    defaultValues:
-      row &&
-      table.fields.reduce((a, b) => ({ ...a, [b.name]: row[b.name] ?? '' }), {
-        id: row.id,
-      }),
   });
 
   return (

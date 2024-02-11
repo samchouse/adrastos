@@ -1,10 +1,11 @@
+import { useQuery } from '@tanstack/react-query';
 import {
   createRootRouteWithContext,
   Link,
   Outlet,
   redirect,
 } from '@tanstack/react-router';
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 
 import { NotFound } from '~/components';
 import { Button } from '~/components/ui';
@@ -55,6 +56,13 @@ const TanStackRouterDevtools = import.meta.env.PROD
 
 function RootComponent() {
   const { user } = Route.useLoaderData();
+  const { client } = Route.useRouteContext();
+
+  const { data: accessToken } = useQuery(tokenRefreshQueryOptions(client));
+
+  useEffect(() => {
+    client.authToken = accessToken;
+  }, [accessToken, client]);
 
   return (
     <div className="bg-background text-primary flex h-screen flex-col font-['Work_Sans']">

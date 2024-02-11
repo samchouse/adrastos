@@ -11,19 +11,19 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as SignupImport } from './routes/signup.tsx'
-import { Route as LoginImport } from './routes/login.tsx'
-import { Route as HomeImport } from './routes/home.tsx'
-import { Route as SplatImport } from './routes/$.tsx'
-import { Route as DashboardRouteImport } from './routes/dashboard/route.tsx'
-import { Route as IndexImport } from './routes/index.tsx'
-import { Route as DashboardIndexImport } from './routes/dashboard/index.tsx'
-import { Route as DashboardSettingsImport } from './routes/dashboard/settings.tsx'
-import { Route as DashboardProfileImport } from './routes/dashboard/profile.tsx'
-import { Route as DashboardAuthImport } from './routes/dashboard/auth.tsx'
-import { Route as DashboardSplatImport } from './routes/dashboard/$.tsx'
-import { Route as DashboardTablesRouteImport } from './routes/dashboard/tables/route.tsx'
-import { Route as DashboardTablesTableIdImport } from './routes/dashboard/tables/$tableId.tsx'
+import { Route as SignupImport } from './routes/signup'
+import { Route as LoginImport } from './routes/login'
+import { Route as HomeImport } from './routes/home'
+import { Route as SplatImport } from './routes/$'
+import { Route as DashboardRouteImport } from './routes/dashboard/route'
+import { Route as IndexImport } from './routes/index'
+import { Route as DashboardIndexImport } from './routes/dashboard/index'
+import { Route as DashboardSettingsImport } from './routes/dashboard/settings'
+import { Route as DashboardProfileImport } from './routes/dashboard/profile'
+import { Route as DashboardAuthImport } from './routes/dashboard/auth'
+import { Route as DashboardSplatImport } from './routes/dashboard/$'
+import { Route as DashboardTablesRouteImport } from './routes/dashboard/tables/route'
+import { Route as DashboardTablesTableIdImport } from './routes/dashboard/tables/$tableId'
 
 // Create/Update Routes
 

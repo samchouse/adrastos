@@ -12,7 +12,12 @@ use adrastos_core::{
 };
 
 use actix_session::Session;
-use actix_web::{cookie::{Cookie, SameSite}, get, http::header, web, HttpResponse, Responder};
+use actix_web::{
+    cookie::{Cookie, SameSite},
+    get,
+    http::header,
+    web, HttpResponse, Responder,
+};
 use chrono::Utc;
 use serde::Deserialize;
 use tracing::error;
@@ -168,7 +173,7 @@ pub async fn callback(
         .map_err(|_| {
             Error::InternalServerError("An error occurred while getting the session".into())
         })?
-        .map(|url| format!("{}/{}", client_url, url))
+        .map(|url| format!("{}{}", client_url, url))
         .unwrap_or(format!("{}/dashboard", client_url));
 
     let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;

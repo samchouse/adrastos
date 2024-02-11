@@ -78,7 +78,7 @@ impl OAuth2 {
             BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url))
                 .set_redirect_uri(
                     RedirectUrl::new(format!(
-                        "https://{server_url}/auth/oauth2/callback?provider={provider}"
+                        "https://{server_url}/api/auth/oauth2/callback?provider={provider}"
                     ))
                     .unwrap(),
                 ),

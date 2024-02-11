@@ -64,7 +64,8 @@ const formSchema = z
 
 function SignupComponent() {
   const navigate = useNavigate();
-  const { mutateAsync, isPending } = useSignupMutation();
+  const { client } = Route.useRouteContext();
+  const { mutateAsync, isPending } = useSignupMutation(client);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

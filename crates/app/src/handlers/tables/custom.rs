@@ -129,10 +129,6 @@ pub async fn create(
             return (key, value);
         };
 
-        if id.is_empty() {
-            return (key, value);
-        }
-
         (key, id.into())
     }).collect::<Vec<_>>();
 

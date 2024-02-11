@@ -27,7 +27,6 @@ enum ColType {
     Date,
     Array(Box<ColType>),
     Relation(String),
-    OptionalDate,
 }
 
 impl ColType {
@@ -37,18 +36,17 @@ impl ColType {
 
         match self {
             ColType::String => {
-                json!({ camel_case_name: column.get(name).unwrap().as_str().unwrap() })
+                json!({ camel_case_name: column.get(name).unwrap().as_str() })
             }
             ColType::Number => {
-                json!({ camel_case_name: column.get(name).unwrap().as_i64().unwrap() })
+                json!({ camel_case_name: column.get(name).unwrap().as_i64() })
             }
             ColType::Boolean => {
                 json!({ camel_case_name: column.get(name).unwrap().as_bool().unwrap() })
             }
             ColType::Date => {
                 let date =
-                    serde_json::from_value::<DateTime<Utc>>(column.get(name).unwrap().clone())
-                        .unwrap();
+                    serde_json::from_value::<DateTime<Utc>>(column.get(name).unwrap().clone()).ok();
 
                 json!({ camel_case_name: date })
             }
@@ -69,12 +67,6 @@ impl ColType {
             },
             ColType::Relation(name) => {
                 json!({ camel_case_name: column.get(name).unwrap() })
-            }
-            ColType::OptionalDate => {
-                let date =
-                    serde_json::from_value::<DateTime<Utc>>(column.get(name).unwrap().clone()).ok();
-
-                json!({ camel_case_name: date })
             }
         }
     }
@@ -209,7 +201,7 @@ impl CustomTableSelectBuilder {
         let mut columns = vec![
             ("id", ColType::String),
             ("created_at", ColType::Date),
-            ("updated_at", ColType::OptionalDate),
+            ("updated_at", ColType::Date),
         ];
 
         self.schema.fields.iter().for_each(|f| match f.info {

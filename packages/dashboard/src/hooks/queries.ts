@@ -1,12 +1,17 @@
 import { Client, Table } from '@adrastos/lib';
 import { queryOptions } from '@tanstack/react-query';
 
+const baseQueryKey = {
+  tables: ['tables'] as const,
+};
+
 export const queryKeys = {
   tokenRefresh: ['auth', 'token', 'refresh'] as const,
   me: ['me'] as const,
   configDetails: ['config', 'details'] as const,
-  tables: ['tables'] as const,
-  tableData: (table: string) => [...queryKeys.tables, table, 'data'] as const,
+  tables: [...baseQueryKey.tables, 'list'] as const,
+  tableData: (table: string) =>
+    [...baseQueryKey.tables, table, 'data'] as const,
 };
 
 export const tokenRefreshQueryOptions = (client: Client) =>
