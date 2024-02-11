@@ -86,3 +86,4 @@ export {
 } from './select';
 export { Separator } from './separator';
 export { Toaster } from './sonner';
+export { Badge } from './badge';

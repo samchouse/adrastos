@@ -8,17 +8,13 @@ import {
   NavigationMenuList,
   User,
 } from '~/components';
-import { meQueryOptions, tokenRefreshQueryOptions } from '~/hooks';
+import { meQueryOptions } from '~/hooks';
 import { cn } from '~/lib/utils';
 
 export const Route = createFileRoute('/dashboard')({
   component: RouteComponent,
-  loader: async ({ context: { queryClient, client } }) => ({
-    accessToken: await queryClient.ensureQueryData(
-      tokenRefreshQueryOptions(client),
-    ),
-    user: await queryClient.ensureQueryData(meQueryOptions(client)),
-  }),
+  loader: async ({ context: { queryClient, client } }) =>
+    await queryClient.ensureQueryData(meQueryOptions(client)),
 });
 
 function RouteComponent() {

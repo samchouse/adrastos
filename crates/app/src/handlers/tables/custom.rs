@@ -120,6 +120,22 @@ pub async fn create(
         ("updated_at", None::<DateTime<Utc>>.into()),
     ];
 
+    table_values = table_values.clone().into_iter().map(|(key, value)| {
+        if key != "id" {
+            return (key, value);
+        }
+
+        let Some(Some(id)) = body.get("id").map(|f| f.as_str()) else {
+            return (key, value);
+        };
+
+        if id.is_empty() {
+            return (key, value);
+        }
+
+        (key, id.into())
+    }).collect::<Vec<_>>();
+
     custom_table.fields.iter().for_each(|field| {
         let validation_results =
             field.validate(body.get(&AsLowerCamelCase(field.name.clone()).to_string()));

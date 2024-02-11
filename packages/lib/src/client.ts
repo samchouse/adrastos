@@ -39,7 +39,7 @@ export class Client {
     return `${this.baseUrl.replace(/\/$/, '')}/api${path}`;
   }
 
-  async request<T>({ method, path, body, options }: Request): Promise<T> {
+  async request<T = null>({ method, path, body, options }: Request) {
     const res = await fetch(this.buildUrl(path), {
       body,
       method,
@@ -51,7 +51,11 @@ export class Client {
       },
     });
 
-    if (!res.ok) throw new ResponseError('Something went wrong');
-    return res.json() as Promise<T>;
+    if (!res.ok)
+      throw new ResponseError(
+        'Something went wrong',
+        (await res.json()) as ResponseError['details'],
+      );
+    return res.json() as T;
   }
 }

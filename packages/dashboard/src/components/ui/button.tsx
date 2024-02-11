@@ -52,6 +52,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(
           'leading-[0] aria-disabled:cursor-not-allowed',
           sharedClasses,
+          size === 'sm' && 'h-9',
         )}
       >
         <Comp

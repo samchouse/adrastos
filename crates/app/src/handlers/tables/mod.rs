@@ -14,6 +14,7 @@ use heck::AsSnakeCase;
 use regex::Regex;
 use sea_query::{Alias, PostgresQueryBuilder, Table, TableCreateStatement};
 use serde::Deserialize;
+use serde_json::Value;
 use utoipa::ToSchema;
 
 use crate::middleware::user::RequiredUser;
@@ -283,5 +284,5 @@ pub async fn delete(
         .await
         .unwrap();
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(Value::Null))
 }

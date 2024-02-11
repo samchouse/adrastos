@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import {
   createRootRouteWithContext,
   Link,
@@ -7,12 +6,14 @@ import {
 } from '@tanstack/react-router';
 import React, { Suspense } from 'react';
 
+import { NotFound } from '~/components';
 import { Button } from '~/components/ui';
 import { meQueryOptions, tokenRefreshQueryOptions } from '~/hooks';
 import { RouterContext } from '~/typings';
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent,
+  notFoundComponent: NotFound,
   loader: async ({ context: { client, queryClient } }) => ({
     accessToken: await queryClient
       .ensureQueryData(tokenRefreshQueryOptions(client))
@@ -53,8 +54,7 @@ const TanStackRouterDevtools = import.meta.env.PROD
     );
 
 function RootComponent() {
-  const { client } = Route.useRouteContext();
-  const { data: user } = useQuery(meQueryOptions(client));
+  const { user } = Route.useLoaderData();
 
   return (
     <div className="bg-background text-primary flex h-screen flex-col font-['Work_Sans']">

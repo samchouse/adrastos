@@ -295,7 +295,7 @@ pub async fn verify(
     .await
     .map_err(|_| Error::InternalServerError("Unable to update user".to_string()))?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(Value::Null))
 }
 
 #[post("/resend-verification")]

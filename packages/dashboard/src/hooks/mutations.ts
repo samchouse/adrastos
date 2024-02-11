@@ -1,5 +1,6 @@
-import { Client } from '@adrastos/lib';
+import { Client, ResponseError } from '@adrastos/lib';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import { queryKeys } from './queries';
 
@@ -28,14 +29,20 @@ export const useLoginMutation = (client: Client) => {
   });
 };
 
-export const useLogoutMutation = (client: Client) =>
-  useMutation({
+export const useLogoutMutation = (client: Client) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
     mutationKey: ['auth', 'logout'],
     mutationFn: async () => await client.accounts.logout(),
-    onSuccess: () => {
+    onSuccess: async () => {
       client.authToken = undefined;
+
+      await queryClient.setQueryData(queryKeys.tokenRefresh, null);
+      await queryClient.setQueryData(queryKeys.me, null);
     },
   });
+};
 
 export const useConfigSmtpMutation = (client: Client) => {
   const queryClient = useQueryClient();
@@ -85,6 +92,18 @@ export const useCreateTableMutation = (client: Client) => {
   });
 };
 
+export const useDeleteTableMutation = (client: Client) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ['customTable', 'delete'],
+    mutationFn: async (
+      table: Parameters<(typeof client)['tables']['delete']>[0],
+    ) => await client.tables.delete(table),
+    onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.tables }),
+  });
+};
+
 export const useCreateRowMutation = (client: Client, table: string) => {
   const queryClient = useQueryClient();
 
@@ -95,6 +114,11 @@ export const useCreateRowMutation = (client: Client, table: string) => {
     ) => await client.tables.createRow(table, data),
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.tableData(table) }),
+    onError: (error: ResponseError) =>
+      toast.error("Couldn't create row", {
+        description:
+          error.details.message ?? error.details.error ?? error.message,
+      }),
   });
 };
 

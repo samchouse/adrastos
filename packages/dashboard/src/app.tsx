@@ -21,7 +21,7 @@ const router = createRouter({
   },
   Wrap: ({ children }) => (
     <QueryClientProvider client={queryClient}>
-      <Toaster />
+      <Toaster closeButton position="bottom-center" />
       <ReactQueryDevtools position="bottom" />
 
       {children}

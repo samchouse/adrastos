@@ -154,7 +154,7 @@ export class TablesModule extends BaseModule {
   ) {
     return this.client.request({
       path: merge(
-        `/tables/${table}/update?`,
+        `/tables/${table}/delete?`,
         Object.entries<string | number | boolean | string[] | Date | undefined>(
           match,
         )

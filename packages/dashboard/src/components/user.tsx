@@ -1,11 +1,5 @@
 import { Client, User as UserType } from '@adrastos/lib';
-import { useQueryClient } from '@tanstack/react-query';
-import {
-  Link,
-  useNavigate,
-  useRouter,
-  useRouterState,
-} from '@tanstack/react-router';
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { ExternalLink, LogOut, Settings, User as UserIcon } from 'lucide-react';
 
 import {
@@ -20,17 +14,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/components/ui';
-import { queryKeys, useLogoutMutation } from '~/hooks';
+import { useLogoutMutation } from '~/hooks';
 
 export const User: React.FC<{
   client: Client;
   user: UserType;
 }> = ({ user, client }) => {
   const navigate = useNavigate();
-  const router = useRouter();
   const routerState = useRouterState();
-
-  const queryClient = useQueryClient();
 
   const { mutateAsync } = useLogoutMutation(client);
 
@@ -84,16 +75,10 @@ export const User: React.FC<{
           onSelect={() =>
             void (async () => {
               await mutateAsync();
-              await queryClient.setQueryData(queryKeys.tokenRefresh, null);
               await navigate({
                 to: '/login',
                 search: { to: routerState.location.pathname },
               });
-              router.invalidate();
-              await queryClient.resetQueries({
-                queryKey: queryKeys.tokenRefresh,
-              });
-              await queryClient.resetQueries({ queryKey: queryKeys.me });
             })()
           }
           className="cursor-pointer"

@@ -28,7 +28,7 @@ import {
   FormMessage,
   Input,
 } from '~/components/ui';
-import { useLoginMutation } from '~/hooks';
+import { queryKeys, useLoginMutation } from '~/hooks';
 import { providers } from '~/lib';
 
 export const Route = createFileRoute('/login')({
@@ -61,7 +61,7 @@ const formSchema = z.object({
 });
 
 function LoginComponent() {
-  const { client } = Route.useRouteContext();
+  const { client, queryClient } = Route.useRouteContext();
   const router = useRouter();
   const { to } = Route.useSearch();
 
@@ -74,6 +74,11 @@ function LoginComponent() {
       password: '',
     },
   });
+
+  useEffect(() => {
+    void queryClient.resetQueries({ queryKey: queryKeys.tokenRefresh });
+    void queryClient.resetQueries({ queryKey: queryKeys.me });
+  }, [queryClient]);
 
   useEffect(() => {
     if (isError)

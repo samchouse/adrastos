@@ -1,6 +1,6 @@
-/* eslint-disable */
+/* prettier-ignore-start */
 
-/* prettier-ignore */
+/* eslint-disable */
 
 // @ts-nocheck
 
@@ -11,17 +11,19 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as SignupImport } from './routes/signup'
-import { Route as LoginImport } from './routes/login'
-import { Route as HomeImport } from './routes/home'
-import { Route as DashboardRouteImport } from './routes/dashboard/route'
-import { Route as IndexImport } from './routes/index'
-import { Route as DashboardIndexImport } from './routes/dashboard/index'
-import { Route as DashboardSettingsImport } from './routes/dashboard/settings'
-import { Route as DashboardProfileImport } from './routes/dashboard/profile'
-import { Route as DashboardAuthImport } from './routes/dashboard/auth'
-import { Route as DashboardTablesRouteImport } from './routes/dashboard/tables/route'
-import { Route as DashboardTablesTableIdImport } from './routes/dashboard/tables/$tableId'
+import { Route as SignupImport } from './routes/signup.tsx'
+import { Route as LoginImport } from './routes/login.tsx'
+import { Route as HomeImport } from './routes/home.tsx'
+import { Route as SplatImport } from './routes/$.tsx'
+import { Route as DashboardRouteImport } from './routes/dashboard/route.tsx'
+import { Route as IndexImport } from './routes/index.tsx'
+import { Route as DashboardIndexImport } from './routes/dashboard/index.tsx'
+import { Route as DashboardSettingsImport } from './routes/dashboard/settings.tsx'
+import { Route as DashboardProfileImport } from './routes/dashboard/profile.tsx'
+import { Route as DashboardAuthImport } from './routes/dashboard/auth.tsx'
+import { Route as DashboardSplatImport } from './routes/dashboard/$.tsx'
+import { Route as DashboardTablesRouteImport } from './routes/dashboard/tables/route.tsx'
+import { Route as DashboardTablesTableIdImport } from './routes/dashboard/tables/$tableId.tsx'
 
 // Create/Update Routes
 
@@ -37,6 +39,11 @@ const LoginRoute = LoginImport.update({
 
 const HomeRoute = HomeImport.update({
   path: '/home',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const SplatRoute = SplatImport.update({
+  path: '/$',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -70,6 +77,11 @@ const DashboardAuthRoute = DashboardAuthImport.update({
   getParentRoute: () => DashboardRouteRoute,
 } as any)
 
+const DashboardSplatRoute = DashboardSplatImport.update({
+  path: '/$',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+
 const DashboardTablesRouteRoute = DashboardTablesRouteImport.update({
   path: '/tables',
   getParentRoute: () => DashboardRouteRoute,
@@ -92,6 +104,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRoute
     }
+    '/$': {
+      preLoaderRoute: typeof SplatImport
+      parentRoute: typeof rootRoute
+    }
     '/home': {
       preLoaderRoute: typeof HomeImport
       parentRoute: typeof rootRoute
@@ -106,6 +122,10 @@ declare module '@tanstack/react-router' {
     }
     '/dashboard/tables': {
       preLoaderRoute: typeof DashboardTablesRouteImport
+      parentRoute: typeof DashboardRouteImport
+    }
+    '/dashboard/$': {
+      preLoaderRoute: typeof DashboardSplatImport
       parentRoute: typeof DashboardRouteImport
     }
     '/dashboard/auth': {
@@ -137,12 +157,16 @@ export const routeTree = rootRoute.addChildren([
   IndexRoute,
   DashboardRouteRoute.addChildren([
     DashboardTablesRouteRoute.addChildren([DashboardTablesTableIdRoute]),
+    DashboardSplatRoute,
     DashboardAuthRoute,
     DashboardProfileRoute,
     DashboardSettingsRoute,
     DashboardIndexRoute,
   ]),
+  SplatRoute,
   HomeRoute,
   LoginRoute,
   SignupRoute,
 ])
+
+/* prettier-ignore-end */
