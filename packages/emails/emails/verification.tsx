@@ -13,7 +13,7 @@ import {
 } from '@react-email/components';
 import * as React from 'react';
 
-import { Font } from '../components';
+import { Font } from '../components/index.js';
 
 const supportEmail = 'support@adrastos.xenfo.dev';
 const verificationUrl = (baseUrl: string, token: string) =>

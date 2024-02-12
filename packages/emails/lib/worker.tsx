@@ -1,10 +1,10 @@
 import { render } from '@react-email/components';
-import pino from 'pino';
+import { pino } from 'pino';
 import * as React from 'react';
 import * as redis from 'redis';
 
-import VerificationEmail from '../emails/verification';
-import { env } from './env';
+import VerificationEmail from '../emails/verification.js';
+import { env } from './env.js';
 
 const logger = pino();
 const client = redis.createClient({ url: env.REDIS_URL });

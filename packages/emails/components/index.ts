@@ -1,1 +1,1 @@
-export * from './Font';
+export * from './Font.js';

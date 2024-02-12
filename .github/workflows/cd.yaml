@@ -145,7 +145,7 @@ jobs:
 
       - name: Remove from Cloudflare
         run: |
-          export RECORD_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records?name=adrastos-api-pr-${{ github.event.pull_request.number }}.xenfo.dev" \
+          export RECORD_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records?name=adi-pr-${{ github.event.pull_request.number }}.xenfo.dev" \
             -H "Authorization: Bearer ${{ secrets.CF_TOKEN }}" \
             -H "Content-Type:application/json" \
           | jq -r '.result[0].id')

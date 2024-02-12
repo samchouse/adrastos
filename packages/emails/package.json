@@ -2,6 +2,7 @@
   "name": "@adrastos/emails",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "run -T conc \"run -T tsc -w\" \"run -T nodemon out/lib/worker.js\"",
     "build": "run -T tsc",
