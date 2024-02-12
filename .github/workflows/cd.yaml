@@ -65,6 +65,8 @@ jobs:
       - id: node
         run: |
           yarn install
+          cd packages/lib
+          yarn build
           cd packages/dashboard
           yarn build
 
@@ -175,6 +177,8 @@ jobs:
       - id: node
         run: |
           yarn install
+          cd packages/lib
+          yarn build
           cd packages/dashboard
           yarn build
 
@@ -247,6 +251,8 @@ jobs:
       - id: node
         run: |
           yarn install
+          cd packages/lib
+          yarn build
           cd packages/dashboard
           yarn build
 
