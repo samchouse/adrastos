@@ -1,37 +1,51 @@
-import { useQuery } from '@tanstack/react-query';
+import { Client, Table } from '@adrastos/lib';
+import { queryOptions } from '@tanstack/react-query';
 
-import { getConfigDetails, getMe, getTokenRefresh } from '~/lib';
+const baseQueryKey = {
+  tables: ['tables'] as const,
+};
 
 export const queryKeys = {
   tokenRefresh: ['auth', 'token', 'refresh'] as const,
   me: ['me'] as const,
-  configDetails: ['config', 'details'] as const
+  configDetails: ['config', 'details'] as const,
+  tables: [...baseQueryKey.tables, 'list'] as const,
+  tableData: (table: string) =>
+    [...baseQueryKey.tables, table, 'data'] as const,
 };
 
-export const useTokenRefreshQuery = () =>
-  useQuery({
+export const tokenRefreshQueryOptions = (client: Client) =>
+  queryOptions({
     queryKey: queryKeys.tokenRefresh,
-    queryFn: async () => await getTokenRefresh(),
+    queryFn: async () => await client.accounts.refreshToken(),
     refetchInterval: 1000 * 60 * 10,
-    retry: false
+    retry: false,
   });
 
-export const useMeQuery = () => {
-  const { isSuccess } = useTokenRefreshQuery();
-
-  return useQuery({
+export const meQueryOptions = (client: Client) =>
+  queryOptions({
     queryKey: queryKeys.me,
-    queryFn: async () => await getMe(),
-    enabled: isSuccess
+    queryFn: () => client.accounts.currentUser(),
   });
-};
 
-export const useConfigDetailsQuery = () => {
-  const { isSuccess } = useTokenRefreshQuery();
-
-  return useQuery({
+export const configDetailsQueryOptions = (client: Client) =>
+  queryOptions({
     queryKey: queryKeys.configDetails,
-    queryFn: async () => await getConfigDetails(),
-    enabled: isSuccess
+    queryFn: async () => await client.config.details(),
   });
-};
+
+export const tablesQueryOptions = (client: Client) =>
+  queryOptions({
+    queryKey: queryKeys.tables,
+    queryFn: () => client.tables.list(),
+  });
+
+export const tableDataQueryOptions = <T, U extends boolean>(
+  client: Client,
+  table: T extends Table<infer _, infer U> ? U : string,
+  one: U = true as U,
+) =>
+  queryOptions({
+    queryKey: queryKeys.tableData(table),
+    queryFn: () => client.tables.get<T, U>(table, one),
+  });

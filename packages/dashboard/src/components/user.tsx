@@ -1,7 +1,6 @@
+import { Client, User as UserType } from '@adrastos/lib';
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { ExternalLink, LogOut, Settings, User as UserIcon } from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Dispatch, SetStateAction } from 'react';
 
 import {
   Avatar,
@@ -14,19 +13,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Skeleton
 } from '~/components/ui';
 import { useLogoutMutation } from '~/hooks';
-import { User as UserType } from '~/types';
 
 export const User: React.FC<{
-  user?: UserType;
-  setIsLoggingOff: Dispatch<SetStateAction<boolean>>;
-}> = ({ user, setIsLoggingOff }) => {
-  const router = useRouter();
-  const { mutateAsync } = useLogoutMutation();
+  client: Client;
+  user: UserType;
+}> = ({ user, client }) => {
+  const navigate = useNavigate();
+  const routerState = useRouterState();
 
-  return user ? (
+  const { mutateAsync } = useLogoutMutation(client);
+
+  return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
@@ -52,20 +51,20 @@ export const User: React.FC<{
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <Link href="/dashboard/profile">
+        <Link to="/dashboard/profile">
           <DropdownMenuItem className="cursor-pointer">
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile</span>
           </DropdownMenuItem>
         </Link>
-        <Link href="/dashboard/settings">
+        <Link to="/dashboard/settings">
           <DropdownMenuItem className="cursor-pointer">
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
           </DropdownMenuItem>
         </Link>
         <DropdownMenuSeparator />
-        <Link href="/home">
+        <Link to="/home">
           <DropdownMenuItem className="cursor-pointer">
             <ExternalLink className="mr-2 h-4 w-4" />
             <span>Home</span>
@@ -73,11 +72,15 @@ export const User: React.FC<{
         </Link>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onSelect={async () => {
-            setIsLoggingOff(true);
-            await mutateAsync();
-            router.push('/');
-          }}
+          onSelect={() =>
+            void (async () => {
+              await mutateAsync();
+              await navigate({
+                to: '/login',
+                search: { to: routerState.location.pathname },
+              });
+            })()
+          }
           className="cursor-pointer"
         >
           <LogOut className="mr-2 h-4 w-4" />
@@ -85,7 +88,5 @@ export const User: React.FC<{
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  ) : (
-    <Skeleton className="h-[40px] w-[40px] rounded-full" />
   );
 };

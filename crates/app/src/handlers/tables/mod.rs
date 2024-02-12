@@ -1,11 +1,8 @@
-use actix_web::{delete, patch, post, web, HttpResponse, Responder};
+use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
     db::postgres,
     entities::custom_table::{
-        fields::{
-            BooleanField, DateField, EmailField, NumberField, RelationField, SelectField,
-            StringField, UrlField,
-        },
+        fields::Field,
         mm_relation::ManyToManyRelationTable,
         schema::{CustomTableSchema, UpdateCustomTableSchema},
     },
@@ -17,7 +14,7 @@ use heck::AsSnakeCase;
 use regex::Regex;
 use sea_query::{Alias, PostgresQueryBuilder, Table, TableCreateStatement};
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::Value;
 use utoipa::ToSchema;
 
 use crate::middleware::user::RequiredUser;
@@ -28,17 +25,10 @@ pub mod custom;
 #[serde(rename_all = "camelCase")]
 pub struct CreateBody {
     name: String,
-    string_fields: Option<Vec<StringField>>,
-    number_fields: Option<Vec<NumberField>>,
-    boolean_fields: Option<Vec<BooleanField>>,
-    date_fields: Option<Vec<DateField>>,
-    email_fields: Option<Vec<EmailField>>,
-    url_fields: Option<Vec<UrlField>>,
-    select_fields: Option<Vec<SelectField>>,
-    relation_fields: Option<Vec<RelationField>>,
+    fields: Vec<Field>,
 }
 
-#[derive(Deserialize, ToSchema, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 enum Action {
     Create,
@@ -46,35 +36,30 @@ enum Action {
     Delete,
 }
 
-#[derive(Deserialize, ToSchema, Debug)]
-struct UpdateField<T> {
+#[derive(Deserialize, Debug)]
+struct UpdateField {
     name: String,
+    field: Field,
     action: Action,
-    field: T,
 }
 
-#[derive(Deserialize, ToSchema, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateBody {
     name: Option<String>,
-    string_fields: Option<Vec<UpdateField<StringField>>>,
-    // number_fields: Option<Vec<UpdateField<NumberField>>>,
-    // boolean_fields: Option<Vec<UpdateField<BooleanField>>>,
-    // date_fields: Option<Vec<UpdateField<DateField>>>,
-    // email_fields: Option<Vec<UpdateField<EmailField>>>,
-    // url_fields: Option<Vec<UpdateField<UrlField>>>,
-    // select_fields: Option<Vec<UpdateField<SelectField>>>,
-    // relation_fields: Option<Vec<UpdateField<RelationField>>>,
+    fields: Option<Vec<UpdateField>>,
 }
 
-#[utoipa::path(
-    post,
-    path = "/tables/create",
-    request_body = CreateBody,
-    responses(
-        (status = 200, description = "", body = Response<CustomTableSchema>),
-    )
-)]
+#[get("/list")]
+pub async fn list(
+    _: RequiredUser,
+    db_pool: web::Data<deadpool_postgres::Pool>,
+) -> actix_web::Result<impl Responder, Error> {
+    let tables = CustomTableSchema::find().all(&db_pool).await?;
+    Ok(HttpResponse::Ok().json(tables))
+}
+
+#[utoipa::path(path = "/tables")]
 #[post("/create")]
 pub async fn create(
     _: RequiredUser,
@@ -86,76 +71,12 @@ pub async fn create(
     let custom_table = CustomTableSchema {
         id: Id::new().to_string(),
         name: AsSnakeCase(body.name).to_string(),
-        string_fields: body
-            .string_fields
-            .unwrap_or_default()
+        fields: body
+            .fields
             .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        number_fields: body
-            .number_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        boolean_fields: body
-            .boolean_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        date_fields: body
-            .date_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        email_fields: body
-            .email_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        url_fields: body
-            .url_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        select_fields: body
-            .select_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
-            })
-            .collect(),
-        relation_fields: body
-            .relation_fields
-            .unwrap_or_default()
-            .into_iter()
-            .map(|mut f| {
-                f.name = AsSnakeCase(f.name).to_string();
-                f
+            .map(|f| Field {
+                name: AsSnakeCase(f.name).to_string(),
+                info: f.info,
             })
             .collect(),
         created_at: Utc::now(),
@@ -222,11 +143,7 @@ pub async fn create(
             .unwrap();
     }
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Table created successfully",
-        "table": custom_table
-    })))
+    Ok(HttpResponse::Ok().json(custom_table))
 }
 
 #[patch("/update/{name}")]
@@ -243,7 +160,6 @@ pub async fn update(
         .one(&db_pool)
         .await?;
 
-    let mut table_name = custom_table.name.clone();
     let mut alter_query = Table::alter();
     let mut update = UpdateCustomTableSchema {
         ..Default::default()
@@ -264,63 +180,44 @@ pub async fn update(
             update.name = Some(name);
         }
     }
-    if let Some(string_fields) = body.string_fields {
-        let mut updated_string_fields = custom_table.string_fields.clone();
+    if let Some(fields) = body.fields {
+        let mut updated_fields = custom_table.fields.clone();
 
-        string_fields.iter().for_each(|comp| match comp.action {
+        fields.iter().for_each(|update| match update.action {
             Action::Create => {
-                updated_string_fields.push(comp.field.clone());
+                updated_fields.push(update.field.clone());
             }
             Action::Update => {
-                updated_string_fields = updated_string_fields
+                updated_fields = updated_fields
                     .clone()
                     .into_iter()
                     .map(|f| {
-                        if f.name == comp.name {
-                            return comp.field.clone();
+                        if f.name == update.name {
+                            return update.field.clone();
                         }
 
                         f
                     })
                     .collect();
 
-                if comp.name != comp.field.name {
-                    alter_query.rename_column(Alias::new(&comp.name), Alias::new(&comp.field.name));
+                if update.name != update.field.name {
+                    alter_query
+                        .rename_column(Alias::new(&update.name), Alias::new(&update.field.name));
                 }
-
-                alter_query.modify_column(&mut comp.field.column());
             }
             Action::Delete => {
-                updated_string_fields = updated_string_fields
+                updated_fields = updated_fields
                     .clone()
                     .into_iter()
-                    .filter(|f| f.name != comp.field.name)
+                    .filter(|f| f.name != update.name)
                     .collect();
             }
         });
 
-        update.string_fields = Some(updated_string_fields);
+        update.fields = Some(updated_fields);
     }
 
     custom_table.update(&db_pool, update.clone()).await?;
-
-    if let Some(updated_name) = update.name {
-        db_pool
-            .get()
-            .await
-            .unwrap()
-            .execute(
-                Table::rename()
-                    .table(Alias::new(&table_name), Alias::new(updated_name.clone()))
-                    .to_string(PostgresQueryBuilder)
-                    .as_str(),
-                &[],
-            )
-            .await
-            .unwrap();
-
-        table_name = updated_name;
-    }
 
     db_pool
         .get()
@@ -328,7 +225,7 @@ pub async fn update(
         .unwrap()
         .execute(
             alter_query
-                .table(Alias::new(table_name))
+                .table(Alias::new(&custom_table.name))
                 .to_string(PostgresQueryBuilder)
                 .as_str(),
             &[],
@@ -336,23 +233,30 @@ pub async fn update(
         .await
         .unwrap();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Table updated successfully",
-    })))
+    if let Some(name) = update.name {
+        db_pool
+            .get()
+            .await
+            .unwrap()
+            .execute(
+                Table::rename()
+                    .table(Alias::new(&custom_table.name), Alias::new(name.clone()))
+                    .to_string(PostgresQueryBuilder)
+                    .as_str(),
+                &[],
+            )
+            .await
+            .unwrap();
+    }
+
+    let custom_table = CustomTableSchema::find()
+        .by_name(path.clone())
+        .one(&db_pool)
+        .await?;
+
+    Ok(HttpResponse::Ok().json(custom_table))
 }
 
-#[utoipa::path(
-    delete,
-    path = "/tables/delete/{name}",
-    request_body = CreateBody,
-    responses(
-        (status = 200, description = "", body = CustomTableSchema),
-    ),
-    params(
-        ("name" = String, Path, description = "The name of the table to delete"),
-    )
-)]
 #[delete("/delete/{name}")]
 pub async fn delete(
     _: RequiredUser,
@@ -380,8 +284,5 @@ pub async fn delete(
         .await
         .unwrap();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Table deleted successfully",
-    })))
+    Ok(HttpResponse::Ok().json(Value::Null))
 }

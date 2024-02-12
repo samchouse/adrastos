@@ -11,7 +11,10 @@ use adrastos_core::{
 };
 use tokio::{sync::Mutex, time::timeout};
 
-use actix_web::{cookie::Cookie, get, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{
+    cookie::{Cookie, SameSite},
+    get, post, web, HttpRequest, HttpResponse, Responder,
+};
 use chrono::{Duration, Utc};
 use deadpool_redis::redis::{self, AsyncCommands};
 use futures_util::StreamExt;
@@ -19,11 +22,10 @@ use lettre::{
     message::header::ContentType, AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value};
 use tracing::{error, warn};
-use utoipa::ToSchema;
 
-use crate::{middleware::user::RequiredUser, openapi, session::SessionKey};
+use crate::{middleware::user::RequiredUser, session::SessionKey};
 
 pub mod mfa;
 pub mod oauth2;
@@ -34,36 +36,22 @@ pub struct VerifyParams {
     token: String,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignupBody {
-    #[schema(max_length = 50)]
     first_name: String,
-    #[schema(max_length = 50)]
     last_name: String,
-    #[schema(schema_with = openapi::email)]
     email: String,
-    #[schema(min_length = 5, max_length = 64)]
     username: String,
-    #[schema(min_length = 8, max_length = 64)]
     password: String,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize)]
 pub struct LoginBody {
     email: String,
     password: String,
 }
 
-#[utoipa::path(
-    post,
-    path = "/auth/signup",
-    request_body = SignupBody,
-    responses(
-        (status = 200, description = "User created successfully", body = User),
-        (status = 400, description = "Validation failed", body = Error),
-    )
-)]
 #[post("/signup")]
 pub async fn signup(
     body: web::Json<SignupBody>,
@@ -168,21 +156,9 @@ pub async fn signup(
         };
     }
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "user": user
-    })))
+    Ok(HttpResponse::Ok().json(user))
 }
 
-#[utoipa::path(
-    post,
-    path = "/auth/login",
-    request_body = LoginBody,
-    responses(
-        (status = 200, description = "User created successfully", body = User),
-        (status = 400, description = "Validation failed"),
-    )
-)]
 #[post("/login")]
 pub async fn login(
     session: Session,
@@ -228,14 +204,12 @@ pub async fn login(
             Cookie::build("isLoggedIn", true.to_string())
                 .secure(true)
                 .http_only(true)
+                .same_site(SameSite::None)
                 .path("/")
                 .expires(auth.cookie.expires().unwrap())
                 .finish(),
         )
-        .json(json!({
-            "success": true,
-            "user": user
-        })))
+        .json(user))
 }
 
 #[get("/logout")]
@@ -268,9 +242,7 @@ pub async fn logout(
     Ok(HttpResponse::Ok()
         .cookie(cookies.is_logged_in)
         .cookie(cookies.refresh_token)
-        .json(json!({
-            "success": true
-        })))
+        .json(Value::Null))
 }
 
 #[get("/verify")]
@@ -323,10 +295,7 @@ pub async fn verify(
     .await
     .map_err(|_| Error::InternalServerError("Unable to update user".to_string()))?;
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Email was successfully verified"
-    })))
+    Ok(HttpResponse::Ok().json(Value::Null))
 }
 
 #[post("/resend-verification")]
@@ -407,8 +376,5 @@ pub async fn resend_verification(
         ));
     };
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Resent verification email"
-    })))
+    Ok(HttpResponse::Ok().json(Value::Null))
 }

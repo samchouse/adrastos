@@ -1,6 +1,6 @@
 use std::fmt;
 
-use actix_web::cookie::{time::OffsetDateTime, Cookie, Expiration};
+use actix_web::cookie::{time::OffsetDateTime, Cookie, Expiration, SameSite};
 use argon2::{
     password_hash::{
         self, rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
@@ -110,6 +110,7 @@ pub async fn authenticate(
     let cookie = Cookie::build("refreshToken", refresh_token.token.clone())
         .secure(true)
         .http_only(true)
+        .same_site(SameSite::None)
         .path("/api/auth")
         .expires(Expiration::from(cookie_expiration))
         .finish();

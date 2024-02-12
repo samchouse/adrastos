@@ -2,31 +2,43 @@
   "root": true,
   "parser": "@typescript-eslint/parser",
   "ignorePatterns": ["*.d.ts"],
-  "plugins": ["@typescript-eslint", "prettier"],
+  "plugins": ["@typescript-eslint", "react-refresh", "prettier"],
   "settings": {
     "next": {
       "rootDir": "packages/dashboard"
     }
   },
   "parserOptions": {
-    "project": "./packages/**/tsconfig.json"
+    "project": ["./packages/**/tsconfig.json"]
   },
   "extends": [
     "eslint:recommended",
-    "next/core-web-vitals",
-    "plugin:@typescript-eslint/strict",
+    "plugin:@typescript-eslint/recommended-type-checked",
+    "plugin:@typescript-eslint/stylistic-type-checked",
+    "plugin:react-hooks/recommended",
     "plugin:prettier/recommended"
   ],
   "rules": {
     "arrow-body-style": ["error"],
     "prefer-arrow-callback": ["error"],
-    "no-unused-vars": [
-      "error",
-      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+    "react-refresh/only-export-components": [
+      "warn",
+      { "allowConstantExport": true }
     ],
     "@typescript-eslint/no-unused-vars": [
       "error",
       { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": "*.js",
+      "rules": {
+        "no-unused-vars": [
+          "error",
+          { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+        ]
+      }
+    }
+  ]
 }

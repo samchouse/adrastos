@@ -28,12 +28,14 @@ use tracing_unwrap::{OptionExt, ResultExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+mod assets;
 mod cli;
 mod handlers;
 mod middleware;
 mod openapi;
 mod session;
 mod telemetry;
+mod util;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -92,6 +94,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(TracingLogger::default())
             .wrap(sentry_actix::Sentry::new())
+            .wrap(actix_web::middleware::NormalizePath::trim())
             .wrap(middleware::user::GetUser {
                 config: config.clone(),
                 db_pool: db_pool.clone(),
@@ -102,9 +105,10 @@ async fn main() -> std::io::Result<()> {
             ))
             .wrap(
                 Cors::default()
-                    .allow_any_header()
+                    .allow_any_origin()
                     .allow_any_method()
-                    .allow_any_origin(),
+                    .allow_any_header()
+                    .supports_credentials(),
             )
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(OAuth2::new(&config)))
@@ -144,49 +148,56 @@ async fn main() -> std::io::Result<()> {
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", ApiDoc::openapi()),
             )
-            .service((handlers::index, handlers::me))
+            .service(handlers::api_index)
             .service(
-                web::scope("/auth")
-                    .service((
-                        handlers::auth::signup,
-                        handlers::auth::login,
-                        handlers::auth::logout,
-                        handlers::auth::verify,
-                        handlers::auth::resend_verification,
-                        handlers::auth::token::refresh,
-                    ))
-                    .service(web::scope("/oauth2").service((
-                        handlers::auth::oauth2::login,
-                        handlers::auth::oauth2::callback,
+                web::scope("/api")
+                    .service(handlers::me)
+                    .service(
+                        web::scope("/auth")
+                            .service((
+                                handlers::auth::signup,
+                                handlers::auth::login,
+                                handlers::auth::logout,
+                                handlers::auth::verify,
+                                handlers::auth::resend_verification,
+                                handlers::auth::token::refresh,
+                            ))
+                            .service(web::scope("/oauth2").service((
+                                handlers::auth::oauth2::login,
+                                handlers::auth::oauth2::callback,
+                            )))
+                            .service(web::scope("/mfa").service((
+                                handlers::auth::mfa::enable,
+                                handlers::auth::mfa::disable,
+                                handlers::auth::mfa::verify,
+                                handlers::auth::mfa::confirm,
+                                handlers::auth::mfa::regenerate,
+                            ))),
+                    )
+                    .service(web::scope("/config").service((
+                        handlers::config::details,
+                        handlers::config::oauth2,
+                        handlers::config::smtp,
                     )))
-                    .service(web::scope("/mfa").service((
-                        handlers::auth::mfa::enable,
-                        handlers::auth::mfa::disable,
-                        handlers::auth::mfa::verify,
-                        handlers::auth::mfa::confirm,
-                        handlers::auth::mfa::regenerate,
-                    ))),
+                    .service(
+                        web::scope("/tables")
+                            .service((
+                                handlers::tables::list,
+                                handlers::tables::create,
+                                handlers::tables::update,
+                                handlers::tables::delete,
+                            ))
+                            .service(web::scope("/{name}").service((
+                                handlers::tables::custom::row,
+                                handlers::tables::custom::rows,
+                                handlers::tables::custom::create,
+                                handlers::tables::custom::update,
+                                handlers::tables::custom::delete,
+                            ))),
+                    ),
             )
-            .service(web::scope("/config").service((
-                handlers::config::details,
-                handlers::config::oauth2,
-                handlers::config::smtp,
-            )))
-            .service(
-                web::scope("/tables")
-                    .service((
-                        handlers::tables::create,
-                        handlers::tables::update,
-                        handlers::tables::delete,
-                    ))
-                    .service(web::scope("/{name}").service((
-                        handlers::tables::custom::row,
-                        handlers::tables::custom::rows,
-                        handlers::tables::custom::create,
-                        handlers::tables::custom::delete,
-                    ))),
-            )
-            .default_service(web::route().to(handlers::not_found))
+            .service(handlers::index)
+            .default_service(web::route().to(handlers::default))
     });
 
     let server = if use_tls {
@@ -242,4 +253,11 @@ async fn server_started(use_tls: bool, url: &str) {
     };
 
     info!("server started at {url}");
+
+    if url.contains("0.0.0.0") {
+        info!(
+            "you can access the server at {}",
+            url.replace("0.0.0.0", "127.0.0.1")
+        );
+    }
 }

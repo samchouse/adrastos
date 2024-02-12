@@ -4,30 +4,19 @@ use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use tracing_unwrap::ResultExt;
-use utoipa::ToSchema;
 
 use crate::{entities::Update, error::Error};
 
-use super::fields::{
-    BooleanField, DateField, EmailField, NumberField, RelationField, SelectField, StringField,
-    UrlField,
-};
+use super::fields::Field;
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, DbSelect, DbCommon, DbQuery)]
+#[derive(Debug, Serialize, Deserialize, Clone, DbSelect, DbCommon, DbQuery)]
 #[adrastos(rename = "custom_tables")]
 pub struct CustomTableSchema {
     pub id: String,
     #[adrastos(find, unique)]
     pub name: String,
-    pub string_fields: Vec<StringField>,
-    pub number_fields: Vec<NumberField>,
-    pub boolean_fields: Vec<BooleanField>,
-    pub date_fields: Vec<DateField>,
-    pub email_fields: Vec<EmailField>,
-    pub url_fields: Vec<UrlField>,
-    pub select_fields: Vec<SelectField>,
-    pub relation_fields: Vec<RelationField>,
+    pub fields: Vec<Field>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -35,14 +24,7 @@ pub struct CustomTableSchema {
 #[derive(Debug, Clone, Default)]
 pub struct UpdateCustomTableSchema {
     pub name: Option<String>,
-    pub string_fields: Option<Vec<StringField>>,
-    pub number_fields: Option<Vec<NumberField>>,
-    pub boolean_fields: Option<Vec<BooleanField>>,
-    pub date_fields: Option<Vec<DateField>>,
-    pub email_fields: Option<Vec<EmailField>>,
-    pub url_fields: Option<Vec<UrlField>>,
-    pub select_fields: Option<Vec<SelectField>>,
-    pub relation_fields: Option<Vec<RelationField>>,
+    pub fields: Option<Vec<Field>>,
 }
 
 impl CustomTableSchema {
@@ -56,93 +38,9 @@ impl CustomTableSchema {
             .values(Update::create([
                 (CustomTableSchemaIden::Name, update.name.into()),
                 (
-                    CustomTableSchemaIden::StringFields,
+                    CustomTableSchemaIden::Fields,
                     update
-                        .string_fields
-                        .clone()
-                        .map(|v| {
-                            v.into_iter()
-                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
-                                .collect::<Vec<_>>()
-                        })
-                        .into(),
-                ),
-                (
-                    CustomTableSchemaIden::NumberFields,
-                    update
-                        .number_fields
-                        .clone()
-                        .map(|v| {
-                            v.into_iter()
-                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
-                                .collect::<Vec<_>>()
-                        })
-                        .into(),
-                ),
-                (
-                    CustomTableSchemaIden::BooleanFields,
-                    update
-                        .boolean_fields
-                        .clone()
-                        .map(|v| {
-                            v.into_iter()
-                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
-                                .collect::<Vec<_>>()
-                        })
-                        .into(),
-                ),
-                (
-                    CustomTableSchemaIden::DateFields,
-                    update
-                        .date_fields
-                        .clone()
-                        .map(|v| {
-                            v.into_iter()
-                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
-                                .collect::<Vec<_>>()
-                        })
-                        .into(),
-                ),
-                (
-                    CustomTableSchemaIden::EmailFields,
-                    update
-                        .email_fields
-                        .clone()
-                        .map(|v| {
-                            v.into_iter()
-                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
-                                .collect::<Vec<_>>()
-                        })
-                        .into(),
-                ),
-                (
-                    CustomTableSchemaIden::UrlFields,
-                    update
-                        .url_fields
-                        .clone()
-                        .map(|v| {
-                            v.into_iter()
-                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
-                                .collect::<Vec<_>>()
-                        })
-                        .into(),
-                ),
-                (
-                    CustomTableSchemaIden::SelectFields,
-                    update
-                        .select_fields
-                        .clone()
-                        .map(|v| {
-                            v.into_iter()
-                                .map(|v| serde_json::to_string(&v).unwrap_or_log())
-                                .collect::<Vec<_>>()
-                        })
-                        .into(),
-                ),
-                (
-                    CustomTableSchemaIden::RelationFields,
-                    update
-                        .relation_fields
+                        .fields
                         .clone()
                         .map(|v| {
                             v.into_iter()

@@ -1,32 +1,61 @@
 import { ResponseError } from './errors';
-import { AccountsModule, TablesModule } from './modules';
+import { AccountsModule, ConfigModule, TablesModule } from './modules';
 import { Request } from './types';
 
+export {
+  table,
+  Table,
+  TFWithModifiers,
+  TInfer,
+  TField,
+  CustomTable,
+} from './modules';
+
 export class Client {
+  #authToken?: string;
+
   public accounts: AccountsModule;
   public tables: TablesModule;
+  public config: ConfigModule;
 
   constructor(
-    // eslint-disable-next-line no-unused-vars
     private baseUrl: string,
-    private _projectId: string
+    private _projectId: string,
   ) {
     this.accounts = new AccountsModule(this);
     this.tables = new TablesModule(this);
+    this.config = new ConfigModule(this);
+  }
+
+  public set authToken(token: string | undefined) {
+    this.#authToken = token;
+  }
+
+  public get hasAuthToken() {
+    return !!this.#authToken;
   }
 
   public buildUrl(path: string) {
-    return new URL(path, this.baseUrl);
+    return `${this.baseUrl.replace(/\/$/, '')}/api${path}`;
   }
 
-  async request({ path, method, options }: Request) {
+  async request<T = null>({ method, path, body, options }: Request) {
     const res = await fetch(this.buildUrl(path), {
+      body,
       method,
-      ...options
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+        ...(this.#authToken && { Authorization: `Bearer ${this.#authToken}` }),
+      },
     });
 
-    if (!res.ok) throw new ResponseError('Something went wrong');
-
-    return res.json();
+    if (!res.ok)
+      throw new ResponseError(
+        'Something went wrong',
+        (await res.json()) as ResponseError['details'],
+      );
+    return res.json() as T;
   }
 }

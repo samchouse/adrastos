@@ -125,8 +125,7 @@ impl Config {
                 .parse()
                 .unwrap_or_log(),
             certs_path: env::var(ConfigKey::CertsPath.to_string()).ok(),
-            client_url: env::var(ConfigKey::ClientUrl.to_string())
-                .unwrap_or("http://127.0.0.1:3000".into()),
+            client_url: env::var(ConfigKey::ClientUrl.to_string()).unwrap_or("/".into()),
             server_url: env::var(ConfigKey::ServerUrl.to_string())
                 .unwrap_or("127.0.0.1:8000".into()),
             postgres_url: env::var(ConfigKey::PostgresUrl.to_string()).unwrap_or_log(),
@@ -171,41 +170,41 @@ impl Config {
         self.current_version = system.current_version.clone();
         self.previous_version = system.previous_version.clone();
 
-        self.smtp_host = system.smtp_config.as_ref().map(|c| c.host.clone());
-        self.smtp_port = system.smtp_config.as_ref().map(|c| c.port);
-        self.smtp_username = system.smtp_config.as_ref().map(|c| c.username.clone());
+        self.smtp_host = system.smtp_config.clone().map(|c| c.host.clone());
+        self.smtp_port = system.smtp_config.clone().map(|c| c.port);
+        self.smtp_username = system.smtp_config.clone().map(|c| c.username.clone());
         self.smtp_password = system
             .smtp_config
             .as_ref()
             .map(|c| Secret::new(c.password.clone()));
-        self.smtp_sender_name = system.smtp_config.as_ref().map(|c| c.sender_name.clone());
-        self.smtp_sender_email = system.smtp_config.as_ref().map(|c| c.sender_email.clone());
+        self.smtp_sender_name = system.smtp_config.clone().map(|c| c.sender_name.clone());
+        self.smtp_sender_email = system.smtp_config.clone().map(|c| c.sender_email.clone());
 
-        self.google_client_id = system.google_config.as_ref().map(|c| c.client_id.clone());
+        self.google_client_id = system.google_config.clone().map(|c| c.client_id.clone());
         self.google_client_secret = system
             .google_config
             .as_ref()
             .map(|c| Secret::new(c.client_secret.clone()));
 
-        self.facebook_client_id = system.facebook_config.as_ref().map(|c| c.client_id.clone());
+        self.facebook_client_id = system.facebook_config.clone().map(|c| c.client_id.clone());
         self.facebook_client_secret = system
             .facebook_config
             .as_ref()
             .map(|c| Secret::new(c.client_secret.clone()));
 
-        self.github_client_id = system.github_config.as_ref().map(|c| c.client_id.clone());
+        self.github_client_id = system.github_config.clone().map(|c| c.client_id.clone());
         self.github_client_secret = system
             .github_config
             .as_ref()
             .map(|c| Secret::new(c.client_secret.clone()));
 
-        self.twitter_client_id = system.twitter_config.as_ref().map(|c| c.client_id.clone());
+        self.twitter_client_id = system.twitter_config.clone().map(|c| c.client_id.clone());
         self.twitter_client_secret = system
             .twitter_config
             .as_ref()
             .map(|c| Secret::new(c.client_secret.clone()));
 
-        self.discord_client_id = system.discord_config.as_ref().map(|c| c.client_id.clone());
+        self.discord_client_id = system.discord_config.clone().map(|c| c.client_id.clone());
         self.discord_client_secret = system
             .discord_config
             .as_ref()

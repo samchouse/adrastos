@@ -169,8 +169,8 @@ pub fn db_select(item: TokenStream) -> TokenStream {
                 self
             }
 
-            async fn finish(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<#ident, crate::error::Error> {
-                let row = db_pool
+            async fn finish(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<Vec<deadpool_postgres::tokio_postgres::Row>, crate::error::Error> {
+                let rows = db_pool
                     .get()
                     .await
                     .unwrap()
@@ -182,15 +182,9 @@ pub fn db_select(item: TokenStream) -> TokenStream {
                             #ident::error_identifier(),
                         );
                         crate::error::Error::InternalServerError(error)
-                    })?
-                    .into_iter()
-                    .next()
-                    .ok_or_else(|| {
-                        let message = format!("No {} was found", #ident::error_identifier());
-                        crate::error::Error::BadRequest(message)
                     })?;
 
-                Ok(row.into())
+                Ok(rows)
             }
 
             #(#impls)*
@@ -208,13 +202,28 @@ pub fn db_select(item: TokenStream) -> TokenStream {
             pub async fn one(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<#ident, crate::error::Error> {
                 self.query_builder.reset_limit().limit(1);
 
-                self.finish(db_pool).await
+                Ok(self
+                    .finish(db_pool)
+                    .await?
+                    .into_iter()
+                    .next()
+                    .ok_or_else(|| {
+                        let message = format!("No {} was found", #ident::error_identifier());
+                        crate::error::Error::BadRequest(message)
+                    })?
+                    .into())
             }
 
-            pub async fn all(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<#ident, crate::error::Error> {
+            pub async fn all(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<Vec<#ident>, crate::error::Error> {
                 self.query_builder.reset_limit();
 
-                self.finish(db_pool).await
+                // TODO(@Xenfo): add pagination, etc.
+                Ok(self
+                    .finish(db_pool)
+                    .await?
+                    .into_iter()
+                    .map(|row| row.into())
+                    .collect::<Vec<_>>())
             }
 
             pub fn to_string(&self) -> String {

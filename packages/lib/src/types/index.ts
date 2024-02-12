@@ -2,20 +2,25 @@ export * from './table';
 
 type Options = Omit<RequestInit, 'body'>;
 
-interface BaseRequest {
+export interface Request {
+  method: 'GET' | 'DELETE' | 'POST' | 'PATCH' | 'PUT';
   path: string;
-  options?: RequestInit;
-}
-
-interface BasicRequest extends BaseRequest {
-  method?: 'GET' | 'DELETE';
+  body?: BodyInit;
   options?: Options;
 }
 
-interface BodyRequest extends BaseRequest {
-  method: 'POST' | 'PATCH' | 'PUT';
-  body: BodyInit;
-  options?: Options;
+export interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  username: string;
+  verified: boolean;
+  banned: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type Request = BasicRequest | BodyRequest;
+export type AndNullable<T> = {
+  [P in keyof T]: undefined extends T[P] ? T[P] | null : T[P];
+};

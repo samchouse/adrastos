@@ -22,8 +22,8 @@ const worker = async () => {
         <VerificationEmail
           token={token}
           baseUrl={`${env.CLIENT_URL ?? 'http://localhost:3000'}/api`}
-        />
-      )
+        />,
+      ),
     );
     logger.info(`Finished request with token: ${token}`);
   });

@@ -15,6 +15,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt, clippy
+      - run: mkdir packages/dashboard/dist
 
       - name: Check formatting
         run: cargo fmt --check
@@ -29,6 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@nightly
+      - run: mkdir packages/dashboard/dist
 
       - name: Test the project
         run: cargo test --all-targets --locked

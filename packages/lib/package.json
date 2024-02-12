@@ -3,8 +3,8 @@
   "version": "0.0.2",
   "description": "A killer Backend-as-a-Service (BaaS) written in Rust",
   "author": "Samuel Corsi-House <chouse.samuel@gmail.com>",
-  "main": "out/index.js",
-  "types": "out/index.d.ts",
+  "main": "out/index.mjs",
+  "types": "out/index.d.mts",
   "files": [
     "out",
     "./LICENSE",
@@ -21,9 +21,13 @@
   "scripts": {
     "prepack": "cp ../../LICENSE .",
     "postpack": "rm LICENSE",
-    "build": "tsup"
+    "build": "tsup",
+    "watch": "tsup --watch"
+  },
+  "peerDependencies": {
+    "zod": ">=3.22"
   },
   "devDependencies": {
-    "tsup": "^7.2.0"
+    "tsup": "^8.0.2"
   }
 }

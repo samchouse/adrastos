@@ -1,71 +1,84 @@
-interface Field {
+import { AndNullable } from '../types';
+
+export type Field = AndNullable<
+  | StringField
+  | NumberField
+  | BooleanField
+  | DateField
+  | EmailField
+  | UrlField
+  | SelectField
+  | RelationSingleField
+  | RelationManyField
+>;
+
+interface BaseField {
   name: string;
 }
 
-export interface StringField extends Field {
+interface ExtendedField extends BaseField {
+  isRequired: boolean;
+  isUnique: boolean;
+}
+
+export interface StringField extends ExtendedField {
+  type: 'string';
   minLength?: number;
   maxLength?: number;
   pattern?: string;
-  isRequired?: boolean;
-  isUnique?: boolean;
 }
 
-export interface StringField extends Field {
-  minLength?: number;
-  maxLength?: number;
-  pattern?: string;
-  isRequired?: boolean;
-  isUnique?: boolean;
-}
-
-export interface NumberField extends Field {
+export interface NumberField extends ExtendedField {
+  type: 'number';
   min?: number;
   max?: number;
-  isRequired: boolean;
-  isUnique: boolean;
 }
 
-export interface BooleanField extends Field {}
-
-export interface DateField extends Field {
-  isRequired: boolean;
-  isUnique: boolean;
+export interface BooleanField extends BaseField {
+  type: 'boolean';
 }
 
-export interface EmailField extends Field {
+export interface DateField extends ExtendedField {
+  type: 'date';
+}
+
+export interface EmailField extends ExtendedField {
+  type: 'email';
   except: string[];
   only: string[];
-  isRequired: boolean;
-  isUnique: boolean;
 }
 
-export interface UrlField extends Field {
+export interface UrlField extends ExtendedField {
+  type: 'url';
   except: string[];
   only: string[];
-  isRequired: boolean;
-  isUnique: boolean;
 }
 
-export interface SelectField extends Field {
+export interface SelectField extends ExtendedField {
+  type: 'select';
   options: string[];
   minSelected?: number;
   maxSelected?: number;
-  isRequired: boolean;
-  isUnique: boolean;
 }
 
-export interface RelationField extends Field {
+interface RelationFieldBase extends ExtendedField {
+  type: 'relation';
   table: string;
-  type: 'single' | 'many';
+  cascadeDelete: boolean;
+}
+
+export interface RelationSingleField extends RelationFieldBase {
+  target: 'single';
+}
+
+export interface RelationManyField extends RelationFieldBase {
+  target: 'many';
   minSelected?: number;
   maxSelected?: number;
-  cascadeDelete: boolean;
-  isRequired: boolean;
-  isUnique: boolean;
 }
 
-export interface UpdateField<T extends Field> {
+export interface FieldUpdate {
   name: string;
   action: 'create' | 'update' | 'delete';
-  field: T;
+  field: Field;
 }

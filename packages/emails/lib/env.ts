@@ -9,7 +9,7 @@ export const env = createEnv({
   client: {},
   server: {
     CLIENT_URL: z.string().optional(),
-    REDIS_URL: z.string()
+    REDIS_URL: z.string(),
   },
-  runtimeEnv: process.env
+  runtimeEnv: process.env,
 });

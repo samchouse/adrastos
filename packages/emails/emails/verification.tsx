@@ -9,7 +9,7 @@ import {
   Link,
   Preview,
   Tailwind,
-  Text
+  Text,
 } from '@react-email/components';
 import * as React from 'react';
 
@@ -26,7 +26,7 @@ interface VerificationProps {
 
 export const VerificationEmail: React.FC<VerificationProps> = ({
   token,
-  baseUrl
+  baseUrl,
 }) => {
   const url = verificationUrl(baseUrl, token);
 
@@ -41,13 +41,13 @@ export const VerificationEmail: React.FC<VerificationProps> = ({
               {
                 family: 'Roboto',
                 weight: 400,
-                url: 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2'
+                url: 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2',
               },
               {
                 family: 'Roboto-Bold',
                 weight: 700,
-                url: 'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc4.woff2'
-              }
+                url: 'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc4.woff2',
+              },
             ]}
           />
         </Head>
@@ -60,7 +60,7 @@ export const VerificationEmail: React.FC<VerificationProps> = ({
               as="h2"
               className="text-2xl font-bold"
               style={{
-                fontFamily: 'Roboto-Bold, Roboto'
+                fontFamily: 'Roboto-Bold, Roboto',
               }}
             >
               Verify Your Email

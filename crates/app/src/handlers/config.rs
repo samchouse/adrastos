@@ -47,7 +47,6 @@ pub async fn details(
         .into();
 
     Ok(HttpResponse::Ok().json(json!({
-        "success": true,
         "smtpConfig": system.smtp_config.map(|c| json!({
             "host": c.host,
             "port": c.port,
@@ -87,7 +86,7 @@ pub async fn smtp(
             let password = body
                 .password
                 .clone()
-                .or(system.smtp_config.as_ref().map(|c| c.password.clone()));
+                .or(system.smtp_config.map(|c: SmtpConfig| c.password.clone()));
             let Some(password) = password else {
                 return Err(Error::BadRequest(
                     "A password is required to enable SMTP".to_string(),
@@ -114,9 +113,14 @@ pub async fn smtp(
     conn.execute(&system.set(), &[]).await.unwrap();
     config.lock().await.attach_system(&system);
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "SMTP settings successfully configured",
+    Ok(HttpResponse::Ok().json(system.smtp_config.map(|c| {
+        json!({
+            "host": c.host,
+            "port": c.port,
+            "username": c.username,
+            "senderName": c.sender_name,
+            "senderEmail": c.sender_email,
+        })
     })))
 }
 
@@ -156,7 +160,10 @@ pub async fn oauth2(
     config.lock().await.attach_system(&system);
 
     Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "OAuth2 providers successfully configured",
+        "google": system.google_config,
+        "facebook": system.facebook_config,
+        "github": system.github_config,
+        "twitter": system.twitter_config,
+        "discord": system.discord_config,
     })))
 }

@@ -1,15 +1,16 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::collections::HashMap;
 
 use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
     db::postgres,
     entities::custom_table::{
-        fields::RelationType, mm_relation::ManyToManyRelationTable, schema::CustomTableSchema,
+        fields::{FieldInfo, RelationTarget},
+        mm_relation::ManyToManyRelationTable,
+        schema::CustomTableSchema,
         CustomTableSelectBuilder,
     },
     error::Error,
     id::Id,
-    url::Url,
     util,
 };
 use chrono::{DateTime, Utc};
@@ -17,7 +18,7 @@ use heck::{AsLowerCamelCase, AsSnakeCase};
 use regex::Regex;
 use sea_query::{Alias, Expr, PostgresQueryBuilder, SimpleExpr, Value};
 use serde_json::json;
-use validator::{ValidationError, ValidationErrors};
+use validator::ValidationErrors;
 
 use crate::middleware::user::RequiredUser;
 
@@ -25,7 +26,7 @@ use crate::middleware::user::RequiredUser;
 pub async fn rows(
     _: RequiredUser,
     path: web::Path<String>,
-    web::Query(query): web::Query<HashMap<String, String>>,
+    web::Query(mut query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let custom_table = CustomTableSchema::find()
@@ -33,22 +34,37 @@ pub async fn rows(
         .one(&db_pool)
         .await?;
 
-    let rows = CustomTableSelectBuilder::from(&custom_table)
+    let page = query.get("page").map(|s| s.parse::<u64>().unwrap());
+    let limit = query.get("limit").map(|s| s.parse::<u64>().unwrap());
+    query.remove("page");
+    query.remove("limit");
+
+    let mut builder = CustomTableSelectBuilder::from(&custom_table);
+    builder
         .and_where(
             query
                 .iter()
                 .map(|(field, equals)| Expr::col(Alias::new(field)).eq(equals))
                 .collect(),
         )
-        .join()
-        .limit(None) // TODO(@Xenfo): support pagination
-        .finish(&db_pool)
-        .await?;
+        .paginate(page, limit)
+        .join();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "data": rows
-    })))
+    let rows = builder.finish(&db_pool).await?;
+    let mut response = json!({ "rows": rows });
+
+    if let Some(page) = page
+        && let Some(limit) = limit
+    {
+        let count = builder.count().finish(&db_pool).await?.as_i64().unwrap() as u64;
+
+        crate::util::attach_pagination_details(
+            &mut response,
+            crate::util::PaginationInfo { page, limit, count },
+        );
+    }
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 #[get("/row")]
@@ -76,10 +92,7 @@ pub async fn row(
         .finish(&db_pool)
         .await?;
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "data": row.as_array().unwrap().first()
-    })))
+    Ok(HttpResponse::Ok().json(row.as_array().unwrap().first()))
 }
 
 #[post("/create")]
@@ -107,7 +120,23 @@ pub async fn create(
         ("updated_at", None::<DateTime<Utc>>.into()),
     ];
 
-    custom_table.string_fields.iter().for_each(|field| {
+    table_values = table_values
+        .clone()
+        .into_iter()
+        .map(|(key, value)| {
+            if key != "id" {
+                return (key, value);
+            }
+
+            let Some(Some(id)) = body.get("id").map(|f| f.as_str()) else {
+                return (key, value);
+            };
+
+            (key, id.into())
+        })
+        .collect::<Vec<_>>();
+
+    custom_table.fields.iter().for_each(|field| {
         let validation_results =
             field.validate(body.get(&AsLowerCamelCase(field.name.clone()).to_string()));
 
@@ -127,288 +156,44 @@ pub async fn create(
             }
         }
     });
-    custom_table.number_fields.iter().for_each(|field| {
-        let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
-
-        match value {
-            Some(value) => {
-                let value = value.as_i64().unwrap();
-
-                let mut value_error = ValidationError::new("value");
-
-                if let Some(min) = field.min {
-                    if value < min.try_into().unwrap() {
-                        value_error.add_param(Cow::from("min"), &min);
-                    }
-                }
-                if let Some(max) = field.max {
-                    if value > max.try_into().unwrap() {
-                        value_error.add_param(Cow::from("max"), &max);
-                    }
-                }
-
-                if !value_error.params.is_empty() {
-                    errors.add(
-                        util::string_to_static_str(
-                            AsLowerCamelCase(field.name.clone()).to_string(),
-                        ),
-                        value_error,
-                    )
-                }
-
-                table_values.push((&field.name, value.into()));
-            }
-            None => {
-                if field.is_required {
-                    errors.add(
-                        util::string_to_static_str(
-                            AsLowerCamelCase(field.name.clone()).to_string(),
-                        ),
-                        ValidationError::new("required"),
-                    );
-                }
-            }
-        }
-    });
-    custom_table.boolean_fields.iter().for_each(|field| {
-        let value = match body.get(&AsLowerCamelCase(field.name.clone()).to_string()) {
-            Some(value) => value.as_bool().unwrap(),
-            None => false,
-        };
-
-        table_values.push((&field.name, value.into()));
-    });
-    custom_table.date_fields.iter().for_each(|field| {
-        let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
-
-        match value {
-            Some(value) => {
-                table_values.push((
-                    &field.name,
-                    serde_json::from_value::<DateTime<Utc>>(value.to_owned())
-                        .unwrap()
-                        .into(),
-                ));
-            }
-            None => {
-                if field.is_required {
-                    errors.add(
-                        util::string_to_static_str(
-                            AsLowerCamelCase(field.name.clone()).to_string(),
-                        ),
-                        ValidationError::new("required"),
-                    );
-                }
-            }
-        }
-    });
-    custom_table.email_fields.iter().for_each(|field| {
-        let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
-
-        match value {
-            Some(value) => {
-                let value = value.as_str().unwrap();
-                let mut value_url = Url::from(value.to_owned());
-
-                let mut pattern_error = ValidationError::new("pattern");
-
-                if !field.only.is_empty() {
-                    value_url
-                        .validate_with_patterns(field.only.clone())
-                        .iter()
-                        .for_each(|(c, pattern)| {
-                            if !c {
-                                pattern_error.add_param(Cow::from("only"), &pattern);
-                            }
-                        });
-                } else if !field.except.is_empty() {
-                    value_url
-                        .validate_with_patterns(field.except.clone())
-                        .iter()
-                        .for_each(|(c, pattern)| {
-                            if *c {
-                                pattern_error.add_param(Cow::from("except"), &pattern);
-                            }
-                        });
-                }
-
-                if !pattern_error.params.is_empty() {
-                    errors.add(
-                        util::string_to_static_str(
-                            AsLowerCamelCase(field.name.clone()).to_string(),
-                        ),
-                        pattern_error,
-                    )
-                }
-
-                table_values.push((&field.name, value.into()));
-            }
-            None => {
-                if field.is_required {
-                    errors.add(
-                        util::string_to_static_str(
-                            AsLowerCamelCase(field.name.clone()).to_string(),
-                        ),
-                        ValidationError::new("required"),
-                    );
-                }
-            }
-        }
-    });
-    custom_table.url_fields.iter().for_each(|field| {
-        let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
-
-        match value {
-            Some(value) => {
-                let value = value.as_str().unwrap();
-                let mut value_url = Url::from(value.to_owned());
-
-                let mut pattern_error = ValidationError::new("pattern");
-
-                if !field.only.is_empty() {
-                    value_url
-                        .validate_with_patterns(field.only.clone())
-                        .iter()
-                        .for_each(|(c, pattern)| {
-                            if !c {
-                                pattern_error.add_param(Cow::from("only"), &pattern);
-                            }
-                        });
-                } else if !field.except.is_empty() {
-                    value_url
-                        .validate_with_patterns(field.except.clone())
-                        .iter()
-                        .for_each(|(c, pattern)| {
-                            if *c {
-                                pattern_error.add_param(Cow::from("except"), &pattern);
-                            }
-                        });
-                }
-
-                if !pattern_error.params.is_empty() {
-                    errors.add(
-                        util::string_to_static_str(
-                            AsLowerCamelCase(field.name.clone()).to_string(),
-                        ),
-                        pattern_error,
-                    )
-                }
-
-                table_values.push((&field.name, value.into()));
-            }
-            None => {
-                if field.is_required {
-                    errors.add(
-                        util::string_to_static_str(
-                            AsLowerCamelCase(field.name.clone()).to_string(),
-                        ),
-                        ValidationError::new("required"),
-                    );
-                }
-            }
-        }
-    });
-    custom_table.select_fields.iter().for_each(|field| {
-        let value = body.get(&AsLowerCamelCase(field.name.clone()).to_string());
-
-        match value {
-            Some(value) => {
-                let value = value
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .map(|v| v.as_str().unwrap().to_owned())
-                    .collect::<Vec<_>>();
-
-                let mut selections_error = ValidationError::new("selections");
-
-                let invalid_selections = value
-                    .iter()
-                    .map(|v| (v.to_owned(), field.options.contains(v)))
-                    .collect::<Vec<_>>();
-
-                if !invalid_selections.iter().all(|(_, contains)| *contains) {
-                    selections_error.add_param(
-                        Cow::from("invalid"),
-                        &invalid_selections
-                            .iter()
-                            .filter_map(|(v, contains)| {
-                                if !contains {
-                                    return Some(v);
-                                }
-
-                                None
-                            })
-                            .collect::<Vec<_>>(),
-                    );
-                }
-
-                if let Some(min_selected) = field.min_selected {
-                    if value.len() < min_selected.try_into().unwrap() {
-                        selections_error.add_param(Cow::from("min"), &min_selected);
-                    }
-                }
-                if let Some(max_selected) = field.max_selected {
-                    if value.len() > max_selected.try_into().unwrap() {
-                        selections_error.add_param(Cow::from("max"), &max_selected);
-                    }
-                }
-
-                if !selections_error.params.is_empty() {
-                    errors.add(
-                        util::string_to_static_str(
-                            AsLowerCamelCase(field.name.clone()).to_string(),
-                        ),
-                        selections_error,
-                    )
-                }
-
-                table_values.push((&field.name, value.into()));
-            }
-            None => {
-                if field.is_required {
-                    errors.add(
-                        util::string_to_static_str(
-                            AsLowerCamelCase(field.name.clone()).to_string(),
-                        ),
-                        ValidationError::new("required"),
-                    );
-                }
-            }
-        }
-    });
 
     let insert_queries = custom_table
-        .relation_fields
+        .fields
         .iter()
-        .filter_map(|field| match field.relation_type {
-            RelationType::Single => {
-                let value = body
-                    .get(&AsLowerCamelCase(field.name.clone()).to_string())
-                    .unwrap()
-                    .as_str()
-                    .unwrap();
+        .filter_map(|field| {
+            let FieldInfo::Relation { target, .. } = &field.info else {
+                return None;
+            };
 
-                table_values.push((&field.name, value.into()));
+            match target {
+                RelationTarget::Single => {
+                    let value = body
+                        .get(&AsLowerCamelCase(field.name.clone()).to_string())
+                        .unwrap()
+                        .as_str()
+                        .unwrap();
 
-                None
-            }
-            RelationType::Many => {
-                let values = body
-                    .get(&AsLowerCamelCase(field.name.clone()).to_string())
-                    .unwrap()
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .map(|v| v.as_str().unwrap().to_string())
-                    .collect::<Vec<_>>();
+                    table_values.push((&field.name, value.into()));
 
-                Some(ManyToManyRelationTable::insert_query(
-                    &custom_table,
-                    field,
-                    id.clone(),
-                    values,
-                ))
+                    None
+                }
+                RelationTarget::Many => {
+                    let values = body
+                        .get(&AsLowerCamelCase(field.name.clone()).to_string())
+                        .unwrap()
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|v| v.as_str().unwrap().to_string())
+                        .collect::<Vec<_>>();
+
+                    Some(ManyToManyRelationTable::insert_query(
+                        &custom_table,
+                        field,
+                        id.clone(),
+                        values,
+                    ))
+                }
             }
         })
         .flatten()
@@ -497,7 +282,7 @@ pub async fn create(
             match value {
                 SimpleExpr::Value(value) => match value {
                     Value::String(value) => Some(json!({ camel_case_name: value })),
-                    Value::Int(value) => Some(json!({ camel_case_name: value })),
+                    Value::BigInt(value) => Some(json!({ camel_case_name: value })),
                     Value::Bool(value) => Some(json!({ camel_case_name: value })),
                     Value::ChronoDateTimeUtc(value) => Some(json!({ camel_case_name: value })),
                     Value::Array(_, Some(value)) => {
@@ -518,29 +303,65 @@ pub async fn create(
         })
         .for_each(|patch| json_patch::merge(&mut data, &patch));
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "data": data
-    })))
+    Ok(HttpResponse::Ok().json(json!(data)))
 }
 
 #[patch("/update")]
 pub async fn update(
     _: RequiredUser,
+    bytes: web::Bytes,
     path: web::Path<String>,
     web::Query(query): web::Query<HashMap<String, String>>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
+    let body = serde_json::from_str::<HashMap<String, serde_json::Value>>(
+        &String::from_utf8(bytes.to_vec()).unwrap(),
+    )
+    .map_err(|err| Error::BadRequest(err.to_string()))?;
+
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
         .one(&db_pool)
         .await?;
 
     let mut db_query = sea_query::Query::update();
+    // TODO(@Xenfo): Add support for multiple rows
+    db_query.limit(1);
 
     query.iter().for_each(|(field, equals)| {
         db_query.and_where(Expr::col(Alias::new(AsSnakeCase(field).to_string())).eq(equals));
     });
+
+    let mut errors = ValidationErrors::new();
+    let mut table_values: Vec<(_, SimpleExpr)> = vec![("updated_at", Utc::now().into())];
+
+    custom_table.fields.iter().for_each(|field| {
+        let validation_results =
+            field.validate(body.get(&AsLowerCamelCase(field.name.clone()).to_string()));
+
+        match validation_results {
+            Ok(value) => {
+                table_values.push((&field.name, value));
+            }
+            Err(validation_errors) => {
+                validation_errors.iter().for_each(|error| {
+                    errors.add(
+                        util::string_to_static_str(
+                            AsLowerCamelCase(field.name.clone()).to_string(),
+                        ),
+                        error.clone(),
+                    );
+                });
+            }
+        }
+    });
+
+    if !errors.is_empty() {
+        return Err(Error::ValidationErrors {
+            message: "Validation failed".to_string(),
+            errors,
+        });
+    }
 
     db_pool
         .get()
@@ -549,6 +370,12 @@ pub async fn update(
         .execute(
             db_query
                 .table(Alias::new(&custom_table.name))
+                .values(
+                    table_values
+                        .clone()
+                        .into_iter()
+                        .map(|(f, v)| (Alias::new(f), v.clone())),
+                )
                 .to_string(PostgresQueryBuilder)
                 .as_str(),
             &[],
@@ -556,10 +383,39 @@ pub async fn update(
         .await
         .unwrap();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Row updated successfully"
-    })))
+    let mut data = json!({});
+
+    table_values
+        .into_iter()
+        .filter_map(|(name, value)| {
+            let camel_case_name = heck::AsLowerCamelCase(name).to_string();
+            let camel_case_name = camel_case_name.as_str();
+
+            match value {
+                SimpleExpr::Value(value) => match value {
+                    Value::String(value) => Some(json!({ camel_case_name: value })),
+                    Value::BigInt(value) => Some(json!({ camel_case_name: value })),
+                    Value::Bool(value) => Some(json!({ camel_case_name: value })),
+                    Value::ChronoDateTimeUtc(value) => Some(json!({ camel_case_name: value })),
+                    Value::Array(_, Some(value)) => {
+                        let value = value
+                            .iter()
+                            .filter_map(|value| match value {
+                                Value::String(value) => Some(value),
+                                _ => None,
+                            })
+                            .collect::<Vec<_>>();
+
+                        Some(json!({ camel_case_name: value }))
+                    }
+                    _ => None,
+                },
+                _ => None,
+            }
+        })
+        .for_each(|patch| json_patch::merge(&mut data, &patch));
+
+    Ok(HttpResponse::Ok().json(json!(data)))
 }
 
 #[delete("/delete")]
@@ -575,6 +431,8 @@ pub async fn delete(
         .await?;
 
     let mut db_query = sea_query::Query::delete();
+    // TODO(@Xenfo): Add support for multiple rows
+    db_query.limit(1);
 
     query.iter().for_each(|(field, equals)| {
         db_query.and_where(Expr::col(Alias::new(AsSnakeCase(field).to_string())).eq(equals));
@@ -594,8 +452,5 @@ pub async fn delete(
         .await
         .unwrap();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "success": true,
-        "message": "Row deleted successfully"
-    })))
+    Ok(HttpResponse::Ok().json(serde_json::Value::Null))
 }

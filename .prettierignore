@@ -1,5 +1,7 @@
 # files
 *.env
+*.yml
+*.yaml
 **/next-env.d.ts
 
 # directories

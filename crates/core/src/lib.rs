@@ -1,4 +1,4 @@
-#![feature(let_chains, async_fn_in_trait)]
+#![feature(let_chains)]
 
 pub mod auth;
 pub mod config;
