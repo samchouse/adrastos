@@ -15,6 +15,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt, clippy
+      - run: mkdir packages/dashboard/dist
 
       - name: Check formatting
         run: cargo fmt --check
