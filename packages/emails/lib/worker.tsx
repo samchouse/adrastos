@@ -14,7 +14,10 @@ logger.info('Worker started');
 const worker = async () => {
   await client.connect();
 
-  await client.subscribe('emails', async (token) => {
+  const subscriber = client.duplicate();
+  await subscriber.connect();
+
+  await subscriber.subscribe('emails', async (token) => {
     logger.info(`Received request with token: ${token}`);
     await client.publish(
       'html',
