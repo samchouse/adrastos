@@ -1,7 +1,9 @@
 use std::ops::Deref;
 
 use actix_web::{
-    get, http::header::{CacheControl, CacheDirective}, web, HttpRequest, HttpResponse, Responder
+    get,
+    http::header::{CacheControl, CacheDirective},
+    web, HttpRequest, HttpResponse, Responder,
 };
 use adrastos_core::{config::Config, error::Error};
 use tokio::sync::Mutex;

@@ -22,6 +22,6 @@ pub fn handle_embedded_file(path: &str) -> Result<impl Responder, Error> {
             }
 
             handle_embedded_file("index.html")
-        },
+        }
     }
 }

@@ -3,14 +3,13 @@
 case $1 in
 cou)
   PR=$2
-  BRANCH=$3
 
   mkdir -p staging
 
   if [ ! -f "staging/docker-compose.pr-$PR.yml" ]; then
     cat <<EOF >>../../Caddyfile
 
-adrastos-api-pr-$PR.xenfo.dev {
+adi-pr-$PR.xenfo.dev {
 	reverse_proxy adrastos-staging-pr-$PR-app-1:8000
 }
 EOF
@@ -35,8 +34,6 @@ services:
       - emails
     env_file:
       - ../staging.env
-    environment:
-      - CLIENT_URL=https://adrastos-git-$(echo "$BRANCH" | sed 's/\//-/')-xenfo.vercel.app
     networks:
       - deployments_default
     volumes:
@@ -49,16 +46,16 @@ EOF
 
     cat <<EOF >/home/sam/.cloudflared/config.yml
 $(head -n-1 /home/sam/.cloudflared/config.yml)
-  - hostname: adrastos-api-pr-$PR.xenfo.dev
+  - hostname: adi-pr-$PR.xenfo.dev
     service: https://localhost
     originRequest:
-      originServerName: adrastos-api-pr-$PR.xenfo.dev
-      httpHostHeader: adrastos-api-pr-$PR.xenfo.dev
+      originServerName: adi-pr-$PR.xenfo.dev
+      httpHostHeader: adi-pr-$PR.xenfo.dev
 $(tail -n1 /home/sam/.cloudflared/config.yml)
 EOF
 
     systemctl restart cloudflared
-    su -- sam -c "cloudflared tunnel route dns '7d6af8ba-5ea2-4136-b245-27b513646807' \"adrastos-api-pr-$PR\""
+    su -- sam -c "cloudflared tunnel route dns '7d6af8ba-5ea2-4136-b245-27b513646807' \"adi-pr-$PR\""
   fi
 
   su -- sam -c "docker compose -f \"staging/docker-compose.pr-$PR.yml\" up -d"
@@ -67,10 +64,10 @@ EOF
 destroy)
   PR=$2
 
-  yq -yi 'del(.ingress[] | select(.hostname == "adrastos-api-pr-29.xenfo.dev"))' /home/sam/.cloudflared/config.yml
+  yq -yi "del(.ingress[] | select(.hostname == \"adi-pr-$PR.xenfo.dev\"))" /home/sam/.cloudflared/config.yml
   systemctl restart cloudflared
 
-  sed -i ":a;N;\$!ba; s/adrastos-api-pr-$PR\.xenfo\.dev {[^{}]*}//g" ../../Caddyfile
+  sed -i ":a;N;\$!ba; s/adi-pr-$PR\.xenfo\.dev {[^{}]*}//g" ../../Caddyfile
   sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' ../../Caddyfile
   docker compose -f ../../docker-compose.yml exec -w /etc/caddy caddy caddy reload
 

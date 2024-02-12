@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "run -T conc \"cd lib && run -T tsc -w\" \"run -T nodemon out/lib/worker.js\"",
-    "build": "cd lib && run -T tsc",
+    "dev": "run -T conc \"run -T tsc -w\" \"run -T nodemon out/lib/worker.js\"",
+    "build": "run -T tsc",
     "start": "node out/lib/worker.js",
     "email:dev": "email dev",
     "email:export": "email export"

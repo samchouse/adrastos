@@ -29,6 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@nightly
+      - run: mkdir packages/dashboard/dist
 
       - name: Test the project
         run: cargo test --all-targets --locked
