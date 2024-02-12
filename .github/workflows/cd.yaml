@@ -67,7 +67,7 @@ jobs:
           yarn install
           cd packages/lib
           yarn build
-          cd packages/dashboard
+          cd ../dashboard
           yarn build
 
       - uses: dtolnay/rust-toolchain@nightly
@@ -179,7 +179,7 @@ jobs:
           yarn install
           cd packages/lib
           yarn build
-          cd packages/dashboard
+          cd ../dashboard
           yarn build
 
       - uses: dtolnay/rust-toolchain@nightly
@@ -253,7 +253,7 @@ jobs:
           yarn install
           cd packages/lib
           yarn build
-          cd packages/dashboard
+          cd ../dashboard
           yarn build
 
       - uses: dtolnay/rust-toolchain@nightly
