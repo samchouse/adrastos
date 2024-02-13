@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use tracing::error;
 use tracing_unwrap::ResultExt;
 use validator::Validate;
+use webauthn_rs::prelude::*;
 
 use crate::{auth, error::Error};
 
@@ -40,6 +41,8 @@ pub struct User {
     #[validate(length(min = 8, max = 64))]
     #[adrastos(transform = validate_password)]
     pub password: String,
+    #[serde(skip_serializing)]
+    pub passkeys: Vec<Passkey>,
     pub verified: bool,
     pub banned: bool,
     #[serde(skip_serializing)]
@@ -69,6 +72,7 @@ pub struct UpdateUser {
     pub username: Option<String>,
     #[validate(length(min = 8, max = 64))]
     pub password: Option<String>,
+    pub passkeys: Option<Vec<Passkey>>,
     pub verified: Option<bool>,
     pub banned: Option<bool>,
     pub mfa_secret: Option<Option<String>>,
@@ -98,6 +102,17 @@ impl User {
                     update
                         .password
                         .map(|v| auth::hash_password(v.as_str()).unwrap_or_log())
+                        .into(),
+                ),
+                (
+                    UserIden::Passkeys,
+                    update
+                        .passkeys
+                        .map(|pks| {
+                            pks.into_iter()
+                                .map(|pk| serde_json::to_string(&pk).unwrap())
+                                .collect::<Vec<_>>()
+                        })
                         .into(),
                 ),
                 (UserIden::Verified, update.verified.into()),

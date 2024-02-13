@@ -6,6 +6,8 @@ pub enum SessionKey {
     LoginUserId,
     MfaRetries,
     Redirect,
+    PasskeyRegistration,
+    PasskeyAuthentication,
 }
 
 impl fmt::Display for SessionKey {
@@ -16,6 +18,8 @@ impl fmt::Display for SessionKey {
             SessionKey::LoginUserId => "login_user_id",
             SessionKey::MfaRetries => "mfa_retries",
             SessionKey::Redirect => "redirect",
+            SessionKey::PasskeyRegistration => "passkey_registration",
+            SessionKey::PasskeyAuthentication => "passkey_authentication",
         };
 
         write!(f, "{name}")

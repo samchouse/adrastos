@@ -1,5 +1,10 @@
-use tokio::sync::Mutex;
-
+use actix_session::Session;
+use actix_web::{
+    cookie::{Cookie, SameSite},
+    get,
+    http::header,
+    web, HttpResponse, Responder,
+};
 use adrastos_core::{
     auth::{
         self,
@@ -10,16 +15,9 @@ use adrastos_core::{
     error::Error,
     id::Id,
 };
-
-use actix_session::Session;
-use actix_web::{
-    cookie::{Cookie, SameSite},
-    get,
-    http::header,
-    web, HttpResponse, Responder,
-};
 use chrono::Utc;
 use serde::Deserialize;
+use tokio::sync::Mutex;
 use tracing::error;
 
 use crate::{middleware::user, session::SessionKey};

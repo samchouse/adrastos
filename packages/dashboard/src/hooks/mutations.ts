@@ -44,6 +44,45 @@ export const useLogoutMutation = (client: Client) => {
   });
 };
 
+export const useStartRegisterPasskeyMutation = (client: Client) =>
+  useMutation({
+    mutationKey: ['auth', 'passkeys', 'register', 'start'],
+    mutationFn: async () => await client.accounts.startPasskeyRegistration(),
+  });
+
+export const useFinishRegisterPasskeyMutation = (client: Client) =>
+  useMutation({
+    mutationKey: ['auth', 'passkeys', 'register', 'finish'],
+    mutationFn: async (
+      data: Parameters<
+        (typeof client)['accounts']['finishPasskeyRegistration']
+      >[0],
+    ) => await client.accounts.finishPasskeyRegistration(data),
+  });
+
+export const useStartLoginPasskeyMutation = (client: Client) =>
+  useMutation({
+    mutationKey: ['auth', 'passkeys', 'login', 'start'],
+    mutationFn: async (
+      data:
+        | Parameters<(typeof client)['accounts']['startPasskeyLogin']>[0]
+        | void,
+    ) => await client.accounts.startPasskeyLogin(data ?? undefined),
+  });
+
+export const useFinishLoginPasskeyMutation = (client: Client) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ['auth', 'passkeys', 'login', 'finish'],
+    mutationFn: async (
+      data: Parameters<(typeof client)['accounts']['finishPasskeyLogin']>[0],
+    ) => await client.accounts.finishPasskeyLogin(data),
+    onSuccess: () =>
+      queryClient.refetchQueries({ queryKey: queryKeys.tokenRefresh }),
+  });
+};
+
 export const useConfigSmtpMutation = (client: Client) => {
   const queryClient = useQueryClient();
 

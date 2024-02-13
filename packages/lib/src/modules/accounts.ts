@@ -115,4 +115,90 @@ export class AccountsModule extends BaseModule {
       method: 'GET',
     });
   }
+
+  public async startPasskeyRegistration() {
+    return this.client.request({
+      path: '/auth/passkeys/register/start',
+      method: 'POST',
+      options: {
+        credentials: 'include',
+      },
+    });
+  }
+
+  public async finishPasskeyRegistration(body: {
+    id: string;
+    rawId: string;
+    response: {
+      attestationObject: string;
+      clientDataJSON: string;
+    };
+    type: string;
+    clientExtensionResults: Record<string, unknown>;
+    transports: string[];
+  }) {
+    return this.client.request({
+      path: '/auth/passkeys/register/finish',
+      method: 'POST',
+      options: {
+        credentials: 'include',
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  public async startPasskeyLogin(body?: { id: string }) {
+    return this.client.request<{
+      publicKey: {
+        challenge: string;
+        timeout?: number;
+        rpId?: string;
+        allowCredentials?: {
+          id: string;
+          type: PublicKeyCredentialType;
+          transports?: (
+            | 'ble'
+            | 'cable'
+            | 'hybrid'
+            | 'internal'
+            | 'nfc'
+            | 'smart-card'
+            | 'usb'
+          )[];
+        }[];
+        userVerification?: UserVerificationRequirement;
+        extensions?: AuthenticationExtensionsClientInputs;
+      };
+    }>({
+      path: '/auth/passkeys/login/start',
+      method: 'POST',
+      body: JSON.stringify(body ?? null),
+      options: {
+        credentials: 'include',
+      },
+    });
+  }
+
+  public async finishPasskeyLogin(body: {
+    id: string;
+    rawId: string;
+    response: {
+      clientDataJSON: string;
+      authenticatorData: string;
+      signature: string;
+      userHandle?: string;
+    };
+    authenticatorAttachment?: AuthenticatorAttachment;
+    clientExtensionResults: AuthenticationExtensionsClientOutputs;
+    type: PublicKeyCredentialType;
+  }) {
+    return this.client.request({
+      path: '/auth/passkeys/login/finish',
+      method: 'POST',
+      options: {
+        credentials: 'include',
+      },
+      body: JSON.stringify(body),
+    });
+  }
 }

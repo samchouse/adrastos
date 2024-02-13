@@ -44,3 +44,6 @@ tracing = "0.1.40"
 tracing-unwrap = "0.10.0"
 utoipa = { version = "3.5.0", features = ["actix_extras", "chrono"] }
 validator = { version = "0.16.1", features = ["derive"] }
+webauthn-rs = { git = "https://github.com/Xenfo/webauthn-rs", rev = "fbe5b35", features = [
+	"danger-allow-state-serialisation",
+] }

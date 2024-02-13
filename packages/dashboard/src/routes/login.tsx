@@ -6,8 +6,9 @@ import {
   SiGoogle,
   SiTwitter,
 } from '@icons-pack/react-simple-icons';
+import { startAuthentication } from '@simplewebauthn/browser';
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
-import { Loader2 } from 'lucide-react';
+import { KeyRound, Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -28,7 +29,12 @@ import {
   FormMessage,
   Input,
 } from '~/components/ui';
-import { queryKeys, useLoginMutation } from '~/hooks';
+import {
+  queryKeys,
+  useFinishLoginPasskeyMutation,
+  useLoginMutation,
+  useStartLoginPasskeyMutation,
+} from '~/hooks';
 import { providers } from '~/lib';
 
 export const Route = createFileRoute('/login')({
@@ -66,6 +72,11 @@ function LoginComponent() {
   const { to } = Route.useSearch();
 
   const { mutateAsync, isPending, isError, error } = useLoginMutation(client);
+
+  const { mutateAsync: loginStartPasskeyMutateAsync } =
+    useStartLoginPasskeyMutation(client);
+  const { mutateAsync: loginFinishPasskeyMutateAsync } =
+    useFinishLoginPasskeyMutation(client);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -114,7 +125,13 @@ function LoginComponent() {
                     <FormItem className="w-full">
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="Email" {...field} />
+                        <Input
+                          type="email"
+                          autoComplete="webauthn"
+                          placeholder="Email"
+                          data-form-type="email"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -130,6 +147,7 @@ function LoginComponent() {
                         <Input
                           type="password"
                           placeholder="Password"
+                          data-form-type="password"
                           {...field}
                         />
                       </FormControl>
@@ -160,23 +178,46 @@ function LoginComponent() {
                   </div>
                 </div>
 
-                <div className="grid w-full grid-cols-5 gap-2">
-                  {providers.map((provider) => (
-                    <Button
-                      key={provider}
-                      asChild
-                      variant="outline"
-                      className="w-full"
-                    >
-                      <a
-                        href={client.accounts.loginUsingOAuth2(provider, {
-                          to,
-                        })}
+                <div className="space-y-4">
+                  <Button
+                    variant="secondary"
+                    className="w-full"
+                    type="button"
+                    onClick={() => {
+                      void (async () => {
+                        const options = await loginStartPasskeyMutateAsync();
+                        const response = await startAuthentication(
+                          options.publicKey,
+                        );
+                        await loginFinishPasskeyMutateAsync(response);
+
+                        if (to) router.history.push(to);
+                        else await router.navigate({ to: '/dashboard' });
+                      })();
+                    }}
+                  >
+                    {/* TODO(@Xenfo): https://github.com/lucide-icons/lucide/pull/1848 */}
+                    <KeyRound className="mr-2 h-4 w-4" /> Passkey
+                  </Button>
+
+                  <div className="grid w-full grid-cols-5 gap-2">
+                    {providers.map((provider) => (
+                      <Button
+                        key={provider}
+                        asChild
+                        variant="outline"
+                        className="w-full"
                       >
-                        {providerIcons[provider]}
-                      </a>
-                    </Button>
-                  ))}
+                        <a
+                          href={client.accounts.loginUsingOAuth2(provider, {
+                            to,
+                          })}
+                        >
+                          {providerIcons[provider]}
+                        </a>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
 
                 <Link
