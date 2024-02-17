@@ -8,6 +8,7 @@ const baseQueryKey = {
 export const queryKeys = {
   tokenRefresh: ['auth', 'token', 'refresh'] as const,
   me: ['me'] as const,
+  passkeys: ['passkeys', 'list'] as const,
   configDetails: ['config', 'details'] as const,
   tables: [...baseQueryKey.tables, 'list'] as const,
   tableData: (table: string) =>
@@ -48,4 +49,10 @@ export const tableDataQueryOptions = <T, U extends boolean>(
   queryOptions({
     queryKey: queryKeys.tableData(table),
     queryFn: () => client.tables.get<T, U>(table, one),
+  });
+
+export const passkeysQueryOptions = (client: Client) =>
+  queryOptions({
+    queryKey: queryKeys.passkeys,
+    queryFn: () => client.accounts.listPasskeys(),
   });

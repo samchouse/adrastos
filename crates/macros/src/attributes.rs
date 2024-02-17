@@ -5,12 +5,12 @@ use syn::{Attribute, Meta};
 pub enum TokenName {
     Join,
     Find,
+    Json,
     Unique,
     Rename,
     Relation,
     Validated,
     Transform,
-
     Unknown,
 }
 
@@ -19,6 +19,7 @@ impl From<Ident> for TokenName {
         match value.to_string().as_str() {
             "join" => Self::Join,
             "find" => Self::Find,
+            "json" => Self::Json,
             "unique" => Self::Unique,
             "rename" => Self::Rename,
             "relation" => Self::Relation,
@@ -33,6 +34,7 @@ impl From<Ident> for TokenName {
 pub enum Token {
     Join,
     Find,
+    Json,
     Unique,
     Validated,
     Rename(String),
@@ -45,6 +47,7 @@ impl Token {
         match self {
             Self::Join => TokenName::Join,
             Self::Find => TokenName::Find,
+            Self::Json => TokenName::Json,
             Self::Unique => TokenName::Unique,
             Self::Validated => TokenName::Validated,
             Self::Rename(_) => TokenName::Rename,
@@ -94,6 +97,7 @@ impl From<Vec<Attribute>> for AttributeTokens {
                 match ident.into() {
                     TokenName::Join => Some(Token::Join),
                     TokenName::Find => Some(Token::Find),
+                    TokenName::Json => Some(Token::Json),
                     TokenName::Unique => Some(Token::Unique),
                     TokenName::Validated => Some(Token::Validated),
                     TokenName::Rename => {

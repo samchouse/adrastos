@@ -6,6 +6,7 @@ use secrecy::ExposeSecret;
 use crate::config::Config;
 
 pub use connection::*;
+pub use passkey::*;
 pub use refresh_token_tree::*;
 pub use system::*;
 pub use user::*;
@@ -14,6 +15,7 @@ use self::custom_table::schema::CustomTableSchema;
 
 pub mod connection;
 pub mod custom_table;
+pub mod passkey;
 pub mod refresh_token_tree;
 pub mod system;
 pub mod user;
@@ -73,6 +75,7 @@ pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
         Connection::init(),
         RefreshTokenTree::init(),
         CustomTableSchema::init(),
+        Passkey::init(),
     ];
     for init in inits {
         conn.execute(&init, &[]).await.unwrap();

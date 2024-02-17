@@ -174,6 +174,7 @@ async fn main() -> std::io::Result<()> {
                                 handlers::auth::mfa::regenerate,
                             )))
                             .service(web::scope("/passkeys").service((
+                                handlers::auth::passkeys::list,
                                 handlers::auth::passkeys::register_start,
                                 handlers::auth::passkeys::register_finish,
                                 handlers::auth::passkeys::login_start,

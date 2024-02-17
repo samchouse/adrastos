@@ -90,6 +90,7 @@ where
                     let user = entities::User::find_by_id(&access_token.claims.sub)
                         .join(UserJoin::Connections)
                         .join(UserJoin::RefreshTokenTrees)
+                        .join(UserJoin::Passkeys)
                         .one(&db_pool)
                         .await;
                     if let Ok(user) = user {

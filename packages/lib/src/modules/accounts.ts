@@ -116,8 +116,51 @@ export class AccountsModule extends BaseModule {
     });
   }
 
+  public async listPasskeys() {
+    return this.client.request<
+      {
+        id: string;
+        name: string;
+        lastUsed?: Date;
+        createdAt: Date;
+        updatedAt?: Date;
+      }[]
+    >({
+      path: '/auth/passkeys/list',
+      method: 'GET',
+    });
+  }
+
   public async startPasskeyRegistration() {
-    return this.client.request({
+    return this.client.request<{
+      publicKey: {
+        rp: PublicKeyCredentialRpEntity;
+        user: {
+          id: string;
+          name: string;
+          displayName: string;
+        };
+        challenge: string;
+        pubKeyCredParams: PublicKeyCredentialParameters[];
+        timeout?: number;
+        excludeCredentials?: {
+          id: string;
+          type: PublicKeyCredentialType;
+          transports?: (
+            | 'ble'
+            | 'cable'
+            | 'hybrid'
+            | 'internal'
+            | 'nfc'
+            | 'smart-card'
+            | 'usb'
+          )[];
+        }[];
+        authenticatorSelection?: AuthenticatorSelectionCriteria;
+        attestation?: AttestationConveyancePreference;
+        extensions?: AuthenticationExtensionsClientInputs;
+      };
+    }>({
       path: '/auth/passkeys/register/start',
       method: 'POST',
       options: {
@@ -130,12 +173,24 @@ export class AccountsModule extends BaseModule {
     id: string;
     rawId: string;
     response: {
-      attestationObject: string;
       clientDataJSON: string;
+      attestationObject: string;
+      authenticatorData?: string;
+      transports?: (
+        | 'ble'
+        | 'cable'
+        | 'hybrid'
+        | 'internal'
+        | 'nfc'
+        | 'smart-card'
+        | 'usb'
+      )[];
+      publicKeyAlgorithm?: COSEAlgorithmIdentifier;
+      publicKey?: string;
     };
-    type: string;
-    clientExtensionResults: Record<string, unknown>;
-    transports: string[];
+    authenticatorAttachment?: AuthenticatorAttachment;
+    clientExtensionResults: AuthenticationExtensionsClientOutputs;
+    type: PublicKeyCredentialType;
   }) {
     return this.client.request({
       path: '/auth/passkeys/register/finish',

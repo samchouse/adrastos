@@ -5,30 +5,47 @@ import {
   SiGoogle,
   SiTwitter,
 } from '@icons-pack/react-simple-icons';
+import { startRegistration } from '@simplewebauthn/browser';
 import { useSuspenseQueries } from '@tanstack/react-query';
 import { createFileRoute, useRouterState } from '@tanstack/react-router';
-import { Loader2 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { Loader2, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 
 import {
   Alert,
   AlertDescription,
   AlertTitle,
+  Badge,
   Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
 } from '~/components';
 import {
   meQueryOptions,
+  passkeysQueryOptions,
   tokenRefreshQueryOptions,
+  useFinishRegisterPasskeyMutation,
   useResendVerificationMutation,
+  useStartRegisterPasskeyMutation,
 } from '~/hooks';
 import { providers } from '~/lib';
 
 export const Route = createFileRoute('/dashboard/profile')({
   component: ProfileComponent,
+  loader: async ({ context: { queryClient, client } }) => ({
+    passkeys: await queryClient.ensureQueryData(passkeysQueryOptions(client)),
+  }),
 });
 
 const providerIcons = {
@@ -43,14 +60,20 @@ function ProfileComponent() {
   const routerState = useRouterState();
   const { client } = Route.useRouteContext();
 
-  const [{ data: accessToken }, { data: user }] = useSuspenseQueries({
-    queries: [
-      tokenRefreshQueryOptions(Route.useRouteContext().client),
-      meQueryOptions(Route.useRouteContext()),
-    ],
-  });
+  const [{ data: accessToken }, { data: user }, { data: passkeys }] =
+    useSuspenseQueries({
+      queries: [
+        tokenRefreshQueryOptions(client),
+        meQueryOptions(client),
+        passkeysQueryOptions(client),
+      ],
+    });
 
   const { mutate, isPending } = useResendVerificationMutation(client);
+  const { mutateAsync: registerStartPasskeyMutateAsync } =
+    useStartRegisterPasskeyMutation(client);
+  const { mutateAsync: registerFinishPasskeyMutateAsync } =
+    useFinishRegisterPasskeyMutation(client);
 
   return (
     <div className="flex flex-col gap-y-5 p-5">
@@ -76,6 +99,73 @@ function ProfileComponent() {
           </Button>
         </Alert>
       )}
+
+      <Card>
+        <CardHeader className="flex flex-row justify-between">
+          <div className="flex flex-col space-y-1.5">
+            <CardTitle>Passkeys</CardTitle>
+            <CardDescription>
+              Enable login with passkeys for this account
+            </CardDescription>
+          </div>
+
+          <Button
+            variant="secondary"
+            onClick={() => {
+              void (async () => {
+                const options = await registerStartPasskeyMutateAsync();
+                const response = await startRegistration(options.publicKey);
+                await registerFinishPasskeyMutateAsync(response);
+              })();
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add a passkey
+          </Button>
+        </CardHeader>
+
+        <CardContent>
+          <div className="overflow-hidden rounded-md border">
+            <Table>
+              <TableBody>
+                {passkeys.map((passkey) => (
+                  <TableRow key={passkey.id}>
+                    <TableCell className="py-3 font-medium">
+                      <div className="flex flex-row">
+                        {passkey.name}
+                        <Badge
+                          variant="secondary"
+                          className="hover:bg-secondary ml-4"
+                        >
+                          {passkey.lastUsed
+                            ? `Last used ${formatDistanceToNow(passkey.lastUsed, { addSuffix: true })}`
+                            : 'Never used'}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[1%] py-3 font-medium">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4 text-white" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[120px]">
+                          <DropdownMenuItem>
+                            <Pencil className="mr-2 h-4 w-4" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

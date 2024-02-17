@@ -70,6 +70,9 @@ pub fn db_query(item: TokenStream) -> TokenStream {
                 },
                 _ => quote! { self.#ident.into() },
             },
+            _ if attrs.get(TokenName::Json).is_some() => {
+                quote! { serde_json::to_string(&self.#ident).unwrap().into() }
+            }
             _ => quote! { self.#ident.into() },
         };
 
