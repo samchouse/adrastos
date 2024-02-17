@@ -1,7 +1,7 @@
 use actix_session::Session;
 use actix_web::{
     cookie::{Cookie, SameSite},
-    get,
+    delete, get,
     http::header,
     post, web, HttpRequest, HttpResponse, Responder,
 };
@@ -27,13 +27,72 @@ use crate::{
 };
 
 #[derive(Deserialize)]
+pub struct UpdateBody {
+    name: String,
+}
+
+#[derive(Deserialize)]
+pub struct RegisterFinishBody {
+    name: String,
+    passkey: RegisterPublicKeyCredential,
+}
+
+#[derive(Deserialize)]
 pub struct LoginBody {
     id: String,
 }
 
 #[get("/list")]
 pub async fn list(user: RequiredUser) -> actix_web::Result<impl Responder, Error> {
-    Ok(HttpResponse::Ok().json(user.passkeys.clone()))
+    Ok(HttpResponse::Ok().json(user.passkeys.clone().unwrap_or_default()))
+}
+
+#[post("/update/{id}")]
+pub async fn update(
+    user: RequiredUser,
+    id: web::Path<String>,
+    body: web::Json<UpdateBody>,
+    db_pool: web::Data<deadpool_postgres::Pool>,
+) -> actix_web::Result<impl Responder, Error> {
+    let passkey = user
+        .passkeys
+        .clone()
+        .unwrap()
+        .into_iter()
+        .find(|pk| pk.id == id.to_string())
+        .unwrap();
+
+    passkey
+        .update(
+            &db_pool,
+            UpdatePasskey {
+                name: Some(body.name.clone()),
+                ..Default::default()
+            },
+        )
+        .await?;
+
+    let passkey = Passkey::find_by_id(&id).one(&db_pool).await?;
+    Ok(HttpResponse::Ok().json(passkey))
+}
+
+#[delete("/delete/{id}")]
+pub async fn delete(
+    user: RequiredUser,
+    id: web::Path<String>,
+    db_pool: web::Data<deadpool_postgres::Pool>,
+) -> actix_web::Result<impl Responder, Error> {
+    let passkey = user
+        .passkeys
+        .clone()
+        .unwrap()
+        .into_iter()
+        .find(|pk| pk.id == id.to_string())
+        .unwrap();
+
+    passkey.delete(&db_pool).await?;
+
+    Ok(HttpResponse::Ok().json(Value::Null))
 }
 
 #[post("/register/start")]
@@ -72,7 +131,7 @@ pub async fn register_start(
 pub async fn register_finish(
     req: HttpRequest,
     session: Session,
-    body: web::Json<RegisterPublicKeyCredential>,
+    body: web::Json<RegisterFinishBody>,
     db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let user = User::find_by_id(
@@ -96,12 +155,12 @@ pub async fn register_finish(
         passkeys::build_webauthn(req.headers().get(header::ORIGIN).unwrap().to_str().unwrap());
 
     let passkey = webauthn
-        .finish_passkey_registration(&body, &registration)
+        .finish_passkey_registration(&body.passkey, &registration)
         .unwrap();
 
     let passkey = Passkey {
         id: Id::new().to_string(),
-        name: "Primary".to_string(),
+        name: body.name.clone(),
         user_id: user.id.clone(),
         cred_id: passkey.cred_id().to_string(),
         last_used: None,
@@ -124,13 +183,6 @@ pub async fn login_start(
 ) -> actix_web::Result<impl Responder, Error> {
     let webauthn =
         passkeys::build_webauthn(req.headers().get(header::ORIGIN).unwrap().to_str().unwrap());
-
-    req.headers()
-        .get(header::ORIGIN)
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .to_string();
 
     let allowed = {
         if let Some(body) = &body.0 {
@@ -178,12 +230,18 @@ pub async fn login_finish(
             .get::<String>(&SessionKey::UserId.to_string())
             .unwrap();
         if let Some(user_id) = user_id {
+            let user = User::find_by_id(&user_id)
+                .join(UserJoin::Passkeys)
+                .one(&db_pool)
+                .await?;
+
             (
-                User::find_by_id(&user_id)
-                    .join(UserJoin::Passkeys)
-                    .one(&db_pool)
-                    .await?,
-                None,
+                user.clone(),
+                user.passkeys
+                    .unwrap()
+                    .into_iter()
+                    .find(|pk| pk.cred_id == body.id)
+                    .unwrap(),
             )
         } else {
             let passkey = Passkey::find()
@@ -196,7 +254,7 @@ pub async fn login_finish(
                 .one(&db_pool)
                 .await?;
 
-            (user.clone(), Some(passkey))
+            (user.clone(), passkey)
         }
     };
 
@@ -209,32 +267,27 @@ pub async fn login_finish(
         passkeys::build_webauthn(req.headers().get(header::ORIGIN).unwrap().to_str().unwrap());
 
     let result = webauthn
-        .finish_passkey_authentication(&body, &mut authentication, passkey.map(|pk| vec![pk.data]))
+        .finish_passkey_authentication(&body, &mut authentication, Some(vec![passkey.data.clone()]))
         .unwrap();
 
     session.remove(&SessionKey::UserId.to_string());
     session.remove(&SessionKey::PasskeyAuthentication.to_string());
 
+    let mut passkey_update = UpdatePasskey {
+        last_used: Some(Some(Utc::now())),
+        ..Default::default()
+    };
+
     if result.needs_update() {
-        let mut passkey = user
-            .passkeys
-            .clone()
-            .unwrap()
-            .into_iter()
-            .find(|pk| pk.cred_id == result.cred_id().to_string())
-            .unwrap();
+        let mut passkey = passkey.clone();
         passkey.data.update_credential(&result);
-        passkey
-            .update(
-                &db_pool,
-                UpdatePasskey {
-                    passkey: Some(passkey.data.clone()),
-                    ..Default::default()
-                },
-            )
-            .await
-            .map_err(|_| Error::InternalServerError("Unable to update passkey".to_string()))?;
+        passkey_update.data = Some(passkey.data.clone());
     }
+
+    passkey
+        .update(&db_pool, passkey_update)
+        .await
+        .map_err(|_| Error::InternalServerError("Unable to update passkey".to_string()))?;
 
     let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
     Ok(HttpResponse::Ok()

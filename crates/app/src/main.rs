@@ -175,6 +175,8 @@ async fn main() -> std::io::Result<()> {
                             )))
                             .service(web::scope("/passkeys").service((
                                 handlers::auth::passkeys::list,
+                                handlers::auth::passkeys::update,
+                                handlers::auth::passkeys::delete,
                                 handlers::auth::passkeys::register_start,
                                 handlers::auth::passkeys::register_finish,
                                 handlers::auth::passkeys::login_start,

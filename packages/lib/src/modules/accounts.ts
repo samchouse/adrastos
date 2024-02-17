@@ -131,6 +131,21 @@ export class AccountsModule extends BaseModule {
     });
   }
 
+  public async updatePasskey(id: string, body: { name: string }) {
+    return this.client.request({
+      path: `/auth/passkeys/update/${id}`,
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  public async deletePasskey(id: string) {
+    return this.client.request({
+      path: `/auth/passkeys/delete/${id}`,
+      method: 'DELETE',
+    });
+  }
+
   public async startPasskeyRegistration() {
     return this.client.request<{
       publicKey: {
@@ -170,27 +185,30 @@ export class AccountsModule extends BaseModule {
   }
 
   public async finishPasskeyRegistration(body: {
-    id: string;
-    rawId: string;
-    response: {
-      clientDataJSON: string;
-      attestationObject: string;
-      authenticatorData?: string;
-      transports?: (
-        | 'ble'
-        | 'cable'
-        | 'hybrid'
-        | 'internal'
-        | 'nfc'
-        | 'smart-card'
-        | 'usb'
-      )[];
-      publicKeyAlgorithm?: COSEAlgorithmIdentifier;
-      publicKey?: string;
+    name: string;
+    passkey: {
+      id: string;
+      rawId: string;
+      response: {
+        clientDataJSON: string;
+        attestationObject: string;
+        authenticatorData?: string;
+        transports?: (
+          | 'ble'
+          | 'cable'
+          | 'hybrid'
+          | 'internal'
+          | 'nfc'
+          | 'smart-card'
+          | 'usb'
+        )[];
+        publicKeyAlgorithm?: COSEAlgorithmIdentifier;
+        publicKey?: string;
+      };
+      authenticatorAttachment?: AuthenticatorAttachment;
+      clientExtensionResults: AuthenticationExtensionsClientOutputs;
+      type: PublicKeyCredentialType;
     };
-    authenticatorAttachment?: AuthenticatorAttachment;
-    clientExtensionResults: AuthenticationExtensionsClientOutputs;
-    type: PublicKeyCredentialType;
   }) {
     return this.client.request({
       path: '/auth/passkeys/register/finish',

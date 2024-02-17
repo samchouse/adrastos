@@ -13,6 +13,7 @@ use crate::error::Error;
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct Passkey {
     pub id: String,
+    #[adrastos(unique)]
     pub name: String,
     #[serde(skip_serializing)]
     #[adrastos(relation = User)]
@@ -31,7 +32,8 @@ pub struct Passkey {
 #[derive(Debug, Clone, Default)]
 pub struct UpdatePasskey {
     pub name: Option<String>,
-    pub passkey: Option<webauthn_rs::prelude::Passkey>,
+    pub last_used: Option<Option<DateTime<Utc>>>,
+    pub data: Option<webauthn_rs::prelude::Passkey>,
 }
 
 impl Passkey {
@@ -47,11 +49,12 @@ impl Passkey {
                 (
                     PasskeyIden::Data,
                     update
-                        .passkey
+                        .data
                         .clone()
                         .and_then(|pk| serde_json::to_string(&pk).ok())
                         .into(),
                 ),
+                (PasskeyIden::LastUsed, update.last_used.into()),
                 (PasskeyIden::UpdatedAt, Some(Utc::now()).into()),
             ]))
             .and_where(Expr::col(PasskeyIden::Id).eq(self.id.clone()))

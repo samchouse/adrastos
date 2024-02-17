@@ -93,7 +93,7 @@ function LoginComponent() {
 
   useEffect(() => {
     if (isError)
-      toast('Login failed', {
+      toast.error('Login failed', {
         description: (error as { message: string }).message,
       });
   }, [isError, error]);
