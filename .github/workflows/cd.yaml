@@ -57,10 +57,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v2
 
-      - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-          node-version: latest
+      - run: corepack enable
+      - uses: jdx/mise-action@v2
 
       - id: node
         run: |
@@ -116,8 +114,9 @@ jobs:
           comment-id: ${{ github.event.comment.id }}
           edit-mode: replace
           body: |
-            ## Backend Staging
-            Status: **[${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && 'SUCCEEDED' || !contains(steps.*.conclusion, 'cancelled') && 'FAILED' || 'CANCELLED' }}](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) ${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && ':white_check_mark:' || !contains(steps.*.conclusion, 'cancelled') && ':x:' || ':grey_question:' }}**
+            ## Staging
+            **Status:** [${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && 'SUCCEEDED' || !contains(steps.*.conclusion, 'cancelled') && 'FAILED' || 'CANCELLED' }}](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) ${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && ':white_check_mark:' || !contains(steps.*.conclusion, 'cancelled') && ':x:' || ':grey_question:' }}
+            ${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && '**Deployment:** https://adi-pr-${{ github.event.issue.number }}.xenfo.dev' }}
             - [ ] Deploy this PR
 
   staging-end:
@@ -169,10 +168,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v2
 
-      - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-          node-version: latest
+      - run: corepack enable
+      - uses: jdx/mise-action@v2
 
       - id: node
         run: |
@@ -243,10 +240,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v2
 
-      - uses: actions/setup-node@v4
-        with:
-          cache: yarn
-          node-version: latest
+      - run: corepack enable
+      - uses: jdx/mise-action@v2
 
       - id: node
         run: |

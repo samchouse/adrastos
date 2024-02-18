@@ -15,6 +15,10 @@ pub fn handle_embedded_file(path: &str) -> Result<impl Responder, Error> {
             .content_type(from_path(path).first_or_octet_stream().as_ref())
             .body(content.data.into_owned())),
         None => {
+            if path.starts_with("/api") {
+                return Err(Error::NotFound);
+            }
+
             if let Some(path) = path.split('/').last() {
                 if PathBuf::from(path).extension().is_some() {
                     return Err(Error::NotFound);

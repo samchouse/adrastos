@@ -23,6 +23,7 @@ use crate::{
 
 pub mod mfa;
 pub mod oauth2;
+pub mod passkeys;
 
 #[derive(Clone, PartialEq)]
 pub enum TokenType {

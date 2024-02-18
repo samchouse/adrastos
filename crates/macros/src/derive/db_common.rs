@@ -60,19 +60,28 @@ pub fn db_common(item: TokenStream) -> TokenStream {
 
         let unique_attr = attrs.get(TokenName::Unique).is_some().then_some(quote! { .unique_key() });
         let props = match ty {
-            Type::String => Some(quote! { .string().not_null() }),
-            Type::Bool => Some(quote! { .boolean().not_null().default(false) }),
-            Type::DateTime => Some(quote! { .timestamp_with_time_zone().not_null().default(sea_query::Keyword::CurrentTimestamp) }),
-            Type::Vec(_) => Some(quote! { .array(sea_query::ColumnType::String(None)).not_null().default(vec![] as Vec<String>) }),
+            Type::String => quote! { .string().not_null() },
+            Type::Bool => quote! { .boolean().not_null().default(false) },
+            Type::DateTime => quote! { .timestamp_with_time_zone().not_null().default(sea_query::Keyword::CurrentTimestamp) },
+            Type::Vec(_) if attrs.get(TokenName::Json).is_some() => {
+                quote! { .array(sea_query::ColumnType::JsonBinary).not_null().default(vec![] as Vec<String>) }
+            },
+            Type::Vec(_) => quote! { .array(sea_query::ColumnType::String(None)).not_null().default(vec![] as Vec<String>) },
             Type::Option(generic) => {
                 match *generic {
-                    Type::DateTime => Some(quote! { .timestamp_with_time_zone() }),
-                    Type::Vec(_) => Some(quote! { .array(sea_query::ColumnType::String(None)) }),
-                    _ => Some(quote! { .string() }),
+                    Type::DateTime => quote! { .timestamp_with_time_zone() },
+                    Type::Vec(_) if attrs.get(TokenName::Json).is_some() => {
+                        quote! { .array(sea_query::ColumnType::JsonBinary) }
+                    },
+                    Type::Vec(_) => quote! { .array(sea_query::ColumnType::String(None)) },
+                    _ => quote! { .string() },
                 }
             },
-            _ => None,
-        }?;
+            _ if attrs.get(TokenName::Json).is_some() => {
+                quote! { .json_binary().not_null() }
+            },
+            _ => quote! { .string().not_null() }
+        };
 
         Some(quote! {
             .col(
@@ -131,12 +140,12 @@ pub fn db_common(item: TokenStream) -> TokenStream {
                 Type::Vec(generic) => {
                     match *generic {
                         Type::String | Type::Bool | Type::DateTime => quote! { #ident: row.get(#str_ident) },
-                        _ => quote!{ #ident: row.try_get::<_, serde_json::Value>(#str_ident).ok().map(|s| serde_json::from_value(s).unwrap()) },
+                        _ => quote!{ #ident: row.try_get::<_, serde_json::Value>(#str_ident).ok().map(|v| serde_json::from_value(v).unwrap()) },
                     }
                 },
-                _ => quote! { #ident: row.try_get(#str_ident).ok().map(|v| serde_json::from_str(v).unwrap()) },
+                _ => quote! { #ident: row.try_get(#str_ident).ok().map(|v| serde_json::from_value(v).unwrap()) },
             },
-            _ => quote! { #ident: serde_json::from_str(row.get(#str_ident)).unwrap() },
+            _ => quote! { #ident: serde_json::from_value(row.get(#str_ident)).unwrap() },
         }
     });
 

@@ -131,7 +131,11 @@ function SignupComponent() {
                       <FormItem className="w-full">
                         <FormLabel>Username</FormLabel>
                         <FormControl>
-                          <Input placeholder="Username" {...field} />
+                          <Input
+                            placeholder="Username"
+                            data-form-type="username"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -144,7 +148,12 @@ function SignupComponent() {
                       <FormItem className="w-full">
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="Email" {...field} />
+                          <Input
+                            type="email"
+                            placeholder="Email"
+                            data-form-type="email"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

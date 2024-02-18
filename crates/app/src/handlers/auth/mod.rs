@@ -29,6 +29,7 @@ use crate::{middleware::user::RequiredUser, session::SessionKey};
 
 pub mod mfa;
 pub mod oauth2;
+pub mod passkeys;
 pub mod token;
 
 #[derive(Deserialize)]

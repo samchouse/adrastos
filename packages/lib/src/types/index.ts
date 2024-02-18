@@ -17,8 +17,8 @@ export interface User {
   username: string;
   verified: boolean;
   banned: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt?: Date;
 }
 
 export type AndNullable<T> = {

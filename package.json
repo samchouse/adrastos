@@ -11,11 +11,11 @@
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.1.1",
-    "@types/node": "^20.11.17",
-    "@types/react": "^18.2.55",
+    "@types/node": "^20.11.19",
+    "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.1",
+    "@typescript-eslint/parser": "^7.0.1",
     "concurrently": "^8.2.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
@@ -27,5 +27,5 @@
     "prettier-plugin-tailwindcss": "^0.5.11",
     "typescript": "^5.3.3"
   },
-  "packageManager": "yarn@3.6.1"
+  "packageManager": "yarn@4.1.0+sha256.81a00df816059803e6b5148acf03ce313cad36b7f6e5af6efa040a15981a6ffb"
 }

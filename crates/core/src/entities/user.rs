@@ -8,7 +8,7 @@ use validator::Validate;
 
 use crate::{auth, error::Error};
 
-use super::{Connection, RefreshTokenTree, Update};
+use super::{Connection, Passkey, RefreshTokenTree, Update};
 
 fn validate_password(password: String) -> Result<String, Error> {
     auth::hash_password(&password).map_err(|err| {
@@ -21,7 +21,7 @@ fn validate_password(password: String) -> Result<String, Error> {
 #[enum_def]
 #[derive(Debug, Default, Validate, Serialize, Deserialize, Clone, DbCommon, DbSelect, DbQuery)]
 #[adrastos(validated)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all(serialize = "camelCase"))]
 pub struct User {
     pub id: String,
     #[adrastos(find)]
@@ -55,6 +55,9 @@ pub struct User {
     #[adrastos(join)]
     #[serde(skip_serializing)]
     pub refresh_token_trees: Option<Vec<RefreshTokenTree>>,
+    #[adrastos(join)]
+    #[serde(skip_serializing)]
+    pub passkeys: Option<Vec<Passkey>>,
 }
 
 #[derive(Debug, Validate, Clone, Default)]
@@ -69,6 +72,7 @@ pub struct UpdateUser {
     pub username: Option<String>,
     #[validate(length(min = 8, max = 64))]
     pub password: Option<String>,
+    pub passkeys: Option<Vec<webauthn_rs::prelude::Passkey>>,
     pub verified: Option<bool>,
     pub banned: Option<bool>,
     pub mfa_secret: Option<Option<String>>,
@@ -98,6 +102,17 @@ impl User {
                     update
                         .password
                         .map(|v| auth::hash_password(v.as_str()).unwrap_or_log())
+                        .into(),
+                ),
+                (
+                    UserIden::Passkeys,
+                    update
+                        .passkeys
+                        .map(|pks| {
+                            pks.into_iter()
+                                .map(|pk| serde_json::to_string(&pk).unwrap())
+                                .collect::<Vec<_>>()
+                        })
                         .into(),
                 ),
                 (UserIden::Verified, update.verified.into()),
