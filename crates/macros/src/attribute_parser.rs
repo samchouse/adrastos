@@ -11,6 +11,7 @@ pub enum TokenName {
     Relation,
     Validated,
     Transform,
+    JoinIdent,
     Unknown,
 }
 
@@ -25,6 +26,7 @@ impl From<Ident> for TokenName {
             "relation" => Self::Relation,
             "validated" => Self::Validated,
             "transform" => Self::Transform,
+            "join_ident" => Self::JoinIdent,
             _ => Self::Unknown,
         }
     }
@@ -40,6 +42,7 @@ pub enum Token {
     Rename(String),
     Relation(Ident),
     Transform(Ident),
+    JoinIdent(String),
 }
 
 impl Token {
@@ -53,6 +56,7 @@ impl Token {
             Self::Rename(_) => TokenName::Rename,
             Self::Relation(_) => TokenName::Relation,
             Self::Transform(_) => TokenName::Transform,
+            Self::JoinIdent(_) => TokenName::JoinIdent,
         }
     }
 }
@@ -131,6 +135,20 @@ impl From<Vec<Attribute>> for AttributeTokens {
                         };
 
                         Some(Token::Transform(ident))
+                    }
+                    TokenName::JoinIdent => {
+                        let Some(TokenTree::Literal(literal)) =
+                            list.tokens.clone().into_iter().nth(index + 2)
+                        else {
+                            return None;
+                        };
+
+                        let renamed = literal
+                            .to_string()
+                            .parse::<String>()
+                            .unwrap()
+                            .replace('\"', "");
+                        Some(Token::JoinIdent(renamed))
                     }
                     _ => None,
                 }

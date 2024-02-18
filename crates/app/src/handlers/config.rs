@@ -9,9 +9,9 @@ use adrastos_core::{
 };
 use serde::Deserialize;
 use serde_json::json;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
-use crate::middleware::user::RequiredUser;
+use crate::middleware::{database::ProjectDatabase, user::RequiredSystemUser};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -33,10 +33,10 @@ pub struct SmtpBody {
 
 #[get("/details")]
 pub async fn details(
-    _: RequiredUser,
-    db_pool: web::Data<deadpool_postgres::Pool>,
+    db: ProjectDatabase,
+    _: RequiredSystemUser,
 ) -> actix_web::Result<impl Responder, Error> {
-    let conn = db_pool.get().await.unwrap();
+    let conn = db.get().await.unwrap();
     let system: System = conn
         .query(&System::get(), &[])
         .await
@@ -66,12 +66,12 @@ pub async fn details(
 
 #[post("/smtp")]
 pub async fn smtp(
-    _: RequiredUser,
+    db: ProjectDatabase,
+    _: RequiredSystemUser,
     body: web::Json<Option<SmtpBody>>,
-    config: web::Data<Mutex<config::Config>>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
+    config: web::Data<RwLock<config::Config>>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let conn = db_pool.get().await.unwrap();
+    let conn = db.get().await.unwrap();
     let mut system: System = conn
         .query(&System::get(), &[])
         .await
@@ -111,7 +111,7 @@ pub async fn smtp(
     }?;
 
     conn.execute(&system.set(), &[]).await.unwrap();
-    config.lock().await.attach_system(&system);
+    config.write().await.attach_system(&system);
 
     Ok(HttpResponse::Ok().json(system.smtp_config.map(|c| {
         json!({
@@ -126,12 +126,12 @@ pub async fn smtp(
 
 #[post("/oauth2")]
 pub async fn oauth2(
-    _: RequiredUser,
-    config: web::Data<Mutex<config::Config>>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
+    db: ProjectDatabase,
+    _: RequiredSystemUser,
+    config: web::Data<RwLock<config::Config>>,
     body: web::Json<HashMap<OAuth2Provider, Option<Oauth2Body>>>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let conn = db_pool.get().await.unwrap();
+    let conn = db.get().await.unwrap();
     let mut system: System = conn
         .query(&System::get(), &[])
         .await
@@ -157,7 +157,7 @@ pub async fn oauth2(
     });
 
     conn.execute(&system.set(), &[]).await.unwrap();
-    config.lock().await.attach_system(&system);
+    config.write().await.attach_system(&system);
 
     Ok(HttpResponse::Ok().json(json!({
         "google": system.google_config,

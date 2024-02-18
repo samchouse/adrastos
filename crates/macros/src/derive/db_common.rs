@@ -4,7 +4,7 @@ use quote::{format_ident, quote};
 use syn::{parse_macro_input, Field, Fields, ItemStruct};
 
 use crate::{
-    attributes::{AttributeTokens, Token, TokenName},
+    attribute_parser::{AttributeTokens, Token, TokenName},
     types::Type,
 };
 

@@ -20,18 +20,18 @@ use sea_query::{Alias, Expr, PostgresQueryBuilder, SimpleExpr, Value};
 use serde_json::json;
 use validator::ValidationErrors;
 
-use crate::middleware::user::RequiredUser;
+use crate::middleware::{database::ProjectDatabase, user::RequiredAnyUser};
 
 #[get("/rows")]
 pub async fn rows(
-    _: RequiredUser,
+    _: RequiredAnyUser,
+    db: ProjectDatabase,
     path: web::Path<String>,
     web::Query(mut query): web::Query<HashMap<String, String>>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
-        .one(&db_pool)
+        .one(&db)
         .await?;
 
     let page = query.get("page").map(|s| s.parse::<u64>().unwrap());
@@ -50,13 +50,13 @@ pub async fn rows(
         .paginate(page, limit)
         .join();
 
-    let rows = builder.finish(&db_pool).await?;
+    let rows = builder.finish(&db).await?;
     let mut response = json!({ "rows": rows });
 
     if let Some(page) = page
         && let Some(limit) = limit
     {
-        let count = builder.count().finish(&db_pool).await?.as_i64().unwrap() as u64;
+        let count = builder.count().finish(&db).await?.as_i64().unwrap() as u64;
 
         crate::util::attach_pagination_details(
             &mut response,
@@ -69,14 +69,14 @@ pub async fn rows(
 
 #[get("/row")]
 pub async fn row(
-    _: RequiredUser,
+    _: RequiredAnyUser,
+    db: ProjectDatabase,
     path: web::Path<String>,
     web::Query(query): web::Query<HashMap<String, String>>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
-        .one(&db_pool)
+        .one(&db)
         .await?;
 
     let row = CustomTableSelectBuilder::from(&custom_table)
@@ -89,7 +89,7 @@ pub async fn row(
                 .collect(),
         )
         .join()
-        .finish(&db_pool)
+        .finish(&db)
         .await?;
 
     Ok(HttpResponse::Ok().json(row.as_array().unwrap().first()))
@@ -97,10 +97,10 @@ pub async fn row(
 
 #[post("/create")]
 pub async fn create(
-    _: RequiredUser,
     bytes: web::Bytes,
+    _: RequiredAnyUser,
+    db: ProjectDatabase,
     path: web::Path<String>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let body = serde_json::from_str::<HashMap<String, serde_json::Value>>(
         &String::from_utf8(bytes.to_vec()).unwrap(),
@@ -109,7 +109,7 @@ pub async fn create(
 
     let custom_table = CustomTableSchema::find()
         .by_name(AsSnakeCase(path.into_inner()).to_string())
-        .one(&db_pool)
+        .one(&db)
         .await?;
 
     let id = Id::new().to_string();
@@ -206,8 +206,7 @@ pub async fn create(
         });
     }
 
-    db_pool
-        .get()
+    db.get()
         .await
         .unwrap()
         .execute(
@@ -262,8 +261,7 @@ pub async fn create(
         })?;
 
     for query in insert_queries {
-        db_pool
-            .get()
+        db.get()
             .await
             .unwrap()
             .execute(query.to_string(PostgresQueryBuilder).as_str(), &[])
@@ -308,11 +306,11 @@ pub async fn create(
 
 #[patch("/update")]
 pub async fn update(
-    _: RequiredUser,
     bytes: web::Bytes,
+    _: RequiredAnyUser,
+    db: ProjectDatabase,
     path: web::Path<String>,
     web::Query(query): web::Query<HashMap<String, String>>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let body = serde_json::from_str::<HashMap<String, serde_json::Value>>(
         &String::from_utf8(bytes.to_vec()).unwrap(),
@@ -321,7 +319,7 @@ pub async fn update(
 
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
-        .one(&db_pool)
+        .one(&db)
         .await?;
 
     let mut db_query = sea_query::Query::update();
@@ -363,8 +361,7 @@ pub async fn update(
         });
     }
 
-    db_pool
-        .get()
+    db.get()
         .await
         .unwrap()
         .execute(
@@ -420,14 +417,14 @@ pub async fn update(
 
 #[delete("/delete")]
 pub async fn delete(
-    _: RequiredUser,
+    _: RequiredAnyUser,
+    db: ProjectDatabase,
     path: web::Path<String>,
     web::Query(query): web::Query<HashMap<String, String>>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
-        .one(&db_pool)
+        .one(&db)
         .await?;
 
     let mut db_query = sea_query::Query::delete();
@@ -438,8 +435,7 @@ pub async fn delete(
         db_query.and_where(Expr::col(Alias::new(AsSnakeCase(field).to_string())).eq(equals));
     });
 
-    db_pool
-        .get()
+    db.get()
         .await
         .unwrap()
         .execute(

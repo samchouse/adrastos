@@ -3,7 +3,7 @@ use quote::quote;
 use syn::{parse_macro_input, Field, ItemStruct};
 
 use crate::{
-    attributes::{AttributeTokens, Token, TokenName},
+    attribute_parser::{AttributeTokens, Token, TokenName},
     types::Type,
 };
 
@@ -93,7 +93,7 @@ pub fn db_query(item: TokenStream) -> TokenStream {
 
     quote! {
         impl #ident {
-            pub async fn create(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), crate::error::Error> {
+            pub async fn create(&self, db: &deadpool_postgres::Pool) -> Result<(), crate::error::Error> {
                 #create_validator
 
                 let query = sea_query::Query::insert()
@@ -106,7 +106,7 @@ pub fn db_query(item: TokenStream) -> TokenStream {
                     ])
                     .to_string(sea_query::PostgresQueryBuilder);
 
-                db_pool
+                db
                     .get()
                     .await
                     .unwrap()
@@ -158,13 +158,13 @@ pub fn db_query(item: TokenStream) -> TokenStream {
                 Ok(())
             }
 
-            pub async fn delete(&self, db_pool: &deadpool_postgres::Pool) -> Result<(), crate::error::Error> {
+            pub async fn delete(&self, db: &deadpool_postgres::Pool) -> Result<(), crate::error::Error> {
                 let query = sea_query::Query::delete()
                     .from_table(Self::table())
                     .and_where(sea_query::Expr::col(sea_query::Alias::new("id")).eq(self.id.clone()))
                     .to_string(sea_query::PostgresQueryBuilder);
 
-                db_pool
+                db
                     .get()
                     .await
                     .unwrap()

@@ -10,144 +10,144 @@
 
 // Import Routes
 
-import { Route as rootRoute } from './routes/__root';
-import { Route as SplatImport } from './routes/$';
-import { Route as DashboardSplatImport } from './routes/dashboard/$';
-import { Route as DashboardAuthImport } from './routes/dashboard/auth';
-import { Route as DashboardIndexImport } from './routes/dashboard/index';
-import { Route as DashboardProfileImport } from './routes/dashboard/profile';
-import { Route as DashboardRouteImport } from './routes/dashboard/route';
-import { Route as DashboardSettingsImport } from './routes/dashboard/settings';
-import { Route as DashboardTablesTableIdImport } from './routes/dashboard/tables/$tableId';
-import { Route as DashboardTablesRouteImport } from './routes/dashboard/tables/route';
-import { Route as HomeImport } from './routes/home';
-import { Route as IndexImport } from './routes/index';
-import { Route as LoginImport } from './routes/login';
-import { Route as SignupImport } from './routes/signup';
+import { Route as rootRoute } from './routes/__root'
+import { Route as SignupImport } from './routes/signup'
+import { Route as LoginImport } from './routes/login'
+import { Route as HomeImport } from './routes/home'
+import { Route as SplatImport } from './routes/$'
+import { Route as DashboardRouteImport } from './routes/dashboard/route'
+import { Route as IndexImport } from './routes/index'
+import { Route as DashboardIndexImport } from './routes/dashboard/index'
+import { Route as DashboardSettingsImport } from './routes/dashboard/settings'
+import { Route as DashboardProfileImport } from './routes/dashboard/profile'
+import { Route as DashboardAuthImport } from './routes/dashboard/auth'
+import { Route as DashboardSplatImport } from './routes/dashboard/$'
+import { Route as DashboardTablesRouteImport } from './routes/dashboard/tables/route'
+import { Route as DashboardTablesTableIdImport } from './routes/dashboard/tables/$tableId'
 
 // Create/Update Routes
 
 const SignupRoute = SignupImport.update({
   path: '/signup',
   getParentRoute: () => rootRoute,
-} as any);
+} as any)
 
 const LoginRoute = LoginImport.update({
   path: '/login',
   getParentRoute: () => rootRoute,
-} as any);
+} as any)
 
 const HomeRoute = HomeImport.update({
   path: '/home',
   getParentRoute: () => rootRoute,
-} as any);
+} as any)
 
 const SplatRoute = SplatImport.update({
   path: '/$',
   getParentRoute: () => rootRoute,
-} as any);
+} as any)
 
 const DashboardRouteRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRoute,
-} as any);
+} as any)
 
 const IndexRoute = IndexImport.update({
   path: '/',
   getParentRoute: () => rootRoute,
-} as any);
+} as any)
 
 const DashboardIndexRoute = DashboardIndexImport.update({
   path: '/',
   getParentRoute: () => DashboardRouteRoute,
-} as any);
+} as any)
 
 const DashboardSettingsRoute = DashboardSettingsImport.update({
   path: '/settings',
   getParentRoute: () => DashboardRouteRoute,
-} as any);
+} as any)
 
 const DashboardProfileRoute = DashboardProfileImport.update({
   path: '/profile',
   getParentRoute: () => DashboardRouteRoute,
-} as any);
+} as any)
 
 const DashboardAuthRoute = DashboardAuthImport.update({
   path: '/auth',
   getParentRoute: () => DashboardRouteRoute,
-} as any);
+} as any)
 
 const DashboardSplatRoute = DashboardSplatImport.update({
   path: '/$',
   getParentRoute: () => DashboardRouteRoute,
-} as any);
+} as any)
 
 const DashboardTablesRouteRoute = DashboardTablesRouteImport.update({
   path: '/tables',
   getParentRoute: () => DashboardRouteRoute,
-} as any);
+} as any)
 
 const DashboardTablesTableIdRoute = DashboardTablesTableIdImport.update({
   path: '/$tableId',
   getParentRoute: () => DashboardTablesRouteRoute,
-} as any);
+} as any)
 
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/': {
-      preLoaderRoute: typeof IndexImport;
-      parentRoute: typeof rootRoute;
-    };
+      preLoaderRoute: typeof IndexImport
+      parentRoute: typeof rootRoute
+    }
     '/dashboard': {
-      preLoaderRoute: typeof DashboardRouteImport;
-      parentRoute: typeof rootRoute;
-    };
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/$': {
-      preLoaderRoute: typeof SplatImport;
-      parentRoute: typeof rootRoute;
-    };
+      preLoaderRoute: typeof SplatImport
+      parentRoute: typeof rootRoute
+    }
     '/home': {
-      preLoaderRoute: typeof HomeImport;
-      parentRoute: typeof rootRoute;
-    };
+      preLoaderRoute: typeof HomeImport
+      parentRoute: typeof rootRoute
+    }
     '/login': {
-      preLoaderRoute: typeof LoginImport;
-      parentRoute: typeof rootRoute;
-    };
+      preLoaderRoute: typeof LoginImport
+      parentRoute: typeof rootRoute
+    }
     '/signup': {
-      preLoaderRoute: typeof SignupImport;
-      parentRoute: typeof rootRoute;
-    };
+      preLoaderRoute: typeof SignupImport
+      parentRoute: typeof rootRoute
+    }
     '/dashboard/tables': {
-      preLoaderRoute: typeof DashboardTablesRouteImport;
-      parentRoute: typeof DashboardRouteImport;
-    };
+      preLoaderRoute: typeof DashboardTablesRouteImport
+      parentRoute: typeof DashboardRouteImport
+    }
     '/dashboard/$': {
-      preLoaderRoute: typeof DashboardSplatImport;
-      parentRoute: typeof DashboardRouteImport;
-    };
+      preLoaderRoute: typeof DashboardSplatImport
+      parentRoute: typeof DashboardRouteImport
+    }
     '/dashboard/auth': {
-      preLoaderRoute: typeof DashboardAuthImport;
-      parentRoute: typeof DashboardRouteImport;
-    };
+      preLoaderRoute: typeof DashboardAuthImport
+      parentRoute: typeof DashboardRouteImport
+    }
     '/dashboard/profile': {
-      preLoaderRoute: typeof DashboardProfileImport;
-      parentRoute: typeof DashboardRouteImport;
-    };
+      preLoaderRoute: typeof DashboardProfileImport
+      parentRoute: typeof DashboardRouteImport
+    }
     '/dashboard/settings': {
-      preLoaderRoute: typeof DashboardSettingsImport;
-      parentRoute: typeof DashboardRouteImport;
-    };
+      preLoaderRoute: typeof DashboardSettingsImport
+      parentRoute: typeof DashboardRouteImport
+    }
     '/dashboard/': {
-      preLoaderRoute: typeof DashboardIndexImport;
-      parentRoute: typeof DashboardRouteImport;
-    };
+      preLoaderRoute: typeof DashboardIndexImport
+      parentRoute: typeof DashboardRouteImport
+    }
     '/dashboard/tables/$tableId': {
-      preLoaderRoute: typeof DashboardTablesTableIdImport;
-      parentRoute: typeof DashboardTablesRouteImport;
-    };
+      preLoaderRoute: typeof DashboardTablesTableIdImport
+      parentRoute: typeof DashboardTablesRouteImport
+    }
   }
 }
 
@@ -167,6 +167,6 @@ export const routeTree = rootRoute.addChildren([
   HomeRoute,
   LoginRoute,
   SignupRoute,
-]);
+])
 
 /* prettier-ignore-end */

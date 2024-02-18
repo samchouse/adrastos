@@ -4,12 +4,17 @@ use quote::{format_ident, quote};
 use syn::{parse_macro_input, Field, Fields, ItemStruct};
 
 use crate::{
-    attributes::{AttributeTokens, TokenName},
+    attribute_parser::{AttributeTokens, Token, TokenName},
     types::Type,
 };
 
 pub fn db_select(item: TokenStream) -> TokenStream {
-    let ItemStruct { ident, fields, .. } = parse_macro_input!(item as ItemStruct);
+    let ItemStruct {
+        ident,
+        fields,
+        attrs,
+        ..
+    } = parse_macro_input!(item as ItemStruct);
 
     let iden_ident = format_ident!("{}Iden", ident);
     let join_ident = format_ident!("{}Join", ident);
@@ -29,7 +34,7 @@ pub fn db_select(item: TokenStream) -> TokenStream {
         }
 
         let str_ident = ident.clone().unwrap().to_string();
-        Some(quote! { Alias::new(#str_ident) })
+        Some(quote! { sea_query::Alias::new(#str_ident) })
     });
 
     let impls = fields.iter().filter_map(|it| {
@@ -47,7 +52,7 @@ pub fn db_select(item: TokenStream) -> TokenStream {
         let ty_ident = ty.into_ident();
         Some(quote! {
             pub fn #by_ident(&mut self, #ident: #ty_ident) -> &mut Self {
-                self.query_builder.and_where(Expr::col(Alias::new(#str_ident)).eq(#ident));
+                self.query_builder.and_where(sea_query::Expr::col(sea_query::Alias::new(#str_ident)).eq(#ident));
 
                 self
             }
@@ -76,8 +81,12 @@ pub fn db_select(item: TokenStream) -> TokenStream {
     let query_branches = enum_variants.clone().map(|(it, variant_ident)| {
         let Field { ty, .. } = it;
         let ty = Type::from(ty.clone());
+        let attrs = AttributeTokens::from(attrs.clone());
 
-        let str_ident = format!("{}_id", ident.clone().to_string().to_lowercase());
+        let str_ident = match attrs.get(TokenName::JoinIdent) {
+            Some(Token::JoinIdent(ident)) => format!("{}_id", ident),
+            _ => format!("{}_id", ident.clone().to_string().to_lowercase()),
+        };
         let ident = match ty {
             Type::Vec(generic) => generic.into_ident(),
             Type::Option(generic) => match *generic {
@@ -94,7 +103,8 @@ pub fn db_select(item: TokenStream) -> TokenStream {
         let Field { ty, .. } = it;
         let ty = Type::from(ty.clone());
 
-        let ident = AsSnakeCase(
+        let ident = AsSnakeCase(format!(
+            "{}s",
             match ty {
                 Type::Vec(generic) => *generic,
                 Type::Option(generic) => match *generic {
@@ -103,8 +113,7 @@ pub fn db_select(item: TokenStream) -> TokenStream {
                 },
                 _ => ty,
             }
-            .to_string(),
-        )
+        ))
         .to_string();
 
         quote! { #join_ident::#variant_ident => #ident.to_string(), }
@@ -138,13 +147,7 @@ pub fn db_select(item: TokenStream) -> TokenStream {
                 };
 
                 self.query_builder.expr(sea_query::Expr::cust(
-                    format!(
-                        "(SELECT json_agg({}) FROM ({query}) {}) as {}",
-                        join.to_string(),
-                        join.to_string(),
-                        format!("{}s", join.to_string())
-                    )
-                    .as_str(),
+                    format!("(SELECT json_agg({join}) FROM ({query}) {join}) as {join}").as_str(),
                 ));
 
                 self
@@ -169,8 +172,8 @@ pub fn db_select(item: TokenStream) -> TokenStream {
                 self
             }
 
-            async fn finish(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<Vec<deadpool_postgres::tokio_postgres::Row>, crate::error::Error> {
-                let rows = db_pool
+            async fn finish(&mut self, db: &deadpool_postgres::Pool) -> Result<Vec<deadpool_postgres::tokio_postgres::Row>, crate::error::Error> {
+                let rows = db
                     .get()
                     .await
                     .unwrap()
@@ -199,11 +202,11 @@ pub fn db_select(item: TokenStream) -> TokenStream {
 
             #join_fn
 
-            pub async fn one(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<#ident, crate::error::Error> {
+            pub async fn one(&mut self, db: &deadpool_postgres::Pool) -> Result<#ident, crate::error::Error> {
                 self.query_builder.reset_limit().limit(1);
 
                 Ok(self
-                    .finish(db_pool)
+                    .finish(db)
                     .await?
                     .into_iter()
                     .next()
@@ -214,12 +217,12 @@ pub fn db_select(item: TokenStream) -> TokenStream {
                     .into())
             }
 
-            pub async fn all(&mut self, db_pool: &deadpool_postgres::Pool) -> Result<Vec<#ident>, crate::error::Error> {
+            pub async fn all(&mut self, db: &deadpool_postgres::Pool) -> Result<Vec<#ident>, crate::error::Error> {
                 self.query_builder.reset_limit();
 
                 // TODO(@Xenfo): add pagination, etc.
                 Ok(self
-                    .finish(db_pool)
+                    .finish(db)
                     .await?
                     .into_iter()
                     .map(|row| row.into())

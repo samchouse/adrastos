@@ -1,6 +1,6 @@
 use adrastos_macros::{DbCommon, DbQuery, DbSelect};
 use chrono::{DateTime, Utc};
-use sea_query::{enum_def, Alias, Expr, PostgresQueryBuilder};
+use sea_query::{enum_def, Expr, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use tracing_unwrap::ResultExt;
@@ -39,7 +39,7 @@ pub struct UpdatePasskey {
 impl Passkey {
     pub async fn update(
         &self,
-        db_pool: &deadpool_postgres::Pool,
+        db: &deadpool_postgres::Pool,
         update: UpdatePasskey,
     ) -> Result<(), Error> {
         let query = sea_query::Query::update()
@@ -60,8 +60,7 @@ impl Passkey {
             .and_where(Expr::col(PasskeyIden::Id).eq(self.id.clone()))
             .to_string(PostgresQueryBuilder);
 
-        db_pool
-            .get()
+        db.get()
             .await
             .unwrap_or_log()
             .execute(&query, &[])

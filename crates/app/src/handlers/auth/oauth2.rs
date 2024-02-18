@@ -11,16 +11,17 @@ use adrastos_core::{
         oauth2::{providers::OAuth2Provider, OAuth2, OAuth2LoginInfo},
     },
     config,
-    entities::{Connection, User},
+    db::postgres::Database,
+    entities::{Connection, UserType},
     error::Error,
     id::Id,
 };
 use chrono::Utc;
 use serde::Deserialize;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tracing::error;
 
-use crate::{middleware::user, session::SessionKey};
+use crate::{middleware::user::AnyUser, session::SessionKey};
 
 #[derive(Deserialize)]
 pub struct LoginParams {
@@ -37,7 +38,7 @@ pub struct CallbackParams {
 
 #[get("/login")]
 pub async fn login(
-    user: user::User,
+    user: AnyUser,
     session: Session,
     oauth2: web::Data<OAuth2>,
     params: web::Query<LoginParams>,
@@ -83,14 +84,14 @@ pub async fn login(
 
 #[get("/callback")]
 pub async fn callback(
-    config: web::Data<Mutex<config::Config>>,
+    db: Database,
+    session: Session,
     oauth2: web::Data<OAuth2>,
     params: web::Query<CallbackParams>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
+    config: web::Data<RwLock<config::Config>>,
     redis_pool: web::Data<deadpool_redis::Pool>,
-    session: Session,
 ) -> actix_web::Result<impl Responder, Error> {
-    let client_url = config.lock().await.client_url.clone();
+    let client_url = config.read().await.client_url.clone();
 
     let provider = OAuth2Provider::try_from(params.provider.as_str())
         .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;
@@ -124,11 +125,11 @@ pub async fn callback(
     let connection = Connection::find()
         .by_provider(provider.to_string())
         .by_provider_id(oauth2_user.id.clone())
-        .one(&db_pool)
+        .one(&db)
         .await;
 
     let user = match connection {
-        Ok(conn) => Ok(User::find_by_id(&conn.user_id).one(&db_pool).await?),
+        Ok(conn) => Ok(UserType::from(&db).find_by_id(&conn.user_id).one().await?),
         Err(..) => {
             if let Ok(Some(user_id)) = session.get::<String>(&SessionKey::UserId.to_string()) {
                 let conn = Connection {
@@ -140,9 +141,9 @@ pub async fn callback(
                     updated_at: None,
                 };
 
-                conn.create(&db_pool).await?;
+                conn.create(&db).await?;
 
-                Ok(User::find_by_id(&conn.user_id).one(&db_pool).await?)
+                Ok(UserType::from(&db).find_by_id(&conn.user_id).one().await?)
             } else {
                 Err(Error::Unauthorized)
             }
@@ -174,7 +175,7 @@ pub async fn callback(
         .map(|url| format!("{}{}", client_url, url))
         .unwrap_or(format!("{}/dashboard", client_url));
 
-    let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
+    let auth = auth::authenticate(&db, &config.read().await.clone(), &user).await?;
     Ok(HttpResponse::Found()
         .cookie(auth.cookie.clone())
         .cookie(
