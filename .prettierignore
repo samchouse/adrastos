@@ -9,6 +9,7 @@
 **/out
 /certs
 /target
+**/dist
 **/.next
 **/node_modules
 **/.react-email

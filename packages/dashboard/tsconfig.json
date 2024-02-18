@@ -23,8 +23,8 @@
     /* Other */
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"],
-    },
+      "~/*": ["./src/*"]
+    }
   },
   "include": [
     "src",
@@ -32,7 +32,7 @@
     "postcss.config.cjs",
     "vite.config.ts",
     "tailwind.config.ts",
-    "src/app",
+    "src/app"
   ],
-  "references": [{ "path": "./tsconfig.node.json" }],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }
