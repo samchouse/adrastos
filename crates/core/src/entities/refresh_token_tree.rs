@@ -43,7 +43,7 @@ impl RefreshTokenTree {
                 (RefreshTokenTreeIden::Tokens, Some(tokens).into()),
                 (
                     RefreshTokenTreeIden::InactiveAt,
-                    Some(Utc::now() + Duration::days(15)).into(),
+                    Some(Utc::now() + Duration::try_days(15).unwrap()).into(),
                 ),
                 (RefreshTokenTreeIden::UpdatedAt, Some(Utc::now()).into()),
             ]))

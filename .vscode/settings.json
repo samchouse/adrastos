@@ -3,9 +3,6 @@
   "eslint.workingDirectories": ["packages/*"],
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "typescript.tsdk": "node_modules/typescript/lib",
-  "tailwindCSS.experimental.classRegex": [
-    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
-  ],
   "cSpell.words": [
     "actix",
     "Adrastos",

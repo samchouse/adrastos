@@ -142,7 +142,7 @@ impl OAuth2 {
         let mut conn = redis_pool.get().await.unwrap();
         redis::cmd("SETEX")
             .arg(format!("oauth:code_verifier:{}", csrf_token.secret()))
-            .arg(Duration::minutes(10).num_seconds())
+            .arg(Duration::try_minutes(10).unwrap().num_seconds())
             .arg(code_verifier.secret())
             .query_async(&mut conn)
             .await

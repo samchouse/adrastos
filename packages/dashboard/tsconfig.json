@@ -32,7 +32,7 @@
     "postcss.config.cjs",
     "vite.config.ts",
     "tailwind.config.ts",
-    "src/app"
+    "src/index.d.ts"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

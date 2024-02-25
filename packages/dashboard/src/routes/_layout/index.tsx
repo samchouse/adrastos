@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute('/_layout/')({
   component: IndexComponent,
 });
 
-export function IndexComponent() {
+function IndexComponent() {
   return (
     <div className="mx-5 flex h-full flex-col items-center justify-center gap-y-1 text-center">
       <h1 className="text-4xl font-bold text-blue-500">Adrastos</h1>

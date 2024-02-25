@@ -68,7 +68,7 @@ export const VerificationEmail: React.FC<VerificationProps> = ({
             <Hr className="border-gray-200" />
 
             <Text className="text-base">
-              Your email was used to sign up for Adrastos. Click the button
+              Your email was used to register for Adrastos. Click the button
               bellow to verify your account.
             </Text>
 

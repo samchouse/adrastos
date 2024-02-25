@@ -11,49 +11,32 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as SignupImport } from './routes/signup'
-import { Route as LoginImport } from './routes/login'
-import { Route as HomeImport } from './routes/home'
-import { Route as SplatImport } from './routes/$'
 import { Route as DashboardRouteImport } from './routes/dashboard/route'
-import { Route as IndexImport } from './routes/index'
+import { Route as LayoutRouteImport } from './routes/_layout/route'
 import { Route as DashboardIndexImport } from './routes/dashboard/index'
-import { Route as DashboardSettingsImport } from './routes/dashboard/settings'
+import { Route as LayoutIndexImport } from './routes/_layout/index'
 import { Route as DashboardProfileImport } from './routes/dashboard/profile'
-import { Route as DashboardAuthImport } from './routes/dashboard/auth'
-import { Route as DashboardSplatImport } from './routes/dashboard/$'
-import { Route as DashboardTablesRouteImport } from './routes/dashboard/tables/route'
-import { Route as DashboardTablesTableIdImport } from './routes/dashboard/tables/$tableId'
+import { Route as LayoutRegisterImport } from './routes/_layout/register'
+import { Route as LayoutLoginImport } from './routes/_layout/login'
+import { Route as DashboardTeamsTeamIdRouteImport } from './routes/dashboard/teams/$teamId/route'
+import { Route as DashboardProjectsProjectIdRouteImport } from './routes/dashboard/projects/$projectId/route'
+import { Route as DashboardTeamsTeamIdIndexImport } from './routes/dashboard/teams/$teamId/index'
+import { Route as DashboardTeamsTeamIdSettingsImport } from './routes/dashboard/teams/$teamId/settings'
+import { Route as DashboardProjectsProjectIdStorageImport } from './routes/dashboard/projects/$projectId/storage'
+import { Route as DashboardProjectsProjectIdSettingsImport } from './routes/dashboard/projects/$projectId/settings'
+import { Route as DashboardProjectsProjectIdAuthImport } from './routes/dashboard/projects/$projectId/auth'
+import { Route as DashboardProjectsProjectIdTablesRouteImport } from './routes/dashboard/projects/$projectId/tables/route'
+import { Route as DashboardProjectsProjectIdTablesTableIdImport } from './routes/dashboard/projects/$projectId/tables/$tableId'
 
 // Create/Update Routes
-
-const SignupRoute = SignupImport.update({
-  path: '/signup',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const LoginRoute = LoginImport.update({
-  path: '/login',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const HomeRoute = HomeImport.update({
-  path: '/home',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const SplatRoute = SplatImport.update({
-  path: '/$',
-  getParentRoute: () => rootRoute,
-} as any)
 
 const DashboardRouteRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRoute,
 } as any)
 
-const IndexRoute = IndexImport.update({
-  path: '/',
+const LayoutRouteRoute = LayoutRouteImport.update({
+  id: '/_layout',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -62,9 +45,9 @@ const DashboardIndexRoute = DashboardIndexImport.update({
   getParentRoute: () => DashboardRouteRoute,
 } as any)
 
-const DashboardSettingsRoute = DashboardSettingsImport.update({
-  path: '/settings',
-  getParentRoute: () => DashboardRouteRoute,
+const LayoutIndexRoute = LayoutIndexImport.update({
+  path: '/',
+  getParentRoute: () => LayoutRouteRoute,
 } as any)
 
 const DashboardProfileRoute = DashboardProfileImport.update({
@@ -72,81 +55,135 @@ const DashboardProfileRoute = DashboardProfileImport.update({
   getParentRoute: () => DashboardRouteRoute,
 } as any)
 
-const DashboardAuthRoute = DashboardAuthImport.update({
-  path: '/auth',
+const LayoutRegisterRoute = LayoutRegisterImport.update({
+  path: '/register',
+  getParentRoute: () => LayoutRouteRoute,
+} as any)
+
+const LayoutLoginRoute = LayoutLoginImport.update({
+  path: '/login',
+  getParentRoute: () => LayoutRouteRoute,
+} as any)
+
+const DashboardTeamsTeamIdRouteRoute = DashboardTeamsTeamIdRouteImport.update({
+  path: '/teams/$teamId',
   getParentRoute: () => DashboardRouteRoute,
 } as any)
 
-const DashboardSplatRoute = DashboardSplatImport.update({
-  path: '/$',
-  getParentRoute: () => DashboardRouteRoute,
+const DashboardProjectsProjectIdRouteRoute =
+  DashboardProjectsProjectIdRouteImport.update({
+    path: '/projects/$projectId',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
+
+const DashboardTeamsTeamIdIndexRoute = DashboardTeamsTeamIdIndexImport.update({
+  path: '/',
+  getParentRoute: () => DashboardTeamsTeamIdRouteRoute,
 } as any)
 
-const DashboardTablesRouteRoute = DashboardTablesRouteImport.update({
-  path: '/tables',
-  getParentRoute: () => DashboardRouteRoute,
-} as any)
+const DashboardTeamsTeamIdSettingsRoute =
+  DashboardTeamsTeamIdSettingsImport.update({
+    path: '/settings',
+    getParentRoute: () => DashboardTeamsTeamIdRouteRoute,
+  } as any)
 
-const DashboardTablesTableIdRoute = DashboardTablesTableIdImport.update({
-  path: '/$tableId',
-  getParentRoute: () => DashboardTablesRouteRoute,
-} as any)
+const DashboardProjectsProjectIdStorageRoute =
+  DashboardProjectsProjectIdStorageImport.update({
+    path: '/storage',
+    getParentRoute: () => DashboardProjectsProjectIdRouteRoute,
+  } as any)
+
+const DashboardProjectsProjectIdSettingsRoute =
+  DashboardProjectsProjectIdSettingsImport.update({
+    path: '/settings',
+    getParentRoute: () => DashboardProjectsProjectIdRouteRoute,
+  } as any)
+
+const DashboardProjectsProjectIdAuthRoute =
+  DashboardProjectsProjectIdAuthImport.update({
+    path: '/auth',
+    getParentRoute: () => DashboardProjectsProjectIdRouteRoute,
+  } as any)
+
+const DashboardProjectsProjectIdTablesRouteRoute =
+  DashboardProjectsProjectIdTablesRouteImport.update({
+    path: '/tables',
+    getParentRoute: () => DashboardProjectsProjectIdRouteRoute,
+  } as any)
+
+const DashboardProjectsProjectIdTablesTableIdRoute =
+  DashboardProjectsProjectIdTablesTableIdImport.update({
+    path: '/$tableId',
+    getParentRoute: () => DashboardProjectsProjectIdTablesRouteRoute,
+  } as any)
 
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      preLoaderRoute: typeof IndexImport
+    '/_layout': {
+      preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRoute
     }
     '/dashboard': {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRoute
     }
-    '/$': {
-      preLoaderRoute: typeof SplatImport
-      parentRoute: typeof rootRoute
+    '/_layout/login': {
+      preLoaderRoute: typeof LayoutLoginImport
+      parentRoute: typeof LayoutRouteImport
     }
-    '/home': {
-      preLoaderRoute: typeof HomeImport
-      parentRoute: typeof rootRoute
-    }
-    '/login': {
-      preLoaderRoute: typeof LoginImport
-      parentRoute: typeof rootRoute
-    }
-    '/signup': {
-      preLoaderRoute: typeof SignupImport
-      parentRoute: typeof rootRoute
-    }
-    '/dashboard/tables': {
-      preLoaderRoute: typeof DashboardTablesRouteImport
-      parentRoute: typeof DashboardRouteImport
-    }
-    '/dashboard/$': {
-      preLoaderRoute: typeof DashboardSplatImport
-      parentRoute: typeof DashboardRouteImport
-    }
-    '/dashboard/auth': {
-      preLoaderRoute: typeof DashboardAuthImport
-      parentRoute: typeof DashboardRouteImport
+    '/_layout/register': {
+      preLoaderRoute: typeof LayoutRegisterImport
+      parentRoute: typeof LayoutRouteImport
     }
     '/dashboard/profile': {
       preLoaderRoute: typeof DashboardProfileImport
       parentRoute: typeof DashboardRouteImport
     }
-    '/dashboard/settings': {
-      preLoaderRoute: typeof DashboardSettingsImport
-      parentRoute: typeof DashboardRouteImport
+    '/_layout/': {
+      preLoaderRoute: typeof LayoutIndexImport
+      parentRoute: typeof LayoutRouteImport
     }
     '/dashboard/': {
       preLoaderRoute: typeof DashboardIndexImport
       parentRoute: typeof DashboardRouteImport
     }
-    '/dashboard/tables/$tableId': {
-      preLoaderRoute: typeof DashboardTablesTableIdImport
-      parentRoute: typeof DashboardTablesRouteImport
+    '/dashboard/projects/$projectId': {
+      preLoaderRoute: typeof DashboardProjectsProjectIdRouteImport
+      parentRoute: typeof DashboardRouteImport
+    }
+    '/dashboard/teams/$teamId': {
+      preLoaderRoute: typeof DashboardTeamsTeamIdRouteImport
+      parentRoute: typeof DashboardRouteImport
+    }
+    '/dashboard/projects/$projectId/tables': {
+      preLoaderRoute: typeof DashboardProjectsProjectIdTablesRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdRouteImport
+    }
+    '/dashboard/projects/$projectId/auth': {
+      preLoaderRoute: typeof DashboardProjectsProjectIdAuthImport
+      parentRoute: typeof DashboardProjectsProjectIdRouteImport
+    }
+    '/dashboard/projects/$projectId/settings': {
+      preLoaderRoute: typeof DashboardProjectsProjectIdSettingsImport
+      parentRoute: typeof DashboardProjectsProjectIdRouteImport
+    }
+    '/dashboard/projects/$projectId/storage': {
+      preLoaderRoute: typeof DashboardProjectsProjectIdStorageImport
+      parentRoute: typeof DashboardProjectsProjectIdRouteImport
+    }
+    '/dashboard/teams/$teamId/settings': {
+      preLoaderRoute: typeof DashboardTeamsTeamIdSettingsImport
+      parentRoute: typeof DashboardTeamsTeamIdRouteImport
+    }
+    '/dashboard/teams/$teamId/': {
+      preLoaderRoute: typeof DashboardTeamsTeamIdIndexImport
+      parentRoute: typeof DashboardTeamsTeamIdRouteImport
+    }
+    '/dashboard/projects/$projectId/tables/$tableId': {
+      preLoaderRoute: typeof DashboardProjectsProjectIdTablesTableIdImport
+      parentRoute: typeof DashboardProjectsProjectIdTablesRouteImport
     }
   }
 }
@@ -154,19 +191,27 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 export const routeTree = rootRoute.addChildren([
-  IndexRoute,
-  DashboardRouteRoute.addChildren([
-    DashboardTablesRouteRoute.addChildren([DashboardTablesTableIdRoute]),
-    DashboardSplatRoute,
-    DashboardAuthRoute,
-    DashboardProfileRoute,
-    DashboardSettingsRoute,
-    DashboardIndexRoute,
+  LayoutRouteRoute.addChildren([
+    LayoutLoginRoute,
+    LayoutRegisterRoute,
+    LayoutIndexRoute,
   ]),
-  SplatRoute,
-  HomeRoute,
-  LoginRoute,
-  SignupRoute,
+  DashboardRouteRoute.addChildren([
+    DashboardProfileRoute,
+    DashboardIndexRoute,
+    DashboardProjectsProjectIdRouteRoute.addChildren([
+      DashboardProjectsProjectIdTablesRouteRoute.addChildren([
+        DashboardProjectsProjectIdTablesTableIdRoute,
+      ]),
+      DashboardProjectsProjectIdAuthRoute,
+      DashboardProjectsProjectIdSettingsRoute,
+      DashboardProjectsProjectIdStorageRoute,
+    ]),
+    DashboardTeamsTeamIdRouteRoute.addChildren([
+      DashboardTeamsTeamIdSettingsRoute,
+      DashboardTeamsTeamIdIndexRoute,
+    ]),
+  ]),
 ])
 
 /* prettier-ignore-end */

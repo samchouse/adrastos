@@ -41,7 +41,7 @@ pub async fn enable(
     let mut conn = redis_pool.get().await.unwrap();
     redis::cmd("SETEX")
         .arg(format!("mfa:secret:{}", user.id))
-        .arg(Duration::minutes(10).num_seconds())
+        .arg(Duration::try_minutes(10).unwrap().num_seconds())
         .arg(mfa.get_secret())
         .query_async(&mut conn)
         .await

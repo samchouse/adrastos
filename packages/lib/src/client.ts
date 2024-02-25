@@ -13,18 +13,22 @@ export {
 
 export class Client {
   #authToken?: string;
+  private projectId: string | undefined;
+  private onlyUseProjectIdIfNeeded = false;
 
   public accounts: AccountsModule;
   public tables: TablesModule;
   public config: ConfigModule;
 
-  constructor(
-    private baseUrl: string,
-    private _projectId: string,
-  ) {
+  constructor(private baseUrl: string) {
     this.accounts = new AccountsModule(this);
     this.tables = new TablesModule(this);
     this.config = new ConfigModule(this);
+  }
+
+  public setProjectId(id: string, onlyIfNeeded = false) {
+    this.projectId = id;
+    this.onlyUseProjectIdIfNeeded = onlyIfNeeded;
   }
 
   public set authToken(token: string | undefined) {
@@ -39,7 +43,13 @@ export class Client {
     return `${this.baseUrl.replace(/\/$/, '')}/api${path}`;
   }
 
-  async request<T = null>({ method, path, body, options }: Request) {
+  async request<T = null>({
+    method,
+    path,
+    body,
+    options,
+    projectIdNeeded,
+  }: Request) {
     const res = await fetch(this.buildUrl(path), {
       body,
       method,
@@ -48,6 +58,9 @@ export class Client {
         'Content-Type': 'application/json',
         ...options?.headers,
         ...(this.#authToken && { Authorization: `Bearer ${this.#authToken}` }),
+        ...((this.onlyUseProjectIdIfNeeded
+          ? projectIdNeeded && this.projectId
+          : this.projectId) && { 'X-Project-Id': this.projectId }),
       },
     });
 

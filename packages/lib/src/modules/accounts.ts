@@ -3,7 +3,7 @@ import { merge } from '../util';
 import { BaseModule } from './util';
 
 export class AccountsModule extends BaseModule {
-  public async signup(body: {
+  public async register(body: {
     firstName: string;
     lastName: string;
     email: string;
@@ -11,7 +11,7 @@ export class AccountsModule extends BaseModule {
     password: string;
   }) {
     return this.client.request<User>({
-      path: '/auth/signup',
+      path: '/auth/register',
       method: 'POST',
       body: JSON.stringify(body),
     });

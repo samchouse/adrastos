@@ -17,12 +17,12 @@ const router = createRouter({
   routeTree,
   context: {
     queryClient,
-    client: new Client(import.meta.env.VITE_BACKEND_URL ?? '', ''),
+    client: new Client(import.meta.env.VITE_BACKEND_URL ?? ''),
   },
   Wrap: ({ children }) => (
     <QueryClientProvider client={queryClient}>
       <Toaster closeButton position="bottom-center" />
-      <ReactQueryDevtools position="bottom" />
+      <ReactQueryDevtools position="bottom" buttonPosition="bottom-left" />
 
       {children}
     </QueryClientProvider>

@@ -32,7 +32,9 @@ import { cn } from '~/lib';
 
 import { DataTable, Row, RowSheet, TableSheet } from './-components';
 
-export const Route = createFileRoute('/dashboard/tables/$tableId')({
+export const Route = createFileRoute(
+  '/dashboard/projects/$projectId/tables/$tableId',
+)({
   component: TableIdComponent,
   notFoundComponent: NotFound,
   loader: async ({

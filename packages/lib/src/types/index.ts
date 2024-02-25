@@ -7,6 +7,7 @@ export interface Request {
   path: string;
   body?: BodyInit;
   options?: Options;
+  projectIdNeeded?: boolean;
 }
 
 export interface User {

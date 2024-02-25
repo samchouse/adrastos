@@ -167,8 +167,8 @@ impl Config {
     }
 
     pub fn attach_system(&mut self, system: &System) {
-        self.current_version = system.current_version.clone();
-        self.previous_version = system.previous_version.clone();
+        self.current_version.clone_from(&system.current_version);
+        self.previous_version.clone_from(&system.previous_version);
 
         self.smtp_host = system.smtp_config.clone().map(|c| c.host.clone());
         self.smtp_port = system.smtp_config.clone().map(|c| c.port);

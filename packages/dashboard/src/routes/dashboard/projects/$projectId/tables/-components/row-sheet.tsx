@@ -34,7 +34,6 @@ import {
 import { cn } from '~/lib';
 
 import { Row } from '.';
-import { Route } from '../$tableId';
 
 const createFormSchema = (fields: Field[]) =>
   z.object(
@@ -84,21 +83,11 @@ export const RowSheet: React.FC<{
   className?: string;
 }> = ({ tableRow, table, className }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { client } = Route.useRouteContext();
   const row = tableRow?.original;
 
-  const { mutateAsync: createMutateAsync } = useCreateRowMutation(
-    client,
-    table.name,
-  );
-  const { mutateAsync: updateMutateAsync } = useUpdateRowMutation(
-    client,
-    table.name,
-  );
-  const { mutateAsync: deleteMutateAsync } = useDeleteRowMutation(
-    client,
-    table.name,
-  );
+  const { mutateAsync: createMutateAsync } = useCreateRowMutation(table.name);
+  const { mutateAsync: updateMutateAsync } = useUpdateRowMutation(table.name);
+  const { mutateAsync: deleteMutateAsync } = useDeleteRowMutation(table.name);
 
   const formSchema = useMemo(
     () => createFormSchema(table.fields),

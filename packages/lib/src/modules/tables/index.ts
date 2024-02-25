@@ -28,6 +28,7 @@ export class TablesModule extends BaseModule {
     return this.client.request<CustomTable[]>({
       path: '/tables/list',
       method: 'GET',
+      projectIdNeeded: true,
     });
   }
 
@@ -44,6 +45,7 @@ export class TablesModule extends BaseModule {
       body: JSON.stringify(
         table instanceof Table ? table.requestBody() : table,
       ),
+      projectIdNeeded: true,
     });
   }
 
@@ -58,6 +60,7 @@ export class TablesModule extends BaseModule {
       path: `/tables/update/${name}`,
       method: 'PATCH',
       body: JSON.stringify(body),
+      projectIdNeeded: true,
     });
   }
 
@@ -65,6 +68,7 @@ export class TablesModule extends BaseModule {
     return this.client.request({
       path: `/tables/delete/${name}`,
       method: 'DELETE',
+      projectIdNeeded: true,
     });
   }
 
@@ -107,6 +111,7 @@ export class TablesModule extends BaseModule {
             .join('&')}`,
       ),
       method: 'GET',
+      projectIdNeeded: true,
     });
   }
 
@@ -120,6 +125,7 @@ export class TablesModule extends BaseModule {
       path: `/tables/${table}/create`,
       method: 'POST',
       body: JSON.stringify(data),
+      projectIdNeeded: true,
     });
   }
 
@@ -143,6 +149,7 @@ export class TablesModule extends BaseModule {
       ),
       method: 'PATCH',
       body: JSON.stringify(data),
+      projectIdNeeded: true,
     });
   }
 
@@ -162,6 +169,7 @@ export class TablesModule extends BaseModule {
           .join('&'),
       ),
       method: 'DELETE',
+      projectIdNeeded: true,
     });
   }
 }
