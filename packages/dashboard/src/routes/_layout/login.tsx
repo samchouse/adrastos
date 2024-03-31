@@ -37,7 +37,7 @@ import {
 } from '~/hooks';
 import { providers } from '~/lib';
 
-export const Route = createFileRoute('/login')({
+export const Route = createFileRoute('/_layout/login')({
   component: LoginComponent,
   validateSearch: (search) =>
     z
@@ -71,12 +71,12 @@ function LoginComponent() {
   const router = useRouter();
   const { to } = Route.useSearch();
 
-  const { mutateAsync, isPending, isError, error } = useLoginMutation(client);
+  const { mutateAsync, isPending, isError, error } = useLoginMutation();
 
   const { mutateAsync: loginStartPasskeyMutateAsync } =
-    useStartLoginPasskeyMutation(client);
+    useStartLoginPasskeyMutation();
   const { mutateAsync: loginFinishPasskeyMutateAsync } =
-    useFinishLoginPasskeyMutation(client);
+    useFinishLoginPasskeyMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -221,10 +221,10 @@ function LoginComponent() {
                 </div>
 
                 <Link
-                  to="/signup"
+                  to="/register"
                   className="text-muted-foreground mt-4 block text-center text-sm underline underline-offset-4"
                 >
-                  Don&apos;t have an account? Sign Up
+                  Don&apos;t have an account? Register
                 </Link>
               </div>
             </CardFooter>

@@ -30,11 +30,13 @@ import {
 } from '~/hooks';
 import { providers } from '~/lib';
 
-export const Route = createFileRoute('/dashboard/settings')({
-  component: SettingsComponent,
-  loader: async ({ context: { queryClient, client } }) =>
-    await queryClient.ensureQueryData(configDetailsQueryOptions(client)),
-});
+export const Route = createFileRoute('/dashboard/projects/$projectId/settings')(
+  {
+    component: SettingsComponent,
+    loader: async ({ context: { queryClient, client } }) =>
+      await queryClient.ensureQueryData(configDetailsQueryOptions(client)),
+  },
+);
 
 const smtpFormSchema = z.object({
   host: z.string().min(1, 'Host is required'),
@@ -59,8 +61,7 @@ export const SmtpCard: React.FC = () => {
     queries: [configDetailsQueryOptions(client)],
   });
 
-  const { mutate, isPending: mutationIsPending } =
-    useConfigSmtpMutation(client);
+  const { mutate, isPending: mutationIsPending } = useConfigSmtpMutation();
 
   const form = useForm<z.infer<typeof smtpFormSchema>>({
     resolver: zodResolver(smtpFormSchema),
@@ -322,8 +323,7 @@ const OAuth2Card: React.FC = () => {
   const [{ data }] = useSuspenseQueries({
     queries: [configDetailsQueryOptions(client)],
   });
-  const { mutate, isPending: mutationIsPending } =
-    useConfigOAuth2Mutation(client);
+  const { mutate, isPending: mutationIsPending } = useConfigOAuth2Mutation();
 
   const form = useForm<z.infer<typeof oauth2FormSchema>>({
     resolver: zodResolver(oauth2FormSchema),

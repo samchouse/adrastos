@@ -62,11 +62,11 @@ jobs:
 
       - id: node
         run: |
-          yarn install
+          pnpm install
           cd packages/lib
-          yarn build
+          pnpm build
           cd ../dashboard
-          yarn build
+          pnpm build
 
       - uses: dtolnay/rust-toolchain@nightly
       - id: rust
@@ -173,11 +173,11 @@ jobs:
 
       - id: node
         run: |
-          yarn install
+          pnpm install
           cd packages/lib
-          yarn build
+          pnpm build
           cd ../dashboard
-          yarn build
+          pnpm build
 
       - uses: dtolnay/rust-toolchain@nightly
       - run: cargo build --release
@@ -245,11 +245,11 @@ jobs:
 
       - id: node
         run: |
-          yarn install
+          pnpm install
           cd packages/lib
-          yarn build
+          pnpm build
           cd ../dashboard
-          yarn build
+          pnpm build
 
       - uses: dtolnay/rust-toolchain@nightly
       - run: cargo install --git https://github.com/SanchithHegde/changelog-gh-usernames

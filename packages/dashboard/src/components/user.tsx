@@ -1,6 +1,6 @@
-import { Client, User as UserType } from '@adrastos/lib';
+import { User as UserType } from '@adrastos/lib';
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
-import { ExternalLink, LogOut, Settings, User as UserIcon } from 'lucide-react';
+import { LogOut, User as UserIcon } from 'lucide-react';
 
 import {
   Avatar,
@@ -17,13 +17,12 @@ import {
 import { useLogoutMutation } from '~/hooks';
 
 export const User: React.FC<{
-  client: Client;
   user: UserType;
-}> = ({ user, client }) => {
+}> = ({ user }) => {
   const navigate = useNavigate();
   const routerState = useRouterState();
 
-  const { mutateAsync } = useLogoutMutation(client);
+  const { mutateAsync } = useLogoutMutation();
 
   return (
     <DropdownMenu>
@@ -55,19 +54,6 @@ export const User: React.FC<{
           <DropdownMenuItem className="cursor-pointer">
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile</span>
-          </DropdownMenuItem>
-        </Link>
-        <Link to="/dashboard/settings">
-          <DropdownMenuItem className="cursor-pointer">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </DropdownMenuItem>
-        </Link>
-        <DropdownMenuSeparator />
-        <Link to="/home">
-          <DropdownMenuItem className="cursor-pointer">
-            <ExternalLink className="mr-2 h-4 w-4" />
-            <span>Home</span>
           </DropdownMenuItem>
         </Link>
         <DropdownMenuSeparator />

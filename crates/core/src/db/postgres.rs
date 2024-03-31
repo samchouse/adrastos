@@ -109,7 +109,7 @@ impl Databases {
         self.0
             .write()
             .await
-            .reset_expiry(db_type, Duration::hours(1));
+            .reset_expiry(db_type, Duration::try_hours(1).unwrap());
         if let Some(pool) = self.0.read().await.get(db_type) {
             return pool.clone();
         }
@@ -123,10 +123,11 @@ impl Databases {
             .unwrap();
         entities::init(db_type, &pool, config).await;
 
-        self.0
-            .write()
-            .await
-            .insert(db_type.clone(), pool.clone(), Duration::hours(1));
+        self.0.write().await.insert(
+            db_type.clone(),
+            pool.clone(),
+            Duration::try_hours(1).unwrap(),
+        );
         self.0.read().await.get(db_type).unwrap().clone()
     }
 

@@ -92,8 +92,8 @@ pub async fn authenticate(
     let refresh_token_tree = RefreshTokenTree {
         id: Id::new().to_string(),
         user_id: user.id.clone(),
-        inactive_at: Utc::now() + chrono::Duration::days(15),
-        expires_at: Utc::now() + chrono::Duration::days(90),
+        inactive_at: Utc::now() + chrono::Duration::try_days(15).unwrap(),
+        expires_at: Utc::now() + chrono::Duration::try_days(90).unwrap(),
         tokens: vec![refresh_token.clone().claims.jti],
         created_at: Utc::now(),
         updated_at: None,
@@ -125,8 +125,8 @@ pub async fn authenticate(
 impl TokenType {
     pub fn sign(&self, config: &config::Config, user: &AnyUser) -> Result<TokenInfo, Error> {
         let expires_at = match self {
-            TokenType::Access => Utc::now() + Duration::minutes(15),
-            TokenType::Refresh => Utc::now() + Duration::days(15),
+            TokenType::Access => Utc::now() + Duration::try_minutes(15).unwrap(),
+            TokenType::Refresh => Utc::now() + Duration::try_days(15).unwrap(),
         };
         let claims = Claims {
             jti: Id::new().to_string(),

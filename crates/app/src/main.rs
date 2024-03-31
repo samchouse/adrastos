@@ -209,7 +209,7 @@ async fn main() -> std::io::Result<()> {
                                 handlers::teams::list,
                                 handlers::teams::create,
                                 handlers::teams::delete,
-                                handlers::teams::projects::get
+                                handlers::teams::projects::get,
                             ))
                             .service(web::scope("/{team_id}/projects").service((
                                 handlers::teams::projects::list,

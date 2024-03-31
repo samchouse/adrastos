@@ -1,23 +1,26 @@
-import { Client, ResponseError } from '@adrastos/lib';
+import { ResponseError } from '@adrastos/lib';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouteContext } from '@tanstack/react-router';
 import { toast } from 'sonner';
 
 import { queryKeys } from './queries';
 
-export const useSignupMutation = (client: Client) => {
-  const { mutateAsync } = useLoginMutation(client);
+export const useRegisterMutation = () => {
+  const { mutateAsync } = useLoginMutation();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
-    mutationKey: ['auth', 'signup'],
+    mutationKey: ['auth', 'register'],
     mutationFn: async (
-      data: Parameters<(typeof client)['accounts']['signup']>[0],
-    ) => await client.accounts.signup(data),
+      data: Parameters<(typeof client)['accounts']['register']>[0],
+    ) => await client.accounts.register(data),
     onSuccess: async (_, vars) => mutateAsync(vars),
   });
 };
 
-export const useLoginMutation = (client: Client) => {
+export const useLoginMutation = () => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['auth', 'login'],
@@ -29,8 +32,9 @@ export const useLoginMutation = (client: Client) => {
   });
 };
 
-export const useLogoutMutation = (client: Client) => {
+export const useLogoutMutation = () => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['auth', 'logout'],
@@ -44,8 +48,9 @@ export const useLogoutMutation = (client: Client) => {
   });
 };
 
-export const useUpdatePasskeyMutation = (client: Client) => {
+export const useUpdatePasskeyMutation = () => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['auth', 'passkeys', 'update'],
@@ -61,8 +66,9 @@ export const useUpdatePasskeyMutation = (client: Client) => {
   });
 };
 
-export const useDeletePasskeyMutation = (client: Client) => {
+export const useDeletePasskeyMutation = () => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['auth', 'passkeys', 'delete'],
@@ -74,14 +80,18 @@ export const useDeletePasskeyMutation = (client: Client) => {
   });
 };
 
-export const useStartRegisterPasskeyMutation = (client: Client) =>
-  useMutation({
+export const useStartRegisterPasskeyMutation = () => {
+  const { client } = useRouteContext({ strict: false });
+
+  return useMutation({
     mutationKey: ['auth', 'passkeys', 'register', 'start'],
     mutationFn: async () => await client.accounts.startPasskeyRegistration(),
   });
+};
 
-export const useFinishRegisterPasskeyMutation = (client: Client) => {
+export const useFinishRegisterPasskeyMutation = () => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['auth', 'passkeys', 'register', 'finish'],
@@ -95,8 +105,10 @@ export const useFinishRegisterPasskeyMutation = (client: Client) => {
   });
 };
 
-export const useStartLoginPasskeyMutation = (client: Client) =>
-  useMutation({
+export const useStartLoginPasskeyMutation = () => {
+  const { client } = useRouteContext({ strict: false });
+
+  return useMutation({
     mutationKey: ['auth', 'passkeys', 'login', 'start'],
     mutationFn: async (
       data:
@@ -104,9 +116,11 @@ export const useStartLoginPasskeyMutation = (client: Client) =>
         | void,
     ) => await client.accounts.startPasskeyLogin(data ?? undefined),
   });
+};
 
-export const useFinishLoginPasskeyMutation = (client: Client) => {
+export const useFinishLoginPasskeyMutation = () => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['auth', 'passkeys', 'login', 'finish'],
@@ -118,8 +132,9 @@ export const useFinishLoginPasskeyMutation = (client: Client) => {
   });
 };
 
-export const useConfigSmtpMutation = (client: Client) => {
+export const useConfigSmtpMutation = () => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['config', 'smtp'],
@@ -131,8 +146,9 @@ export const useConfigSmtpMutation = (client: Client) => {
   });
 };
 
-export const useConfigOAuth2Mutation = (client: Client) => {
+export const useConfigOAuth2Mutation = () => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['config', 'oauth2'],
@@ -144,8 +160,9 @@ export const useConfigOAuth2Mutation = (client: Client) => {
   });
 };
 
-export const useResendVerificationMutation = (client: Client) => {
+export const useResendVerificationMutation = () => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['auth', 'resendVerification'],
@@ -154,8 +171,9 @@ export const useResendVerificationMutation = (client: Client) => {
   });
 };
 
-export const useCreateTableMutation = (client: Client) => {
+export const useCreateTableMutation = () => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['customTable', 'create'],
@@ -166,8 +184,9 @@ export const useCreateTableMutation = (client: Client) => {
   });
 };
 
-export const useDeleteTableMutation = (client: Client) => {
+export const useDeleteTableMutation = () => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['customTable', 'delete'],
@@ -179,8 +198,9 @@ export const useDeleteTableMutation = (client: Client) => {
   });
 };
 
-export const useCreateRowMutation = (client: Client, table: string) => {
+export const useCreateRowMutation = (table: string) => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['customRow', 'create'],
@@ -197,8 +217,9 @@ export const useCreateRowMutation = (client: Client, table: string) => {
   });
 };
 
-export const useUpdateRowMutation = (client: Client, table: string) => {
+export const useUpdateRowMutation = (table: string) => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['customRow', 'update'],
@@ -214,8 +235,9 @@ export const useUpdateRowMutation = (client: Client, table: string) => {
   });
 };
 
-export const useDeleteRowMutation = (client: Client, table: string) => {
+export const useDeleteRowMutation = (table: string) => {
   const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
 
   return useMutation({
     mutationKey: ['customRow', 'delete'],
@@ -224,5 +246,38 @@ export const useDeleteRowMutation = (client: Client, table: string) => {
     ) => await client.tables.deleteRow(table, match),
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.tableData(table) }),
+  });
+};
+
+export const useCreateProjectMutation = (teamId: string) => {
+  const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
+
+  return useMutation({
+    mutationKey: ['project', 'create'],
+    mutationFn: async (data: { name: string; hostnames: string[] }) =>
+      await client.request({
+        path: `/teams/${teamId}/projects/create`,
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () =>
+      queryClient.refetchQueries({ queryKey: queryKeys.projects(teamId) }),
+  });
+};
+
+export const useCreateTeamMutation = () => {
+  const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
+
+  return useMutation({
+    mutationKey: ['team', 'create'],
+    mutationFn: async (name: string) =>
+      await client.request({
+        path: '/teams/create',
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      }),
+    onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.teams }),
   });
 };

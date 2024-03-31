@@ -20,10 +20,10 @@ import {
   FormMessage,
   Input,
 } from '~/components';
-import { useSignupMutation } from '~/hooks';
+import { useRegisterMutation } from '~/hooks';
 
-export const Route = createFileRoute('/signup')({
-  component: SignupComponent,
+export const Route = createFileRoute('/_layout/register')({
+  component: RegisterComponent,
 });
 
 const formSchema = z
@@ -62,10 +62,9 @@ const formSchema = z
       });
   });
 
-function SignupComponent() {
+function RegisterComponent() {
   const navigate = useNavigate();
-  const { client } = Route.useRouteContext();
-  const { mutateAsync, isPending } = useSignupMutation(client);
+  const { mutateAsync, isPending } = useRegisterMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -83,7 +82,7 @@ function SignupComponent() {
     <div className="flex h-full w-screen items-center justify-center">
       <Card className="mx-6 w-full sm:m-0 sm:w-[500px]">
         <CardHeader>
-          <CardTitle>Sign Up</CardTitle>
+          <CardTitle>Register</CardTitle>
         </CardHeader>
 
         <Form {...form}>
@@ -232,7 +231,7 @@ function SignupComponent() {
                   {isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Sign Up
+                  Register
                 </Button>
 
                 <Link

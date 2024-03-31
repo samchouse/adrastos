@@ -13,24 +13,29 @@ import { tablesQueryOptions } from '~/hooks';
 
 import { TableSheet } from './-components';
 
-export const Route = createFileRoute('/dashboard/tables')({
+export const Route = createFileRoute('/dashboard/projects/$projectId/tables')({
   component: RouteComponent,
   loader: async ({ context: { client, queryClient } }) =>
     await queryClient.ensureQueryData(tablesQueryOptions(client)),
-  beforeLoad: async ({ location, context: { client, queryClient } }) => {
+  beforeLoad: async ({
+    location,
+    params: { projectId },
+    context: { client, queryClient },
+  }) => {
     const tables = await queryClient.ensureQueryData(
       tablesQueryOptions(client),
     );
 
     if (tables.length !== 0 && location.pathname === '/dashboard/tables')
       throw redirect({
-        to: '/dashboard/tables/$tableId',
-        params: { tableId: tables?.[0].name },
+        to: '/dashboard/projects/$projectId/tables/$tableId',
+        params: { projectId: projectId, tableId: tables?.[0].name },
       });
   },
 });
 
 function RouteComponent() {
+  const { projectId } = Route.useParams();
   const { client } = Route.useRouteContext();
 
   const [{ data: tables }] = useSuspenseQueries({
@@ -55,8 +60,8 @@ function RouteComponent() {
                 {tables?.map((table) => (
                   <Link
                     key={table.id}
-                    to={`/dashboard/tables/$tableId`}
-                    params={{ tableId: table.name }}
+                    to={`/dashboard/projects/$projectId/tables/$tableId`}
+                    params={{ projectId: projectId, tableId: table.name }}
                   >
                     {({ isActive }) => (
                       <Button

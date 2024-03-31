@@ -1,7 +1,7 @@
 import { Client, CustomTable, Field } from '@adrastos/lib';
 import { PopoverContent, PopoverTrigger } from '@radix-ui/react-popover';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useParams } from '@tanstack/react-router';
 import {
   Calendar,
   Database,
@@ -45,6 +45,9 @@ export const TableSheet: React.FC<{
 }> = ({ client, table, className }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const params = useParams({
+    from: '/dashboard/projects/$projectId',
+  });
 
   const [name, setName] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -55,8 +58,8 @@ export const TableSheet: React.FC<{
     })[]
   >([]);
 
-  const { mutateAsync: createMutateAsync } = useCreateTableMutation(client);
-  const { mutateAsync: deleteMutateAsync } = useDeleteTableMutation(client);
+  const { mutateAsync: createMutateAsync } = useCreateTableMutation();
+  const { mutateAsync: deleteMutateAsync } = useDeleteTableMutation();
 
   return (
     <Sheet
@@ -553,11 +556,15 @@ export const TableSheet: React.FC<{
                   );
 
                   if (tables.length === 0)
-                    await navigate({ to: '/dashboard/tables' });
+                    await navigate({
+                      to: '/dashboard/projects/$projectId/tables',
+                      params: { projectId: params.projectId },
+                    });
                   else
                     await navigate({
-                      to: '/dashboard/tables/$tableId',
+                      to: '/dashboard/projects/$projectId/tables/$tableId',
                       params: {
+                        projectId: params.projectId,
                         tableId: tables?.[0].name,
                       },
                     });
@@ -587,8 +594,9 @@ export const TableSheet: React.FC<{
                   setFields([]);
 
                   await navigate({
-                    to: '/dashboard/tables/$tableId',
+                    to: '/dashboard/projects/$projectId/tables/$tableId',
                     params: {
+                      projectId: params.projectId,
                       tableId: table.name,
                     },
                   });

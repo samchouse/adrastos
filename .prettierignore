@@ -2,10 +2,10 @@
 *.env
 *.yml
 *.yaml
+**/*.gen.ts
 **/next-env.d.ts
 
 # directories
-.yarn
 **/out
 /certs
 /target

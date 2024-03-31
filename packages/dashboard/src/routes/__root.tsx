@@ -1,20 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   createRootRouteWithContext,
-  Link,
   Outlet,
   redirect,
 } from '@tanstack/react-router';
 import React, { Suspense, useEffect } from 'react';
 
-import { NotFound } from '~/components';
-import { Button } from '~/components/ui';
 import { meQueryOptions, tokenRefreshQueryOptions } from '~/hooks';
-import { RouterContext } from '~/typings';
+import { RouterContext } from '~/types';
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent,
-  notFoundComponent: NotFound,
   loader: async ({ context: { client, queryClient } }) => ({
     accessToken: await queryClient
       .ensureQueryData(tokenRefreshQueryOptions(client))
@@ -29,7 +25,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       .catch(() => undefined);
 
     if (
-      ['/', '/login', '/signup'].includes(location.pathname) &&
+      ['/', '/login', '/register'].includes(location.pathname) &&
       client.hasAuthToken
     )
       throw redirect({
@@ -55,7 +51,6 @@ const TanStackRouterDevtools = import.meta.env.PROD
     );
 
 function RootComponent() {
-  const { user } = Route.useLoaderData();
   const { client } = Route.useRouteContext();
 
   const { data: accessToken } = useQuery(tokenRefreshQueryOptions(client));
@@ -66,43 +61,10 @@ function RootComponent() {
 
   return (
     <div className="bg-background text-primary flex h-screen flex-col font-['Work_Sans']">
-      <header className="bg-background relative z-10 flex w-screen justify-between border-b px-4 py-3">
-        <Link to="/">
-          <img
-            src="/logo.svg"
-            alt="logo"
-            width={40}
-            height={40}
-            className="mr-2"
-          />
-        </Link>
-
-        {user ? (
-          <Button asChild>
-            <Link to="/dashboard">Dashboard</Link>
-          </Button>
-        ) : (
-          <div className="space-x-3">
-            <Button asChild variant="outline">
-              <Link to="/login">Login</Link>
-            </Button>
-            <Button asChild>
-              <Link to="/signup">Signup</Link>
-            </Button>
-          </div>
-        )}
-      </header>
-
-      <main className="bg-background h-full overflow-y-auto">
-        <Outlet />
-      </main>
+      <Outlet />
 
       <Suspense fallback={null}>
-        <TanStackRouterDevtools
-          position="bottom-right"
-          toggleButtonProps={{ style: { bottom: '70px' } }}
-          closeButtonProps={{ style: { bottom: '70px' } }}
-        />
+        <TanStackRouterDevtools position="bottom-right" />
       </Suspense>
     </div>
   );

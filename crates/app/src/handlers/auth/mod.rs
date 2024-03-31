@@ -112,7 +112,7 @@ pub async fn register(
             let mut conn = redis_pool.get().await.unwrap();
             redis::cmd("SETEX")
                 .arg(format!("verification:{}", verification_token))
-                .arg(Duration::hours(1).num_seconds())
+                .arg(Duration::try_hours(1).unwrap().num_seconds())
                 .arg(user.id.clone())
                 .query_async(&mut conn)
                 .await
@@ -331,7 +331,7 @@ pub async fn resend_verification(
     let mut conn = redis_pool.get().await.unwrap();
     redis::cmd("SETEX")
         .arg(format!("verification:{}", verification_token))
-        .arg(Duration::hours(1).num_seconds())
+        .arg(Duration::try_hours(1).unwrap().num_seconds())
         .arg(user.id.clone())
         .query_async(&mut conn)
         .await
