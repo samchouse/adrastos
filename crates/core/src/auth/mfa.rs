@@ -9,15 +9,16 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use totp_rs::{Algorithm, Secret, TOTP};
 
 use crate::{
-    entities::{UpdateUser, User},
+    db::postgres::Database,
+    entities::{AnyUser, Project, UpdateAnyUser, UserType},
     error::Error,
 };
 
-pub enum VerificationMethod {
+pub enum VerificationMethod<'a> {
     Code,
     All {
-        user: Box<User>,
-        db_pool: web::Data<deadpool_postgres::Pool>,
+        db: &'a Database,
+        user: Box<AnyUser>,
     },
 }
 
@@ -29,7 +30,7 @@ pub struct BackupCodes {
 }
 
 impl Mfa {
-    pub fn new(secret: Secret, account_name: String) -> Self {
+    pub fn new(secret: Secret, account_name: String, project: &Option<Project>) -> Self {
         Self(
             TOTP::new(
                 Algorithm::SHA1,
@@ -37,7 +38,12 @@ impl Mfa {
                 1,
                 30,
                 secret.to_bytes().unwrap(),
-                Some("Adrastos".to_string()), // TODO(@Xenfo): Change to project name depending on config
+                Some(
+                    project
+                        .as_ref()
+                        .map(|p| p.name.clone())
+                        .unwrap_or("Adrastos".to_string()),
+                ),
                 account_name,
             )
             .unwrap(),
@@ -98,13 +104,13 @@ impl Mfa {
         })
     }
 
-    pub async fn verify(&self, code: &str, method: VerificationMethod) -> Result<bool, Error> {
-        if let VerificationMethod::All { user, db_pool } = method {
+    pub async fn verify(&self, code: &str, method: VerificationMethod<'_>) -> Result<bool, Error> {
+        if let VerificationMethod::All { user, db } = method {
             if code.len() == 10 && code.chars().all(char::is_alphanumeric) {
                 let block_user = user.clone();
                 let block_code = code.to_string();
                 let backup_code_index = web::block(move || {
-                    return block_user
+                    block_user
                         .mfa_backup_codes
                         .clone()
                         .unwrap()
@@ -116,7 +122,7 @@ impl Mfa {
                                     &PasswordHash::new(b_code.as_str()).unwrap(),
                                 )
                                 .is_ok()
-                        });
+                        })
                 })
                 .await
                 .map_err(|_| {
@@ -129,19 +135,20 @@ impl Mfa {
                     let mut backup_codes = user.mfa_backup_codes.clone().unwrap();
                     backup_codes.remove(backup_code_index);
 
-                    user.update(
-                        &db_pool,
-                        UpdateUser {
-                            mfa_backup_codes: Some(Some(backup_codes)),
-                            ..Default::default()
-                        },
-                    )
-                    .await
-                    .map_err(|_| {
-                        Error::InternalServerError(
-                            "An error occurred while updating the user".into(),
+                    UserType::from(db)
+                        .update(
+                            *user,
+                            UpdateAnyUser {
+                                mfa_backup_codes: Some(Some(backup_codes)),
+                                ..Default::default()
+                            },
                         )
-                    })?;
+                        .await
+                        .map_err(|_| {
+                            Error::InternalServerError(
+                                "An error occurred while updating the user".into(),
+                            )
+                        })?;
 
                     return Ok(true);
                 }

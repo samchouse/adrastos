@@ -4,12 +4,13 @@ use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
     config,
-    entities::{UpdateUser, User},
+    db::postgres::Database,
+    entities::{AnyUser, UpdateUser, User, UserType},
     error::Error,
     id::Id,
     util,
 };
-use tokio::{sync::Mutex, time::timeout};
+use tokio::{sync::RwLock, time::timeout};
 
 use actix_web::{
     cookie::{Cookie, SameSite},
@@ -25,7 +26,13 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use tracing::{error, warn};
 
-use crate::{middleware::user::RequiredUser, session::SessionKey};
+use crate::{
+    middleware::{
+        database::ProjectDatabase,
+        user::{RequiredAnyUser, RequiredUser},
+    },
+    session::SessionKey,
+};
 
 pub mod mfa;
 pub mod oauth2;
@@ -39,7 +46,7 @@ pub struct VerifyParams {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SignupBody {
+pub struct RegisterBody {
     first_name: String,
     last_name: String,
     email: String,
@@ -53,11 +60,11 @@ pub struct LoginBody {
     password: String,
 }
 
-#[post("/signup")]
-pub async fn signup(
-    body: web::Json<SignupBody>,
-    config: web::Data<Mutex<config::Config>>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
+#[post("/register")]
+pub async fn register(
+    db: Database,
+    body: web::Json<RegisterBody>,
+    config: web::Data<RwLock<config::Config>>,
     redis_pool: web::Data<deadpool_redis::Pool>,
     mailer: web::Data<Option<AsyncSmtpTransport<Tokio1Executor>>>,
 ) -> actix_web::Result<impl Responder, Error> {
@@ -65,25 +72,27 @@ pub async fn signup(
         return Err(Error::BadRequest("Invalid email".into()));
     }
 
-    if User::find()
+    if UserType::from(&db)
+        .find()
         .by_email(body.email.clone())
-        .one(&db_pool)
+        .one()
         .await
         .is_ok()
     {
         return Err(Error::BadRequest("Email already in use".into()));
     }
 
-    if User::find()
+    if UserType::from(&db)
+        .find()
         .by_username(body.username.clone())
-        .one(&db_pool)
+        .one()
         .await
         .is_ok()
     {
         return Err(Error::BadRequest("Username already in use".into()));
     }
 
-    let user = User {
+    let user = AnyUser {
         id: Id::new().to_string(),
         first_name: body.first_name.clone(),
         last_name: body.last_name.clone(),
@@ -94,67 +103,69 @@ pub async fn signup(
         ..Default::default()
     };
 
-    user.create(&db_pool).await?;
+    UserType::from(&db).create(user.clone()).await?;
 
-    if let Some(mailer) = mailer.get_ref() {
-        let verification_token = Id::new().to_string();
+    if let UserType::Normal(_) = UserType::from(&db) {
+        if let Some(mailer) = mailer.get_ref() {
+            let verification_token = Id::new().to_string();
 
-        let mut conn = redis_pool.get().await.unwrap();
-        redis::cmd("SETEX")
-            .arg(format!("verification:{}", verification_token))
-            .arg(Duration::hours(1).num_seconds())
-            .arg(user.id.clone())
-            .query_async(&mut conn)
-            .await
-            .map_err(|_| {
-                Error::InternalServerError(
-                    "An error ocurred while saving verification token to Redis".into(),
-                )
-            })?;
+            let mut conn = redis_pool.get().await.unwrap();
+            redis::cmd("SETEX")
+                .arg(format!("verification:{}", verification_token))
+                .arg(Duration::hours(1).num_seconds())
+                .arg(user.id.clone())
+                .query_async(&mut conn)
+                .await
+                .map_err(|_| {
+                    Error::InternalServerError(
+                        "An error ocurred while saving verification token to Redis".into(),
+                    )
+                })?;
 
-        let mut conn = redis::Client::open(config.lock().await.redis_url.clone())
-            .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
-            .get_async_connection()
-            .await
-            .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?;
-        conn.publish::<_, _, ()>("emails", verification_token)
-            .await
-            .unwrap();
-
-        let mut pubsub = conn.into_pubsub();
-        pubsub.subscribe("html").await.map_err(|_| {
-            Error::InternalServerError("An error occurred while subscribing to Redis".into())
-        })?;
-
-        let mut stream = pubsub.on_message();
-        if let Ok(Some(msg)) = timeout(time::Duration::from_secs(3), stream.next()).await {
-            drop(stream);
-            pubsub.unsubscribe("html").await.map_err(|_| {
-                Error::InternalServerError(
-                    "An error occurred while unsubscribing from Redis".into(),
-                )
-            })?;
-
-            let html = msg.get_payload::<String>().unwrap();
-            let message = Message::builder()
-                .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
-                .to(format!("<{}>", body.email).parse().unwrap())
-                .subject("Verify Your Email")
-                .header(ContentType::TEXT_HTML)
-                .body(html)
+            let mut conn = redis::Client::open(config.read().await.redis_url.clone())
+                .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
+                .get_async_connection()
+                .await
+                .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?;
+            conn.publish::<_, _, ()>("emails", verification_token)
+                .await
                 .unwrap();
 
-            mailer.send(message).await.map_err(|_| {
-                Error::InternalServerError(
-                    "An error occurred while sending the verification email".into(),
-                )
+            let mut pubsub = conn.into_pubsub();
+            pubsub.subscribe("html").await.map_err(|_| {
+                Error::InternalServerError("An error occurred while subscribing to Redis".into())
             })?;
-        } else {
-            warn!(
-                user.id,
-                "Redis timed out while waiting for verification email"
-            );
-        };
+
+            let mut stream = pubsub.on_message();
+            if let Ok(Some(msg)) = timeout(time::Duration::from_secs(3), stream.next()).await {
+                drop(stream);
+                pubsub.unsubscribe("html").await.map_err(|_| {
+                    Error::InternalServerError(
+                        "An error occurred while unsubscribing from Redis".into(),
+                    )
+                })?;
+
+                let html = msg.get_payload::<String>().unwrap();
+                let message = Message::builder()
+                    .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
+                    .to(format!("<{}>", body.email).parse().unwrap())
+                    .subject("Verify Your Email")
+                    .header(ContentType::TEXT_HTML)
+                    .body(html)
+                    .unwrap();
+
+                mailer.send(message).await.map_err(|_| {
+                    Error::InternalServerError(
+                        "An error occurred while sending the verification email".into(),
+                    )
+                })?;
+            } else {
+                warn!(
+                    user.id,
+                    "Redis timed out while waiting for verification email"
+                );
+            };
+        }
     }
 
     Ok(HttpResponse::Ok().json(user))
@@ -163,13 +174,14 @@ pub async fn signup(
 #[post("/login")]
 pub async fn login(
     session: Session,
+    db: Database,
     body: web::Json<LoginBody>,
-    config: web::Data<Mutex<config::Config>>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
+    config: web::Data<RwLock<config::Config>>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let user = User::find()
+    let user = UserType::from(&db)
+        .find()
         .by_email(body.email.clone())
-        .one(&db_pool)
+        .one()
         .await?;
 
     let is_valid = auth::verify_password(body.password.as_str(), &user.password)
@@ -198,7 +210,7 @@ pub async fn login(
         })));
     }
 
-    let auth = auth::authenticate(&db_pool, &config.lock().await.clone(), &user).await?;
+    let auth = auth::authenticate(&db, &config.read().await.clone(), &user).await?;
     Ok(HttpResponse::Ok()
         .cookie(auth.cookie.clone())
         .cookie(
@@ -215,14 +227,14 @@ pub async fn login(
 
 #[get("/logout")]
 pub async fn logout(
+    db: Database,
     req: HttpRequest,
-    user: RequiredUser,
-    config: web::Data<Mutex<config::Config>>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
+    user: RequiredAnyUser,
+    config: web::Data<RwLock<config::Config>>,
 ) -> actix_web::Result<impl Responder, Error> {
     let mut cookies = util::get_auth_cookies(&req)?;
     let refresh_token = auth::TokenType::verify(
-        &config.lock().await.clone(),
+        &config.read().await.clone(),
         cookies.refresh_token.value().into(),
     )?;
     if refresh_token.token_type != TokenType::Refresh {
@@ -235,7 +247,7 @@ pub async fn logout(
         .into_iter()
         .find(|tree| tree.tokens.contains(&refresh_token.claims.jti))
         .ok_or_else(|| Error::Unauthorized)?
-        .delete(&db_pool)
+        .delete(&db)
         .await?;
 
     cookies.is_logged_in.make_removal();
@@ -249,23 +261,21 @@ pub async fn logout(
 #[get("/verify")]
 pub async fn verify(
     req: HttpRequest,
+    db: ProjectDatabase,
     params: web::Query<VerifyParams>,
-    config: web::Data<Mutex<config::Config>>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
+    config: web::Data<RwLock<config::Config>>,
     redis_pool: web::Data<deadpool_redis::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     // TODO(@Xenfo): make this middleware
     let refresh_token = auth::TokenType::verify(
-        &config.lock().await.clone(),
+        &config.read().await.clone(),
         util::get_auth_cookies(&req)?.refresh_token.value().into(),
     )?;
     if refresh_token.token_type != TokenType::Refresh {
         return Err(Error::Forbidden("Not a refresh token".into()));
     }
 
-    let user = User::find_by_id(&refresh_token.claims.sub)
-        .one(&db_pool)
-        .await?;
+    let user = User::find_by_id(&refresh_token.claims.sub).one(&db).await?;
 
     if user.verified {
         return Err(Error::BadRequest("User is already verified".into()));
@@ -287,7 +297,7 @@ pub async fn verify(
     }
 
     user.update(
-        &db_pool,
+        &db,
         UpdateUser {
             verified: Some(true),
             ..Default::default()
@@ -302,7 +312,7 @@ pub async fn verify(
 #[post("/resend-verification")]
 pub async fn resend_verification(
     user: RequiredUser,
-    config: web::Data<Mutex<config::Config>>,
+    config: web::Data<RwLock<config::Config>>,
     redis_pool: web::Data<deadpool_redis::Pool>,
     mailer: web::Data<Option<AsyncSmtpTransport<Tokio1Executor>>>,
 ) -> actix_web::Result<impl Responder, Error> {
@@ -331,7 +341,7 @@ pub async fn resend_verification(
             )
         })?;
 
-    let mut conn = redis::Client::open(config.lock().await.redis_url.clone())
+    let mut conn = redis::Client::open(config.read().await.redis_url.clone())
         .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
         .get_async_connection()
         .await

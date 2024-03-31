@@ -12,7 +12,7 @@ use oauth2::{
 };
 use secrecy::ExposeSecret;
 use serde::{de::DeserializeOwned, Deserialize};
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 use crate::config;
 
@@ -154,7 +154,7 @@ impl OAuth2 {
     pub async fn confirm_login(
         &self,
         provider: OAuth2Provider,
-        config: &Mutex<config::Config>,
+        config: &RwLock<config::Config>,
         redis_pool: &deadpool_redis::Pool,
         security_info: OAuth2LoginInfo,
     ) -> Result<StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>, String> {
@@ -199,7 +199,7 @@ impl OAuth2 {
                         token.access_token().secret(),
                         client.client_id().as_str(),
                         config
-                            .lock()
+                            .read()
                             .await
                             .facebook_client_secret
                             .as_ref()

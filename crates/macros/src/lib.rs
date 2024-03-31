@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 
-mod attributes;
+mod attribute_parser;
 mod derive;
 mod types;
 

@@ -1,23 +1,32 @@
 // TODO(@Xenfo): use `*Iden::Table` instead of Alias::new() once https://github.com/SeaQL/sea-query/issues/533 is fixed
 
+use chrono::Utc;
 use sea_query::{IntoIden, PostgresQueryBuilder, SimpleExpr};
 use secrecy::ExposeSecret;
 
-use crate::config::Config;
+use crate::{config::Config, db::postgres::DatabaseType, id::Id};
 
+pub use any_user::*;
 pub use connection::*;
 pub use passkey::*;
+pub use project::*;
 pub use refresh_token_tree::*;
 pub use system::*;
+pub use system_user::*;
+pub use team::*;
 pub use user::*;
 
 use self::custom_table::schema::CustomTableSchema;
 
+pub mod any_user;
 pub mod connection;
 pub mod custom_table;
 pub mod passkey;
+pub mod project;
 pub mod refresh_token_tree;
 pub mod system;
+pub mod system_user;
+pub mod team;
 pub mod user;
 
 #[derive(Debug, Clone)]
@@ -54,8 +63,8 @@ impl Update {
     }
 }
 
-pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
-    let conn = db_pool.get().await.unwrap();
+pub async fn init(db_type: &DatabaseType, db: &deadpool_postgres::Pool, config: &Config) {
+    let conn = db.get().await.unwrap();
 
     let query = conn
         .query(
@@ -69,78 +78,106 @@ pub async fn init(db_pool: &deadpool_postgres::Pool, config: &Config) {
         return;
     }
 
-    let inits = vec![
-        System::init(),
-        User::init(),
-        Connection::init(),
-        RefreshTokenTree::init(),
-        CustomTableSchema::init(),
-        Passkey::init(),
-    ];
+    let inits = match db_type {
+        DatabaseType::System => {
+            vec![
+                System::init(),
+                SystemUser::init(),
+                Team::init(),
+                Project::init(),
+                Connection::init(),
+                Passkey::init(),
+                RefreshTokenTree::init(),
+            ]
+        }
+        DatabaseType::Project(_) => {
+            vec![
+                System::init(),
+                User::init(),
+                Connection::init(),
+                RefreshTokenTree::init(),
+                CustomTableSchema::init(),
+                Passkey::init(),
+            ]
+        }
+    };
     for init in inits {
         conn.execute(&init, &[]).await.unwrap();
     }
 
     let mut smtp_config = None;
-    if let Some(host) = config.smtp_host.clone() {
-        if let Some(port) = config.smtp_port {
-            if let Some(username) = config.smtp_username.clone() {
-                if let Some(password) = config.smtp_password.clone() {
-                    smtp_config = Some(SmtpConfig {
-                        host,
-                        port,
-                        username,
-                        password: password.expose_secret().to_string(),
-                        sender_name: "Adrastos".into(),
-                        sender_email: "no-reply@adrastos.example.com".into(),
-                    });
+    let mut google_config = None;
+    let mut facebook_config = None;
+    let mut github_config = None;
+    let mut twitter_config = None;
+    let mut discord_config = None;
+
+    if db_type == &DatabaseType::System {
+        Team {
+            id: Id::new().to_string(),
+            name: "Personal Projects".into(),
+            created_at: Utc::now(),
+            ..Default::default()
+        }
+        .create(db)
+        .await
+        .unwrap();
+
+        if let Some(host) = config.smtp_host.clone() {
+            if let Some(port) = config.smtp_port {
+                if let Some(username) = config.smtp_username.clone() {
+                    if let Some(password) = config.smtp_password.clone() {
+                        smtp_config = Some(SmtpConfig {
+                            host,
+                            port,
+                            username,
+                            password: password.expose_secret().to_string(),
+                            sender_name: "Adrastos".into(),
+                            sender_email: "no-reply@adrastos.example.com".into(),
+                        });
+                    }
                 }
             }
         }
-    }
-    let mut google_config = None;
-    if let Some(client_id) = config.google_client_id.clone() {
-        if let Some(client_secret) = config.google_client_secret.clone() {
-            google_config = Some(OAuth2Config {
-                client_id,
-                client_secret: client_secret.expose_secret().to_string(),
-            });
+        if let Some(client_id) = config.google_client_id.clone() {
+            if let Some(client_secret) = config.google_client_secret.clone() {
+                google_config = Some(OAuth2Config {
+                    client_id,
+                    client_secret: client_secret.expose_secret().to_string(),
+                });
+            }
         }
-    }
-    let mut facebook_config = None;
-    if let Some(client_id) = config.facebook_client_id.clone() {
-        if let Some(client_secret) = config.facebook_client_secret.clone() {
-            facebook_config = Some(OAuth2Config {
-                client_id,
-                client_secret: client_secret.expose_secret().to_string(),
-            });
+        if let Some(client_id) = config.facebook_client_id.clone() {
+            if let Some(client_secret) = config.facebook_client_secret.clone() {
+                facebook_config = Some(OAuth2Config {
+                    client_id,
+                    client_secret: client_secret.expose_secret().to_string(),
+                });
+            }
         }
-    }
-    let mut github_config = None;
-    if let Some(client_id) = config.github_client_id.clone() {
-        if let Some(client_secret) = config.github_client_secret.clone() {
-            github_config = Some(OAuth2Config {
-                client_id,
-                client_secret: client_secret.expose_secret().to_string(),
-            });
+        if let Some(client_id) = config.github_client_id.clone() {
+            if let Some(client_secret) = config.github_client_secret.clone() {
+                github_config = Some(OAuth2Config {
+                    client_id,
+                    client_secret: client_secret.expose_secret().to_string(),
+                });
+            }
         }
-    }
-    let mut twitter_config = None;
-    if let Some(client_id) = config.twitter_client_id.clone() {
-        if let Some(client_secret) = config.twitter_client_secret.clone() {
-            twitter_config = Some(OAuth2Config {
-                client_id,
-                client_secret: client_secret.expose_secret().to_string(),
-            });
+        if let Some(client_id) = config.twitter_client_id.clone() {
+            if let Some(client_secret) = config.twitter_client_secret.clone() {
+                twitter_config = Some(OAuth2Config {
+                    client_id,
+                    client_secret: client_secret.expose_secret().to_string(),
+                });
+            }
         }
-    }
-    let mut discord_config = None;
-    if let Some(client_id) = config.discord_client_id.clone() {
-        if let Some(client_secret) = config.discord_client_secret.clone() {
-            discord_config = Some(OAuth2Config {
-                client_id,
-                client_secret: client_secret.expose_secret().to_string(),
-            });
+        if let Some(client_id) = config.discord_client_id.clone() {
+            if let Some(client_secret) = config.discord_client_secret.clone() {
+                discord_config = Some(OAuth2Config {
+                    client_id,
+                    client_secret: client_secret.expose_secret().to_string(),
+                });
+            }
         }
     }
 

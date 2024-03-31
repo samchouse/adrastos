@@ -159,7 +159,7 @@ impl CustomTableSelectBuilder {
 
     pub async fn finish(
         &mut self,
-        db_pool: &deadpool_postgres::Pool,
+        db: &deadpool_postgres::Pool,
     ) -> Result<serde_json::Value, Error> {
         let query = if self.is_count {
             self.query_builder.to_string(PostgresQueryBuilder)
@@ -170,7 +170,7 @@ impl CustomTableSelectBuilder {
             )
         };
 
-        let row = db_pool
+        let row = db
             .get()
             .await
             .unwrap()

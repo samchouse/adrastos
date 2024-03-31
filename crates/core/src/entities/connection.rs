@@ -1,6 +1,6 @@
 use adrastos_macros::{DbCommon, DbQuery, DbSelect};
 use chrono::{DateTime, Utc};
-use sea_query::{enum_def, Alias, Expr};
+use sea_query::enum_def;
 use serde::{Deserialize, Serialize};
 
 use super::User;

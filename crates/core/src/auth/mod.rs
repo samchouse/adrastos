@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     config::{self, Config},
-    entities::{RefreshTokenTree, User},
+    entities::{AnyUser, RefreshTokenTree},
     error::Error,
     id::Id,
 };
@@ -78,9 +78,9 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, password_hash
 }
 
 pub async fn authenticate(
-    db_pool: &deadpool_postgres::Pool,
+    db: &deadpool_postgres::Pool,
     config: &Config,
-    user: &User,
+    user: &AnyUser,
 ) -> Result<Authentication, Error> {
     let access_token = TokenType::Access.sign(config, user).map_err(|_| {
         Error::InternalServerError("An error occurred while signing the access token".into())
@@ -99,7 +99,7 @@ pub async fn authenticate(
         updated_at: None,
     };
 
-    refresh_token_tree.create(db_pool).await?;
+    refresh_token_tree.create(db).await?;
 
     let cookie_expiration = OffsetDateTime::from_unix_timestamp(
         refresh_token.expires_at.timestamp(),
@@ -123,7 +123,7 @@ pub async fn authenticate(
 }
 
 impl TokenType {
-    pub fn sign(&self, config: &config::Config, user: &User) -> Result<TokenInfo, Error> {
+    pub fn sign(&self, config: &config::Config, user: &AnyUser) -> Result<TokenInfo, Error> {
         let expires_at = match self {
             TokenType::Access => Utc::now() + Duration::minutes(15),
             TokenType::Refresh => Utc::now() + Duration::days(15),

@@ -1,109 +1,7 @@
-// TODO(@Xenfo): add admin only middleware
+use std::future::{ready, Ready};
 
-use std::{
-    future::{ready, Ready},
-    rc::Rc,
-};
-
-use actix_web::{
-    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    http::header::Header,
-    web, Error, FromRequest, HttpMessage,
-};
-use actix_web_httpauth::headers::authorization::{Authorization, Bearer};
-use adrastos_core::{
-    auth::TokenType,
-    config,
-    entities::{self, UserJoin},
-};
-use futures_util::future::LocalBoxFuture;
-use serde::Deserialize;
-
-#[derive(Deserialize, Debug)]
-struct ReqParams {
-    auth: Option<String>,
-}
-
-pub struct GetUser {
-    pub config: config::Config,
-    pub db_pool: deadpool_postgres::Pool,
-}
-
-impl<S, B> Transform<S, ServiceRequest> for GetUser
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    S::Future: 'static,
-    B: 'static,
-{
-    type Response = ServiceResponse<B>;
-    type Error = Error;
-    type InitError = ();
-    type Transform = GetUserMiddleware<S>;
-    type Future = Ready<Result<Self::Transform, Self::InitError>>;
-
-    fn new_transform(&self, service: S) -> Self::Future {
-        ready(Ok(GetUserMiddleware {
-            service: Rc::new(service),
-            config: self.config.clone(),
-            db_pool: self.db_pool.clone(),
-        }))
-    }
-}
-
-pub struct GetUserMiddleware<S> {
-    service: Rc<S>,
-    config: config::Config,
-    db_pool: deadpool_postgres::Pool,
-}
-
-impl<S, B> Service<ServiceRequest> for GetUserMiddleware<S>
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    S::Future: 'static,
-    B: 'static,
-{
-    type Response = ServiceResponse<B>;
-    type Error = Error;
-    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
-
-    forward_ready!(service);
-
-    fn call(&self, mut req: ServiceRequest) -> Self::Future {
-        let config = self.config.clone();
-        let service = self.service.clone();
-        let db_pool = self.db_pool.clone();
-        let authorization = Authorization::<Bearer>::parse(&req);
-
-        Box::pin(async move {
-            let authorization = authorization
-                .ok()
-                .map(|a| a.into_scheme().token().to_owned())
-                .or(req
-                    .extract::<web::Query<ReqParams>>() // TODO(@Xenfo): should mark this token as used in the database
-                    .await
-                    .map(|q| q.auth.clone())
-                    .ok()
-                    .flatten());
-
-            if let Some(token) = authorization {
-                if let Ok(access_token) = TokenType::verify(&config, token) {
-                    let user = entities::User::find_by_id(&access_token.claims.sub)
-                        .join(UserJoin::Connections)
-                        .join(UserJoin::RefreshTokenTrees)
-                        .join(UserJoin::Passkeys)
-                        .one(&db_pool)
-                        .await;
-                    if let Ok(user) = user {
-                        req.extensions_mut().insert::<entities::User>(user);
-                    }
-                }
-            }
-
-            let res = service.call(req).await?;
-            Ok(res)
-        })
-    }
-}
+use actix_web::{Error, FromRequest, HttpMessage};
+use adrastos_core::{db::postgres::DatabaseType, entities};
 
 pub struct User(Option<entities::User>);
 
@@ -112,13 +10,27 @@ impl FromRequest for User {
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
-        let value = req.extensions().get::<entities::User>().cloned();
-        let result = match value {
-            Some(v) => Ok(User(Some(v))),
-            None => Ok(User(None)),
+        let result = match req
+            .extensions()
+            .get::<(std::sync::Arc<deadpool_postgres::Pool>, DatabaseType)>()
+            .cloned()
+        {
+            Some((_, db_type)) => match db_type {
+                DatabaseType::Project(_) => match req.extensions().get::<entities::User>().cloned()
+                {
+                    Some(v) => Ok(User(Some(v))),
+                    None => Ok(User(None)),
+                },
+                _ => Err(adrastos_core::error::Error::BadRequest(
+                    "Missing project ID".into(),
+                )),
+            },
+            None => Err(adrastos_core::error::Error::BadRequest(
+                "Invalid project ID".into(),
+            )),
         };
 
-        ready(result)
+        ready(result.map_err(|e| e.into()))
     }
 }
 
@@ -137,9 +49,121 @@ impl FromRequest for RequiredUser {
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
-        let value = req.extensions().get::<entities::User>().cloned();
+        let result = match req
+            .extensions()
+            .get::<(std::sync::Arc<deadpool_postgres::Pool>, DatabaseType)>()
+            .cloned()
+        {
+            Some((_, db_type)) => match db_type {
+                DatabaseType::Project(_) => match req.extensions().get::<entities::User>().cloned()
+                {
+                    Some(v) => Ok(RequiredUser(v)),
+                    None => Err(adrastos_core::error::Error::Unauthorized),
+                },
+                _ => Err(adrastos_core::error::Error::BadRequest(
+                    "Missing project ID".into(),
+                )),
+            },
+            None => Err(adrastos_core::error::Error::BadRequest(
+                "Invalid project ID".into(),
+            )),
+        };
+
+        ready(result.map_err(|e| e.into()))
+    }
+}
+
+impl std::ops::Deref for RequiredUser {
+    type Target = entities::User;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub struct SystemUser(Option<entities::SystemUser>);
+
+impl FromRequest for SystemUser {
+    type Error = Error;
+    type Future = Ready<Result<Self, Self::Error>>;
+
+    fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
+        ready(Ok(req
+            .extensions()
+            .get::<entities::SystemUser>()
+            .cloned()
+            .map(|v| SystemUser(Some(v)))
+            .unwrap_or(SystemUser(None))))
+    }
+}
+
+impl std::ops::Deref for SystemUser {
+    type Target = Option<entities::SystemUser>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub struct RequiredSystemUser(entities::SystemUser);
+
+impl FromRequest for RequiredSystemUser {
+    type Error = Error;
+    type Future = Ready<Result<Self, Self::Error>>;
+
+    fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
+        let result = match req.extensions().get::<entities::SystemUser>().cloned() {
+            Some(v) => Ok(RequiredSystemUser(v)),
+            None => Err(adrastos_core::error::Error::Unauthorized),
+        };
+
+        ready(result.map_err(|e| e.into()))
+    }
+}
+
+impl std::ops::Deref for RequiredSystemUser {
+    type Target = entities::SystemUser;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub struct AnyUser(Option<entities::AnyUser>);
+
+impl FromRequest for AnyUser {
+    type Error = Error;
+    type Future = Ready<Result<Self, Self::Error>>;
+
+    fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
+        let value = req.extensions().get::<entities::AnyUser>().cloned();
         let result = match value {
-            Some(v) => Ok(RequiredUser(v)),
+            Some(v) => Ok(AnyUser(Some(v))),
+            None => Ok(AnyUser(None)),
+        };
+
+        ready(result)
+    }
+}
+
+impl std::ops::Deref for AnyUser {
+    type Target = Option<entities::AnyUser>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub struct RequiredAnyUser(entities::AnyUser);
+
+impl FromRequest for RequiredAnyUser {
+    type Error = Error;
+    type Future = Ready<Result<Self, Self::Error>>;
+
+    fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
+        let value = req.extensions().get::<entities::AnyUser>().cloned();
+        let result = match value {
+            Some(v) => Ok(RequiredAnyUser(v)),
             None => Err(adrastos_core::error::Error::Unauthorized.into()),
         };
 
@@ -147,8 +171,8 @@ impl FromRequest for RequiredUser {
     }
 }
 
-impl std::ops::Deref for RequiredUser {
-    type Target = entities::User;
+impl std::ops::Deref for RequiredAnyUser {
+    type Target = entities::AnyUser;
 
     fn deref(&self) -> &Self::Target {
         &self.0

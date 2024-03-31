@@ -17,7 +17,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use utoipa::ToSchema;
 
-use crate::middleware::user::RequiredUser;
+use crate::middleware::{database::ProjectDatabase, user::RequiredAnyUser};
 
 pub mod custom;
 
@@ -52,19 +52,19 @@ pub struct UpdateBody {
 
 #[get("/list")]
 pub async fn list(
-    _: RequiredUser,
-    db_pool: web::Data<deadpool_postgres::Pool>,
+    _: RequiredAnyUser,
+    db: ProjectDatabase,
 ) -> actix_web::Result<impl Responder, Error> {
-    let tables = CustomTableSchema::find().all(&db_pool).await?;
+    let tables = CustomTableSchema::find().all(&db).await?;
     Ok(HttpResponse::Ok().json(tables))
 }
 
 #[utoipa::path(path = "/tables")]
 #[post("/create")]
 pub async fn create(
-    _: RequiredUser,
+    _: RequiredAnyUser,
+    db: ProjectDatabase,
     body: web::Json<CreateBody>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let body = body.into_inner();
 
@@ -85,7 +85,7 @@ pub async fn create(
 
     let found_table = CustomTableSchema::find()
         .by_name(custom_table.name.clone())
-        .one(&db_pool)
+        .one(&db)
         .await;
     if found_table.is_ok() {
         return Err(Error::BadRequest(
@@ -93,8 +93,7 @@ pub async fn create(
         ));
     }
 
-    db_pool
-        .get()
+    db.get()
         .await
         .unwrap()
         .execute(
@@ -131,11 +130,10 @@ pub async fn create(
             }
         })?;
 
-    custom_table.create(&db_pool).await?;
+    custom_table.create(&db).await?;
 
     for query in ManyToManyRelationTable::create_queries(&custom_table) {
-        db_pool
-            .get()
+        db.get()
             .await
             .unwrap()
             .execute(query.to_string(PostgresQueryBuilder).as_str(), &[])
@@ -148,16 +146,16 @@ pub async fn create(
 
 #[patch("/update/{name}")]
 pub async fn update(
-    _: RequiredUser,
+    _: RequiredAnyUser,
+    db: ProjectDatabase,
     path: web::Path<String>,
     body: web::Json<UpdateBody>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let body = body.into_inner();
 
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
-        .one(&db_pool)
+        .one(&db)
         .await?;
 
     let mut alter_query = Table::alter();
@@ -169,7 +167,7 @@ pub async fn update(
         if name != custom_table.name {
             let found_table = CustomTableSchema::find()
                 .by_name(name.clone())
-                .one(&db_pool)
+                .one(&db)
                 .await;
             if found_table.is_ok() {
                 return Err(Error::BadRequest(
@@ -217,10 +215,9 @@ pub async fn update(
         update.fields = Some(updated_fields);
     }
 
-    custom_table.update(&db_pool, update.clone()).await?;
+    custom_table.update(&db, update.clone()).await?;
 
-    db_pool
-        .get()
+    db.get()
         .await
         .unwrap()
         .execute(
@@ -234,8 +231,7 @@ pub async fn update(
         .unwrap();
 
     if let Some(name) = update.name {
-        db_pool
-            .get()
+        db.get()
             .await
             .unwrap()
             .execute(
@@ -251,7 +247,7 @@ pub async fn update(
 
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
-        .one(&db_pool)
+        .one(&db)
         .await?;
 
     Ok(HttpResponse::Ok().json(custom_table))
@@ -259,19 +255,18 @@ pub async fn update(
 
 #[delete("/delete/{name}")]
 pub async fn delete(
-    _: RequiredUser,
+    _: RequiredAnyUser,
+    db: ProjectDatabase,
     path: web::Path<String>,
-    db_pool: web::Data<deadpool_postgres::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
-        .one(&db_pool)
+        .one(&db)
         .await?;
 
-    custom_table.delete(&db_pool).await?;
+    custom_table.delete(&db).await?;
 
-    db_pool
-        .get()
+    db.get()
         .await
         .unwrap()
         .execute(

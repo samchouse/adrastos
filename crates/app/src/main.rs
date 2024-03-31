@@ -1,13 +1,15 @@
 #![feature(let_chains)]
 
-use actix_cors::Cors;
 use actix_session::{storage::RedisSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, error::InternalError, web, App, HttpResponse, HttpServer};
 use adrastos_core::{
     auth::oauth2::OAuth2,
     config::Config,
-    db::{postgres, redis},
-    entities::{self, System},
+    db::{
+        postgres::{DatabaseType, Databases},
+        redis,
+    },
+    entities::System,
     migrations::Migrations,
 };
 use clap::Parser;
@@ -21,7 +23,7 @@ use sea_query::PostgresQueryBuilder;
 use secrecy::ExposeSecret;
 use serde_json::json;
 use std::{fs::File, io::BufReader, process};
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tracing::{error, info};
 use tracing_actix_web::TracingLogger;
 use tracing_unwrap::{OptionExt, ResultExt};
@@ -46,13 +48,15 @@ async fn main() -> std::io::Result<()> {
 
     let _sentry_guard = telemetry::init_sentry(&config);
 
-    let db_pool = postgres::create_pool(&config);
-    entities::init(&db_pool, &config).await;
+    let databases = std::sync::Arc::new(Databases::new());
+    let inner_databases = databases.clone();
+    let db = databases.get(&DatabaseType::System, &config).await;
 
     {
-        let conn = db_pool.get().await.unwrap_or_log();
         config.attach_system(
-            &conn
+            &db.get()
+                .await
+                .unwrap_or_log()
                 .query(&System::get(), &[])
                 .await
                 .unwrap_or_log()
@@ -65,7 +69,7 @@ async fn main() -> std::io::Result<()> {
 
     let cli = Cli::parse();
     if cli.command == Some(Command::Migrate) {
-        let conn = db_pool.get().await.unwrap_or_log();
+        let conn = db.get().await.unwrap_or_log();
 
         let migrations = Migrations::all_from(&config.previous_version);
         for migration in &migrations {
@@ -95,24 +99,19 @@ async fn main() -> std::io::Result<()> {
             .wrap(TracingLogger::default())
             .wrap(sentry_actix::Sentry::new())
             .wrap(actix_web::middleware::NormalizePath::trim())
-            .wrap(middleware::user::GetUser {
+            .wrap(middleware::Config {
                 config: config.clone(),
-                db_pool: db_pool.clone(),
+                databases: inner_databases.clone(),
+            })
+            .wrap(middleware::Cors {
+                config: config.clone(),
             })
             .wrap(SessionMiddleware::new(
                 store.clone(),
                 Key::from(config.secret_key.expose_secret().as_bytes()),
             ))
-            .wrap(
-                Cors::default()
-                    .allow_any_origin()
-                    .allow_any_method()
-                    .allow_any_header()
-                    .supports_credentials(),
-            )
-            .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(OAuth2::new(&config)))
-            .app_data(web::Data::new(Mutex::new(config.clone())))
+            .app_data(web::Data::new(RwLock::new(config.clone())))
             .app_data(web::Data::new(redis::create_pool(&config)))
             .app_data(web::JsonConfig::default().error_handler(|err, _| {
                 let err_string = err.to_string();
@@ -155,7 +154,7 @@ async fn main() -> std::io::Result<()> {
                     .service(
                         web::scope("/auth")
                             .service((
-                                handlers::auth::signup,
+                                handlers::auth::register,
                                 handlers::auth::login,
                                 handlers::auth::logout,
                                 handlers::auth::verify,
@@ -202,6 +201,20 @@ async fn main() -> std::io::Result<()> {
                                 handlers::tables::custom::create,
                                 handlers::tables::custom::update,
                                 handlers::tables::custom::delete,
+                            ))),
+                    )
+                    .service(
+                        web::scope("/teams")
+                            .service((
+                                handlers::teams::list,
+                                handlers::teams::create,
+                                handlers::teams::delete,
+                                handlers::teams::projects::get
+                            ))
+                            .service(web::scope("/{team_id}/projects").service((
+                                handlers::teams::projects::list,
+                                handlers::teams::projects::create,
+                                handlers::teams::projects::delete,
                             ))),
                     ),
             )
@@ -250,7 +263,11 @@ async fn main() -> std::io::Result<()> {
     }?
     .run();
 
-    let (server, _) = tokio::join!(server, server_started(use_tls, &server_url));
+    let (server, _, _) = tokio::join!(
+        server,
+        server_started(use_tls, &server_url),
+        Databases::start_expiry_worker(databases)
+    );
 
     server
 }
