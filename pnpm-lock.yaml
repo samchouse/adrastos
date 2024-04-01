@@ -4,6 +4,14 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@icons-pack/react-simple-icons@9.4.0':
+    hash: qoimjvbmc6w3d6kcl6daxadxhm
+    path: patches/@icons-pack__react-simple-icons@9.4.0.patch
+  '@tanstack/react-query@5.28.9':
+    hash: 5iq6i2hdvhxxe3zsuvldhwlwcu
+    path: patches/@tanstack__react-query@5.28.9.patch
+
 importers:
 
   .:
@@ -67,7 +75,7 @@ importers:
         version: 3.3.4(react-hook-form@7.51.2)
       '@icons-pack/react-simple-icons':
         specifier: ^9.4.0
-        version: 9.4.0(react@18.2.0)
+        version: 9.4.0(patch_hash=qoimjvbmc6w3d6kcl6daxadxhm)(react@18.2.0)
       '@radix-ui/react-alert-dialog':
         specifier: ^1.0.5
         version: 1.0.5(@types/react-dom@18.2.23)(@types/react@18.2.73)(react-dom@18.2.0)(react@18.2.0)
@@ -115,7 +123,7 @@ importers:
         version: 9.0.1
       '@tanstack/react-query':
         specifier: ^5.28.9
-        version: 5.28.9(react@18.2.0)
+        version: 5.28.9(patch_hash=5iq6i2hdvhxxe3zsuvldhwlwcu)(react@18.2.0)
       '@tanstack/react-query-devtools':
         specifier: ^5.28.10
         version: 5.28.10(@tanstack/react-query@5.28.9)(react@18.2.0)
@@ -1347,13 +1355,14 @@ packages:
       - supports-color
     dev: true
 
-  /@icons-pack/react-simple-icons@9.4.0(react@18.2.0):
+  /@icons-pack/react-simple-icons@9.4.0(patch_hash=qoimjvbmc6w3d6kcl6daxadxhm)(react@18.2.0):
     resolution: {integrity: sha512-fZtC4Zv53hE+IQE2dJlFt3EB6UOifwTrUNMuEu4hSXemtqMahd05Dpvj2K0j2ewVc+j/ibavud3xjfaMB2Nj7g==}
     peerDependencies:
       react: ^16.13 || ^17 || ^18
     dependencies:
       react: 18.2.0
     dev: false
+    patched: true
 
   /@isaacs/cliui@8.0.2:
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -3056,11 +3065,11 @@ packages:
       react: ^18.0.0
     dependencies:
       '@tanstack/query-devtools': 5.28.10
-      '@tanstack/react-query': 5.28.9(react@18.2.0)
+      '@tanstack/react-query': 5.28.9(patch_hash=5iq6i2hdvhxxe3zsuvldhwlwcu)(react@18.2.0)
       react: 18.2.0
     dev: false
 
-  /@tanstack/react-query@5.28.9(react@18.2.0):
+  /@tanstack/react-query@5.28.9(patch_hash=5iq6i2hdvhxxe3zsuvldhwlwcu)(react@18.2.0):
     resolution: {integrity: sha512-vwifBkGXsydsLxFOBMe3+f8kvtDoqDRDwUNjPHVDDt+FoBetCbOWAUHgZn4k+CVeZgLmy7bx6aKeDbe3e8koOQ==}
     peerDependencies:
       react: ^18.0.0
@@ -3068,6 +3077,7 @@ packages:
       '@tanstack/query-core': 5.28.9
       react: 18.2.0
     dev: false
+    patched: true
 
   /@tanstack/react-router@1.26.1(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-k+qI37wFJWfF1n6kSQ1T70xsw+muxMGa2nDjaaYlsskjazYTOjWeoVN+Dk0LEGQIPgIHhhzUzRfoRaPMi/qq4Q==}

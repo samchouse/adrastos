@@ -1,0 +1,18 @@
+diff --git a/build/modern/useSuspenseQueries.d.ts b/build/modern/useSuspenseQueries.d.ts
+index 77b0cb610afab2221b643539f747fc9b7f4b666b..1ded008fb07d53f32da4d332e014a785aebd49a8 100644
+--- a/build/modern/useSuspenseQueries.d.ts
++++ b/build/modern/useSuspenseQueries.d.ts
+@@ -31,11 +31,11 @@ type GetSuspenseResults<T> = T extends {
+     data: infer TData;
+     error?: infer TError;
+ } ? UseSuspenseQueryResult<TData, TError> : T extends [any, infer TError, infer TData] ? UseSuspenseQueryResult<TData, TError> : T extends [infer TQueryFnData, infer TError] ? UseSuspenseQueryResult<TQueryFnData, TError> : T extends [infer TQueryFnData] ? UseSuspenseQueryResult<TQueryFnData> : T extends {
+-    queryFn?: QueryFunction<infer TQueryFnData, any>;
++    queryFn?: QueryFunction<infer TQueryFnData, any> | SkipToken;
+     select?: (data: any) => infer TData;
+     throwOnError?: ThrowOnError<any, infer TError, any, any>;
+ } ? UseSuspenseQueryResult<unknown extends TData ? TQueryFnData : TData, unknown extends TError ? DefaultError : TError> : T extends {
+-    queryFn?: QueryFunction<infer TQueryFnData, any>;
++    queryFn?: QueryFunction<infer TQueryFnData, any> | SkipToken;
+     throwOnError?: ThrowOnError<any, infer TError, any, any>;
+ } ? UseSuspenseQueryResult<TQueryFnData, unknown extends TError ? DefaultError : TError> : UseSuspenseQueryResult;
+ /**
