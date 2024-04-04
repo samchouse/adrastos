@@ -3,8 +3,7 @@ FROM node:alpine as builder
 RUN apk add curl
 
 WORKDIR /work
-COPY ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "patches", "./"]
-COPY ./packages/emails ./packages/emails
+COPY . .
 RUN corepack enable
 RUN pnpm install --filter @adrastos/emails --frozen-lockfile
 RUN pnpm --filter @adrastos/emails build
