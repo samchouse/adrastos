@@ -11,6 +11,7 @@ use adrastos_core::{
     },
     entities::System,
     migrations::Migrations,
+    s3::S3,
 };
 use clap::Parser;
 use cli::{Cli, Command};
@@ -94,6 +95,8 @@ async fn main() -> std::io::Result<()> {
         .await
         .unwrap_or_log();
 
+    let s3 = web::Data::new(S3::new(&config).await);
+
     let server = HttpServer::new(move || {
         App::new()
             .wrap(TracingLogger::default())
@@ -110,6 +113,7 @@ async fn main() -> std::io::Result<()> {
                 store.clone(),
                 Key::from(config.secret_key.expose_secret().as_bytes()),
             ))
+            .app_data(s3.clone())
             .app_data(web::Data::new(OAuth2::new(&config)))
             .app_data(web::Data::new(RwLock::new(config.clone())))
             .app_data(web::Data::new(redis::create_pool(&config)))
@@ -216,7 +220,12 @@ async fn main() -> std::io::Result<()> {
                                 handlers::teams::projects::create,
                                 handlers::teams::projects::delete,
                             ))),
-                    ),
+                    )
+                    .service(web::scope("/storage").service((
+                        handlers::storage::get_upload,
+                        handlers::storage::upload,
+                        handlers::storage::delete,
+                    ))),
             )
             .service(handlers::index)
             .default_service(web::route().to(handlers::default))

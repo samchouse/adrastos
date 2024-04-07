@@ -9,6 +9,9 @@ edition = "2021"
 actix-web = { version = "4.5.1", features = ["cookies"] }
 adrastos_macros = { path = "../macros" }
 argon2 = "0.5.3"
+aws-config = { version = "1.1.9", features = ["behavior-version-latest"] }
+aws-credential-types = { version = "1.1.8", features = ["hardcoded-credentials"] }
+aws-sdk-s3 = "1.21.0"
 chrono = "0.4.37"
 deadpool-postgres = "0.10.5"
 deadpool-redis = "0.12.0"
