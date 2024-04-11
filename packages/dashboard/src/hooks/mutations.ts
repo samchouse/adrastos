@@ -256,7 +256,7 @@ export const useCreateProjectMutation = (teamId: string) => {
   return useMutation({
     mutationKey: ['project', 'create'],
     mutationFn: async (data: { name: string; hostnames: string[] }) =>
-      await client.request({
+      await client.json({
         path: `/teams/${teamId}/projects/create`,
         method: 'POST',
         body: JSON.stringify(data),
@@ -273,11 +273,28 @@ export const useCreateTeamMutation = () => {
   return useMutation({
     mutationKey: ['team', 'create'],
     mutationFn: async (name: string) =>
-      await client.request({
+      await client.json({
         path: '/teams/create',
         method: 'POST',
         body: JSON.stringify({ name }),
       }),
     onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.teams }),
+  });
+};
+
+export const useDeleteUploadMutation = () => {
+  const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
+
+  return useMutation({
+    mutationKey: ['storage', 'delete'],
+    mutationFn: async (id: string) =>
+      await client.json({
+        path: `/storage/delete/${id}`,
+        method: 'DELETE',
+        projectIdNeeded: true,
+      }),
+    onSuccess: () =>
+      queryClient.refetchQueries({ queryKey: queryKeys.storage }),
   });
 };

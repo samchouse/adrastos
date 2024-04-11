@@ -128,7 +128,6 @@ export const Navbar: React.FC<
             <Link
               to="/dashboard/projects/$projectId/auth"
               params={{ projectId: props.project.id }}
-              activeOptions={{ exact: true }}
               className="text-muted-foreground data-[status=active]:text-primary data-[status=active]:bg-accent hover:bg-accent/70"
             >
               Auth
@@ -138,7 +137,6 @@ export const Navbar: React.FC<
             <Link
               to="/dashboard/projects/$projectId/tables"
               params={{ projectId: props.project.id }}
-              activeOptions={{ exact: true }}
               className="text-muted-foreground data-[status=active]:text-primary data-[status=active]:bg-accent hover:bg-accent/70"
             >
               Tables
@@ -148,7 +146,6 @@ export const Navbar: React.FC<
             <Link
               to="/dashboard/projects/$projectId/storage"
               params={{ projectId: props.project.id }}
-              activeOptions={{ exact: true }}
               className="text-muted-foreground data-[status=active]:text-primary data-[status=active]:bg-accent hover:bg-accent/70"
             >
               Storage
@@ -158,7 +155,6 @@ export const Navbar: React.FC<
             <Link
               to="/dashboard/projects/$projectId/settings"
               params={{ projectId: props.project.id }}
-              activeOptions={{ exact: true }}
               className="text-muted-foreground data-[status=active]:text-primary data-[status=active]:bg-accent hover:bg-accent/70"
             >
               Settings

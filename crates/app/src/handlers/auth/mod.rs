@@ -3,14 +3,13 @@ use std::time;
 use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
-    config,
     db::postgres::Database,
     entities::{AnyUser, UpdateUser, User, UserType},
     error::Error,
     id::Id,
     util,
 };
-use tokio::{sync::RwLock, time::timeout};
+use tokio::time::timeout;
 
 use actix_web::{
     cookie::{Cookie, SameSite},
@@ -28,6 +27,7 @@ use tracing::{error, warn};
 
 use crate::{
     middleware::{
+        config::Config,
         database::ProjectDatabase,
         user::{RequiredAnyUser, RequiredUser},
     },
@@ -64,7 +64,7 @@ pub struct LoginBody {
 pub async fn register(
     db: Database,
     body: web::Json<RegisterBody>,
-    config: web::Data<RwLock<config::Config>>,
+    config: Config,
     redis_pool: web::Data<deadpool_redis::Pool>,
     mailer: web::Data<Option<AsyncSmtpTransport<Tokio1Executor>>>,
 ) -> actix_web::Result<impl Responder, Error> {
@@ -122,7 +122,7 @@ pub async fn register(
                     )
                 })?;
 
-            let mut conn = redis::Client::open(config.read().await.redis_url.clone())
+            let mut conn = redis::Client::open(config.redis_url.clone())
                 .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
                 .get_async_connection()
                 .await
@@ -176,7 +176,7 @@ pub async fn login(
     session: Session,
     db: Database,
     body: web::Json<LoginBody>,
-    config: web::Data<RwLock<config::Config>>,
+    config: Config,
 ) -> actix_web::Result<impl Responder, Error> {
     let user = UserType::from(&db)
         .find()
@@ -210,7 +210,7 @@ pub async fn login(
         })));
     }
 
-    let auth = auth::authenticate(&db, &config.read().await.clone(), &user).await?;
+    let auth = auth::authenticate(&db, &config.clone(), &user).await?;
     Ok(HttpResponse::Ok()
         .cookie(auth.cookie.clone())
         .cookie(
@@ -230,13 +230,11 @@ pub async fn logout(
     db: Database,
     req: HttpRequest,
     user: RequiredAnyUser,
-    config: web::Data<RwLock<config::Config>>,
+    config: Config,
 ) -> actix_web::Result<impl Responder, Error> {
     let mut cookies = util::get_auth_cookies(&req)?;
-    let refresh_token = auth::TokenType::verify(
-        &config.read().await.clone(),
-        cookies.refresh_token.value().into(),
-    )?;
+    let refresh_token =
+        auth::TokenType::verify(&config.clone(), cookies.refresh_token.value().into())?;
     if refresh_token.token_type != TokenType::Refresh {
         return Err(Error::Unauthorized);
     }
@@ -263,12 +261,12 @@ pub async fn verify(
     req: HttpRequest,
     db: ProjectDatabase,
     params: web::Query<VerifyParams>,
-    config: web::Data<RwLock<config::Config>>,
+    config: Config,
     redis_pool: web::Data<deadpool_redis::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
     // TODO(@Xenfo): make this middleware
     let refresh_token = auth::TokenType::verify(
-        &config.read().await.clone(),
+        &config.clone(),
         util::get_auth_cookies(&req)?.refresh_token.value().into(),
     )?;
     if refresh_token.token_type != TokenType::Refresh {
@@ -312,7 +310,7 @@ pub async fn verify(
 #[post("/resend-verification")]
 pub async fn resend_verification(
     user: RequiredUser,
-    config: web::Data<RwLock<config::Config>>,
+    config: Config,
     redis_pool: web::Data<deadpool_redis::Pool>,
     mailer: web::Data<Option<AsyncSmtpTransport<Tokio1Executor>>>,
 ) -> actix_web::Result<impl Responder, Error> {
@@ -341,7 +339,7 @@ pub async fn resend_verification(
             )
         })?;
 
-    let mut conn = redis::Client::open(config.read().await.redis_url.clone())
+    let mut conn = redis::Client::open(config.redis_url.clone())
         .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
         .get_async_connection()
         .await

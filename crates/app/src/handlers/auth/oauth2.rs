@@ -10,7 +10,6 @@ use adrastos_core::{
         self,
         oauth2::{providers::OAuth2Provider, OAuth2, OAuth2LoginInfo},
     },
-    config,
     db::postgres::Database,
     entities::{Connection, UserType},
     error::Error,
@@ -18,10 +17,12 @@ use adrastos_core::{
 };
 use chrono::Utc;
 use serde::Deserialize;
-use tokio::sync::RwLock;
 use tracing::error;
 
-use crate::{middleware::user::AnyUser, session::SessionKey};
+use crate::{
+    middleware::{config::Config, user::AnyUser},
+    session::SessionKey,
+};
 
 #[derive(Deserialize)]
 pub struct LoginParams {
@@ -35,6 +36,10 @@ pub struct CallbackParams {
     state: String,
     code: String,
 }
+
+// TODO(@Xenfo): token dedicated to just oauth2
+// #[get("/authorize")]
+// pub async fn authorize() {}
 
 #[get("/login")]
 pub async fn login(
@@ -85,13 +90,13 @@ pub async fn login(
 #[get("/callback")]
 pub async fn callback(
     db: Database,
+    config: Config,
     session: Session,
     oauth2: web::Data<OAuth2>,
     params: web::Query<CallbackParams>,
-    config: web::Data<RwLock<config::Config>>,
     redis_pool: web::Data<deadpool_redis::Pool>,
 ) -> actix_web::Result<impl Responder, Error> {
-    let client_url = config.read().await.client_url.clone();
+    let client_url = config.client_url.clone();
 
     let provider = OAuth2Provider::try_from(params.provider.as_str())
         .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;
@@ -175,7 +180,7 @@ pub async fn callback(
         .map(|url| format!("{}{}", client_url, url))
         .unwrap_or(format!("{}/dashboard", client_url));
 
-    let auth = auth::authenticate(&db, &config.read().await.clone(), &user).await?;
+    let auth = auth::authenticate(&db, &config.clone(), &user).await?;
     Ok(HttpResponse::Found()
         .cookie(auth.cookie.clone())
         .cookie(

@@ -1,17 +1,16 @@
 use std::fmt::{self, Debug};
 
-use actix_web::{body, error, HttpResponse};
-use reqwest::StatusCode;
-use serde::Serialize;
+use actix_web::{body, error, http::StatusCode, HttpResponse, ResponseError};
 use serde_json::json;
 use validator::ValidationErrors;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub enum Error {
     NotFound,
     Unauthorized,
     Forbidden(String),
     BadRequest(String),
+    Custom(StatusCode, String),
     InternalServerError(String),
     ValidationErrors {
         message: String,
@@ -28,6 +27,7 @@ impl fmt::Display for Error {
             Self::BadRequest { .. } => "Bad Request",
             Self::ValidationErrors { .. } => "Validation Errors",
             Self::InternalServerError { .. } => "Internal Server Error",
+            Self::Custom(..) => "Custom Error",
         };
 
         write!(f, "{name}")
@@ -36,6 +36,27 @@ impl fmt::Display for Error {
 
 impl error::ResponseError for Error {
     fn error_response(&self) -> HttpResponse<body::BoxBody> {
+        self.response()
+    }
+
+    fn status_code(&self) -> StatusCode {
+        match self {
+            Self::NotFound => StatusCode::NOT_FOUND,
+            Self::Unauthorized => StatusCode::UNAUTHORIZED,
+            Self::Forbidden(..) => StatusCode::FORBIDDEN,
+            Self::BadRequest(..) => StatusCode::BAD_REQUEST,
+            Self::Custom(code, ..) => *code,
+            Self::ValidationErrors { .. } => StatusCode::BAD_REQUEST,
+            Self::InternalServerError(..) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+impl Error
+where
+    Self: error::ResponseError,
+{
+    pub fn response(&self) -> HttpResponse<body::BoxBody> {
         let mut response = json!({
             "success": false,
             "status": self.to_string(),
@@ -47,6 +68,7 @@ impl error::ResponseError for Error {
             Self::Forbidden(message) => json!({ "message": message }),
             Self::BadRequest(message) => json!({ "message": message }),
             Self::InternalServerError(error) => json!({ "error": error }),
+            Self::Custom(_, message) => json!({ "message": message }),
             Self::ValidationErrors { message, errors } => {
                 json!({ "message": message, "errors": errors })
             }
@@ -55,16 +77,5 @@ impl error::ResponseError for Error {
         json_patch::merge(&mut response, &patch);
 
         HttpResponse::build(self.status_code()).json(response)
-    }
-
-    fn status_code(&self) -> StatusCode {
-        match self {
-            Self::NotFound => StatusCode::NOT_FOUND,
-            Self::Unauthorized => StatusCode::UNAUTHORIZED,
-            Self::Forbidden(..) => StatusCode::FORBIDDEN,
-            Self::BadRequest(..) => StatusCode::BAD_REQUEST,
-            Self::ValidationErrors { .. } => StatusCode::BAD_REQUEST,
-            Self::InternalServerError(..) => StatusCode::INTERNAL_SERVER_ERROR,
-        }
     }
 }

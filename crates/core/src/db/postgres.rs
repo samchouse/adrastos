@@ -121,7 +121,7 @@ impl Databases {
             .execute(&format!("CREATE DATABASE IF NOT EXISTS {}", db_type), &[])
             .await
             .unwrap();
-        entities::init(db_type, &pool, config).await;
+        entities::init(db_type, &pool).await;
 
         self.0.write().await.insert(
             db_type.clone(),

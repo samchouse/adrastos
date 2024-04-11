@@ -3,13 +3,11 @@ use std::collections::HashMap;
 use actix_web::{get, post, web, HttpResponse, Responder};
 use adrastos_core::{
     auth::oauth2::providers::OAuth2Provider,
-    config,
     entities::{OAuth2Config, SmtpConfig, System},
     error::Error,
 };
 use serde::Deserialize;
 use serde_json::json;
-use tokio::sync::RwLock;
 
 use crate::middleware::{database::ProjectDatabase, user::RequiredSystemUser};
 
@@ -69,7 +67,6 @@ pub async fn smtp(
     db: ProjectDatabase,
     _: RequiredSystemUser,
     body: web::Json<Option<SmtpBody>>,
-    config: web::Data<RwLock<config::Config>>,
 ) -> actix_web::Result<impl Responder, Error> {
     let conn = db.get().await.unwrap();
     let mut system: System = conn
@@ -111,7 +108,6 @@ pub async fn smtp(
     }?;
 
     conn.execute(&system.set(), &[]).await.unwrap();
-    config.write().await.attach_system(&system);
 
     Ok(HttpResponse::Ok().json(system.smtp_config.map(|c| {
         json!({
@@ -128,7 +124,6 @@ pub async fn smtp(
 pub async fn oauth2(
     db: ProjectDatabase,
     _: RequiredSystemUser,
-    config: web::Data<RwLock<config::Config>>,
     body: web::Json<HashMap<OAuth2Provider, Option<Oauth2Body>>>,
 ) -> actix_web::Result<impl Responder, Error> {
     let conn = db.get().await.unwrap();
@@ -157,7 +152,6 @@ pub async fn oauth2(
     });
 
     conn.execute(&system.set(), &[]).await.unwrap();
-    config.write().await.attach_system(&system);
 
     Ok(HttpResponse::Ok().json(json!({
         "google": system.google_config,

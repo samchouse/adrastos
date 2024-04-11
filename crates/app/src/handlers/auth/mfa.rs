@@ -5,7 +5,6 @@ use adrastos_core::{
         self,
         mfa::{Mfa, VerificationMethod},
     },
-    config::Config,
     db::postgres::Database,
     entities::{UpdateAnyUser, UserType},
     error::Error,
@@ -14,10 +13,9 @@ use chrono::Duration;
 use deadpool_redis::redis;
 use serde::Deserialize;
 use serde_json::{json, Value};
-use tokio::sync::RwLock;
 
 use crate::{
-    middleware::{project::Project, user},
+    middleware::{config::Config, project::Project, user},
     session::SessionKey,
 };
 
@@ -111,10 +109,10 @@ pub async fn confirm(
 #[post("/verify")]
 pub async fn verify(
     db: Database,
+    config: Config,
     project: Project,
     session: Session,
     body: web::Json<CVDRBody>,
-    config: web::Data<RwLock<Config>>,
 ) -> actix_web::Result<impl Responder, Error> {
     let Ok(Some(retries)) = session.get::<u8>(&SessionKey::MfaRetries.to_string()) else {
         return Err(Error::BadRequest(
@@ -167,7 +165,7 @@ pub async fn verify(
         return Err(Error::BadRequest("Invalid MFA code".into()));
     }
 
-    let auth = auth::authenticate(&db, &config.read().await.clone(), &user).await?;
+    let auth = auth::authenticate(&db, &config.clone(), &user).await?;
     Ok(HttpResponse::Ok().cookie(auth.cookie).json(user))
 }
 

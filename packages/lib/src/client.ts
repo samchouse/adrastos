@@ -13,7 +13,7 @@ export {
 
 export class Client {
   #authToken?: string;
-  private projectId: string | undefined;
+  public projectId: string | undefined;
   private onlyUseProjectIdIfNeeded = false;
 
   public accounts: AccountsModule;
@@ -43,26 +43,26 @@ export class Client {
     return `${this.baseUrl.replace(/\/$/, '')}/api${path}`;
   }
 
-  async request<T = null>({
-    method,
-    path,
-    body,
-    options,
-    projectIdNeeded,
-  }: Request) {
-    const res = await fetch(this.buildUrl(path), {
+  async request({ method, path, body, options, projectIdNeeded }: Request) {
+    return await fetch(this.buildUrl(path), {
       body,
       method,
       ...options,
       headers: {
-        'Content-Type': 'application/json',
         ...options?.headers,
         ...(this.#authToken && { Authorization: `Bearer ${this.#authToken}` }),
+        ...(!(body instanceof FormData) && {
+          'Content-Type': 'application/json',
+        }),
         ...((this.onlyUseProjectIdIfNeeded
           ? projectIdNeeded && this.projectId
           : this.projectId) && { 'X-Project-Id': this.projectId }),
       },
     });
+  }
+
+  async json<T = null>(options: Request) {
+    const res = await this.request(options);
 
     if (!res.ok)
       throw new ResponseError(

@@ -1,14 +1,39 @@
+use std::fmt;
+
 use adrastos_macros::DbCommon;
 use sea_query::{enum_def, Expr, PostgresQueryBuilder, Query};
 use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum SizeUnit {
+    Mb,
+    Gb,
+}
+
+impl fmt::Display for SizeUnit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            Self::Mb => "MB",
+            Self::Gb => "GB",
+        };
+
+        write!(f, "{name}")
+    }
+}
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, DbCommon)]
 #[adrastos(rename = "system")]
 pub struct System {
     pub id: String,
-    pub current_version: String,
-    pub previous_version: String,
+    pub current_version: Option<String>,
+    pub previous_version: Option<String>,
+
+    pub max_files: Option<i64>,
+    pub max_file_size: Option<i64>,
+    pub size_unit: Option<SizeUnit>,
+    pub accepted_file_extensions: Option<Vec<String>>,
 
     pub smtp_config: Option<SmtpConfig>,
 
@@ -45,6 +70,10 @@ impl System {
                 SystemIden::Id,
                 SystemIden::CurrentVersion,
                 SystemIden::PreviousVersion,
+                SystemIden::MaxFiles,
+                SystemIden::MaxFileSize,
+                SystemIden::SizeUnit,
+                SystemIden::AcceptedFileExtensions,
                 SystemIden::SmtpConfig,
                 SystemIden::GoogleConfig,
                 SystemIden::FacebookConfig,
@@ -67,6 +96,19 @@ impl System {
                 (
                     SystemIden::PreviousVersion,
                     self.previous_version.clone().into(),
+                ),
+                (SystemIden::MaxFiles, self.max_files.into()),
+                (SystemIden::MaxFileSize, self.max_file_size.into()),
+                (
+                    SystemIden::SizeUnit,
+                    self.size_unit
+                        .as_ref()
+                        .and_then(|v| serde_json::to_string(v).ok())
+                        .into(),
+                ),
+                (
+                    SystemIden::AcceptedFileExtensions,
+                    self.accepted_file_extensions.clone().into(),
                 ),
                 (
                     SystemIden::SmtpConfig,

@@ -27,7 +27,7 @@ jobs:
   staging:
     name: Staging
     runs-on: ubuntu-latest
-    environment: Backend Preview
+    environment: App Preview
     if: github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.user.id == 41898282 && contains(github.event.comment.body, '- [x] Deploy this PR') && github.event.issue.state == 'open'
 
     permissions:
@@ -155,7 +155,7 @@ jobs:
   git:
     name: Git
     runs-on: ubuntu-latest
-    environment: Backend Production
+    environment: App Production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:

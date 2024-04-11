@@ -1,17 +1,18 @@
 use actix_web::{
     get,
     http::header::{CacheControl, CacheDirective},
-    web, HttpRequest, HttpResponse, Responder,
+    HttpRequest, HttpResponse, Responder,
 };
 use adrastos_core::{
-    config::Config,
     db::postgres::{Database, DatabaseType},
     entities::{SystemUser, User},
     error::Error,
 };
-use tokio::sync::RwLock;
 
-use crate::{assets::handle_embedded_file, middleware::user::RequiredAnyUser};
+use crate::{
+    assets::handle_embedded_file,
+    middleware::{config::Config, user::RequiredAnyUser},
+};
 
 pub mod auth;
 pub mod config;
@@ -29,11 +30,9 @@ pub async fn index() -> actix_web::Result<impl Responder, Error> {
 }
 
 #[get("/api")]
-pub async fn api_index(
-    config: web::Data<RwLock<Config>>,
-) -> actix_web::Result<impl Responder, Error> {
+pub async fn api_index(config: Config) -> actix_web::Result<impl Responder, Error> {
     Ok(HttpResponse::PermanentRedirect()
-        .append_header(("Location", config.read().await.client_url.clone()))
+        .append_header(("Location", config.client_url.clone()))
         .append_header(CacheControl(vec![CacheDirective::NoCache]))
         .finish())
 }

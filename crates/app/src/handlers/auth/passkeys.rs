@@ -7,7 +7,6 @@ use actix_web::{
 };
 use adrastos_core::{
     auth::{self, passkeys},
-    config::Config,
     db::postgres::Database,
     entities::{AnyUserJoin, Passkey, UpdatePasskey, User, UserJoin, UserType},
     error::Error,
@@ -16,14 +15,13 @@ use adrastos_core::{
 use chrono::Utc;
 use serde::Deserialize;
 use serde_json::Value;
-use tokio::sync::RwLock;
 use webauthn_rs::prelude::{
     Base64UrlSafeData, PasskeyAuthentication, PasskeyRegistration, PublicKeyCredential,
     RegisterPublicKeyCredential,
 };
 
 use crate::{
-    middleware::{project::Project, user::RequiredAnyUser},
+    middleware::{config::Config, project::Project, user::RequiredAnyUser},
     session::SessionKey,
 };
 
@@ -98,11 +96,11 @@ pub async fn delete(
 
 #[post("/register/start")]
 pub async fn register_start(
+    config: Config,
     req: HttpRequest,
     session: Session,
     project: Project,
     user: RequiredAnyUser,
-    config: web::Data<RwLock<Config>>,
 ) -> actix_web::Result<impl Responder, Error> {
     let webauthn =
         passkeys::build_webauthn(req.headers().get(header::ORIGIN), &project, &config).await;
@@ -136,7 +134,7 @@ pub async fn register_finish(
     req: HttpRequest,
     session: Session,
     project: Project,
-    config: web::Data<RwLock<Config>>,
+    config: Config,
     body: web::Json<RegisterFinishBody>,
 ) -> actix_web::Result<impl Responder, Error> {
     let user = User::find_by_id(
@@ -185,7 +183,7 @@ pub async fn login_start(
     req: HttpRequest,
     session: Session,
     project: Project,
-    config: web::Data<RwLock<Config>>,
+    config: Config,
     body: web::Json<Option<LoginBody>>,
 ) -> actix_web::Result<impl Responder, Error> {
     let webauthn =
@@ -230,7 +228,7 @@ pub async fn login_finish(
     req: HttpRequest,
     session: Session,
     project: Project,
-    config: web::Data<RwLock<Config>>,
+    config: Config,
     body: web::Json<PublicKeyCredential>,
 ) -> actix_web::Result<impl Responder, Error> {
     let (user, passkey) = {
@@ -296,7 +294,7 @@ pub async fn login_finish(
         .await
         .map_err(|_| Error::InternalServerError("Unable to update passkey".to_string()))?;
 
-    let auth = auth::authenticate(&db, &config.read().await.clone(), &user).await?;
+    let auth = auth::authenticate(&db, &config.clone(), &user).await?;
     Ok(HttpResponse::Ok()
         .cookie(auth.cookie.clone())
         .cookie(

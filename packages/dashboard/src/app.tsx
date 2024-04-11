@@ -1,3 +1,6 @@
+import './index.css';
+
+import { Client } from '@adrastos/lib';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
@@ -7,10 +10,6 @@ import ReactDOM from 'react-dom/client';
 import { Toaster } from '~/components/ui';
 
 import { routeTree } from './routeTree.gen';
-
-import './index.css';
-
-import { Client } from '@adrastos/lib';
 
 const queryClient = new QueryClient();
 const router = createRouter({

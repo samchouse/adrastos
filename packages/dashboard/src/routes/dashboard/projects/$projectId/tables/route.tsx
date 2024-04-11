@@ -26,7 +26,7 @@ export const Route = createFileRoute('/dashboard/projects/$projectId/tables')({
       tablesQueryOptions(client),
     );
 
-    if (tables.length !== 0 && location.pathname === '/dashboard/tables')
+    if (tables.length !== 0 && location.pathname.endsWith('/tables'))
       throw redirect({
         to: '/dashboard/projects/$projectId/tables/$tableId',
         params: { projectId: projectId, tableId: tables?.[0].name },

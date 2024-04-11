@@ -3,7 +3,10 @@ use std::path::Path;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::{
     config::SharedCredentialsProvider,
-    operation::{delete_object::DeleteObjectOutput, get_object::GetObjectOutput},
+    operation::{
+        delete_object::DeleteObjectOutput, get_object::GetObjectOutput,
+        head_object::HeadObjectOutput, list_objects_v2::ListObjectsV2Output,
+    },
     primitives::ByteStream,
     Client,
 };
@@ -35,6 +38,30 @@ impl S3 {
             client: Client::new(&sdk_config),
             bucket: config.s3_bucket.clone(),
         }
+    }
+
+    pub async fn list(&self, prefix: String) -> Result<ListObjectsV2Output, Error> {
+        self.client
+            .list_objects_v2()
+            .bucket(self.bucket.clone())
+            .prefix(prefix)
+            .send()
+            .await
+            .map_err(|_| {
+                Error::InternalServerError("Something went wrong while listing files".into())
+            })
+    }
+
+    pub async fn head(&self, path: String) -> Result<HeadObjectOutput, Error> {
+        self.client
+            .head_object()
+            .bucket(self.bucket.clone())
+            .key(path)
+            .send()
+            .await
+            .map_err(|_| {
+                Error::InternalServerError("Something went wrong while getting file head".into())
+            })
     }
 
     pub async fn get(&self, path: String) -> Result<GetObjectOutput, Error> {
