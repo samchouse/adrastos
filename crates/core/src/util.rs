@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use actix_web::{cookie::Cookie, HttpRequest};
+use axum_extra::extract::{cookie::Cookie, CookieJar};
 use validator::ValidationError;
 
 use crate::error::Error;
@@ -23,32 +23,17 @@ pub fn create_validation_error(code: &str, message: Option<String>) -> Validatio
     }
 }
 
-pub fn get_auth_cookies(req: &HttpRequest) -> Result<Cookies, Error> {
-    let Ok(cookies) = req.cookies() else {
-        return Err(Error::InternalServerError(
-            "An error occurred reading cookies".into(),
-        ));
-    };
-
-    let Some(is_logged_in_cookie) = cookies.iter().find(|cookie| cookie.name() == "isLoggedIn")
-    else {
+pub fn get_auth_cookies(jar: &CookieJar) -> Result<Cookies, Error> {
+    let Some(is_logged_in_cookie) = jar.get("isLoggedIn") else {
         return Err(Error::Unauthorized);
     };
 
-    let Some(refresh_token_cookie) = cookies
-        .iter()
-        .find(|cookie| cookie.name() == "refreshToken")
-    else {
+    let Some(refresh_token_cookie) = jar.get("refreshToken") else {
         return Err(Error::Unauthorized);
     };
 
     Ok(Cookies {
-        is_logged_in: {
-            let mut cookie = is_logged_in_cookie.clone();
-            cookie.set_path("/");
-
-            cookie
-        },
+        is_logged_in: is_logged_in_cookie.clone(),
         refresh_token: refresh_token_cookie.clone(),
     })
 }

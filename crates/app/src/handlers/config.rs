@@ -1,15 +1,22 @@
 use std::collections::HashMap;
 
-use actix_web::{get, post, web, HttpResponse, Responder};
 use adrastos_core::{
     auth::oauth2::providers::OAuth2Provider,
-    entities::{OAuth2Config, SmtpConfig, System},
+    entities::{OAuth2Config, SmtpConfig},
     error::Error,
+};
+use axum::{
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
 };
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::middleware::{database::ProjectDatabase, user::RequiredSystemUser};
+use crate::{
+    middleware::extractors::{Config, ProjectDatabase, SystemUser},
+    state::AppState,
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -21,31 +28,31 @@ pub struct Oauth2Body {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SmtpBody {
-    pub host: String,
-    pub port: u16,
-    pub username: String,
-    pub password: Option<String>,
-    pub sender_name: String,
-    pub sender_email: String,
+    host: String,
+    port: u16,
+    username: String,
+    password: Option<String>,
+    sender_name: String,
+    sender_email: String,
 }
 
-#[get("/details")]
-pub async fn details(
-    db: ProjectDatabase,
-    _: RequiredSystemUser,
-) -> actix_web::Result<impl Responder, Error> {
-    let conn = db.get().await.unwrap();
-    let system: System = conn
-        .query(&System::get(), &[])
-        .await
-        .unwrap()
-        .into_iter()
-        .next()
-        .unwrap()
-        .into();
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route("/details", get(details))
+        .route("/smtp", post(smtp))
+        .route("/oauth2", post(oauth2))
+}
 
-    Ok(HttpResponse::Ok().json(json!({
-        "smtpConfig": system.smtp_config.map(|c| json!({
+pub async fn details(_: SystemUser, Config(config): Config) -> Result<impl IntoResponse, Error> {
+    let system = config.system();
+    let Some(system) = system else {
+        return Err(Error::InternalServerError(
+            "Something went wrong getting the system.".into(),
+        ));
+    };
+
+    Ok(Json(json!({
+        "smtpConfig": system.smtp_config.as_ref().map(|c| json!({
             "host": c.host,
             "port": c.port,
             "username": c.username,
@@ -62,28 +69,25 @@ pub async fn details(
     })))
 }
 
-#[post("/smtp")]
 pub async fn smtp(
-    db: ProjectDatabase,
-    _: RequiredSystemUser,
-    body: web::Json<Option<SmtpBody>>,
-) -> actix_web::Result<impl Responder, Error> {
-    let conn = db.get().await.unwrap();
-    let mut system: System = conn
-        .query(&System::get(), &[])
-        .await
-        .unwrap()
-        .into_iter()
-        .next()
-        .unwrap()
-        .into();
+    _: SystemUser,
+    Config(config): Config,
+    ProjectDatabase(db): ProjectDatabase,
+    body: Option<Json<SmtpBody>>,
+) -> Result<impl IntoResponse, Error> {
+    let system = config.system();
+    let Some(mut system) = system.clone() else {
+        return Err(Error::InternalServerError(
+            "Something went wrong getting the system.".into(),
+        ));
+    };
 
     system.smtp_config = match body {
-        web::Json(Some(body)) => {
+        Some(Json(body)) => {
             let password = body
                 .password
                 .clone()
-                .or(system.smtp_config.map(|c: SmtpConfig| c.password.clone()));
+                .or(system.smtp_config.as_ref().map(|c| c.password.clone()));
             let Some(password) = password else {
                 return Err(Error::BadRequest(
                     "A password is required to enable SMTP".to_string(),
@@ -104,12 +108,17 @@ pub async fn smtp(
                 sender_email: body.sender_email,
             }))
         }
-        web::Json(None) => Ok(None),
+        None => Ok(None),
     }?;
 
-    conn.execute(&system.set(), &[]).await.unwrap();
+    db.get()
+        .await
+        .unwrap()
+        .execute(&system.set(), &[])
+        .await
+        .unwrap();
 
-    Ok(HttpResponse::Ok().json(system.smtp_config.map(|c| {
+    Ok(Json(system.smtp_config.as_ref().map(|c| {
         json!({
             "host": c.host,
             "port": c.port,
@@ -120,21 +129,18 @@ pub async fn smtp(
     })))
 }
 
-#[post("/oauth2")]
 pub async fn oauth2(
-    db: ProjectDatabase,
-    _: RequiredSystemUser,
-    body: web::Json<HashMap<OAuth2Provider, Option<Oauth2Body>>>,
-) -> actix_web::Result<impl Responder, Error> {
-    let conn = db.get().await.unwrap();
-    let mut system: System = conn
-        .query(&System::get(), &[])
-        .await
-        .unwrap()
-        .into_iter()
-        .next()
-        .unwrap()
-        .into();
+    _: SystemUser,
+    Config(config): Config,
+    ProjectDatabase(db): ProjectDatabase,
+    body: Json<HashMap<OAuth2Provider, Option<Oauth2Body>>>,
+) -> Result<impl IntoResponse, Error> {
+    let system = config.system();
+    let Some(mut system) = system.clone() else {
+        return Err(Error::InternalServerError(
+            "Something went wrong getting the system.".into(),
+        ));
+    };
 
     body.iter().for_each(|(k, v)| {
         let v = v.as_ref().map(|v| OAuth2Config {
@@ -151,9 +157,14 @@ pub async fn oauth2(
         }
     });
 
-    conn.execute(&system.set(), &[]).await.unwrap();
+    db.get()
+        .await
+        .unwrap()
+        .execute(&system.set(), &[])
+        .await
+        .unwrap();
 
-    Ok(HttpResponse::Ok().json(json!({
+    Ok(Json(json!({
         "google": system.google_config,
         "facebook": system.facebook_config,
         "github": system.github_config,

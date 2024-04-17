@@ -1,22 +1,28 @@
-use actix_session::Session;
-use actix_web::{get, post, web, HttpResponse, Responder};
 use adrastos_core::{
     auth::{
         self,
         mfa::{Mfa, VerificationMethod},
     },
-    db::postgres::Database,
-    entities::{UpdateAnyUser, UserType},
+    entities,
     error::Error,
 };
+use axum::{
+    extract::State,
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
+};
+use axum_extra::extract::CookieJar;
 use chrono::Duration;
-use deadpool_redis::redis;
+use fred::{interfaces::KeysInterface, types::Expiration};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use tower_sessions::Session;
 
 use crate::{
-    middleware::{config::Config, project::Project, user},
+    middleware::extractors::{AnyUser, Config, Database, Project},
     session::SessionKey,
+    state::AppState,
 };
 
 #[derive(Deserialize)]
@@ -24,58 +30,69 @@ pub struct CVDRBody {
     code: String,
 }
 
-#[get("/enable")]
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route("/enable", get(enable))
+        .route("/confirm", post(confirm))
+        .route("/verify", post(verify))
+        .route("/disable", post(disable))
+        .route("/codes/regenerate", post(regenerate))
+}
+
 pub async fn enable(
-    project: Project,
-    user: user::RequiredAnyUser,
-    redis_pool: web::Data<deadpool_redis::Pool>,
-) -> actix_web::Result<impl Responder, Error> {
+    project: Option<Project>,
+    AnyUser(user): AnyUser,
+    State(AppState { redis_pool, .. }): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
     if user.mfa_secret.is_some() {
         return Err(Error::BadRequest("MFA is already enabled".into()));
     }
 
-    let mfa = Mfa::new(Mfa::generate_secret(), user.email.clone(), &project);
+    let mfa = Mfa::new(
+        Mfa::generate_secret(),
+        user.email.clone(),
+        &project.map(|Project(p)| p),
+    );
 
-    let mut conn = redis_pool.get().await.unwrap();
-    redis::cmd("SETEX")
-        .arg(format!("mfa:secret:{}", user.id))
-        .arg(Duration::try_minutes(10).unwrap().num_seconds())
-        .arg(mfa.get_secret())
-        .query_async(&mut conn)
+    redis_pool
+        .set(
+            format!("mfa:secret:{}", user.id),
+            mfa.get_secret(),
+            Some(Expiration::EX(Duration::minutes(10).num_seconds())),
+            None,
+            false,
+        )
         .await
         .map_err(|_| {
-            Error::InternalServerError("An error ocurred while saving MFA details to Redis".into())
+            Error::InternalServerError("Something went wrong saving secret to Redis".into())
         })?;
 
-    Ok(HttpResponse::Ok().json(json!({
+    Ok(Json(json!({
         "secret": mfa.get_secret(),
         "qr_code": mfa.get_qr().unwrap(),
     })))
 }
 
-#[post("/confirm")]
 pub async fn confirm(
-    db: Database,
-    project: Project,
-    body: web::Json<CVDRBody>,
-    user: user::RequiredAnyUser,
-    redis_pool: web::Data<deadpool_redis::Pool>,
-) -> actix_web::Result<impl Responder, Error> {
+    project: Option<Project>,
+    AnyUser(user): AnyUser,
+    Database(db): Database,
+    State(AppState { redis_pool, .. }): State<AppState>,
+    Json(body): Json<CVDRBody>,
+) -> Result<impl IntoResponse, Error> {
     if user.mfa_secret.is_some() {
         return Err(Error::BadRequest("MFA is already enabled".into()));
     }
 
-    let mut conn = redis_pool.get().await.unwrap();
-    let mfa_secret = redis::cmd("GET")
-        .arg(format!("mfa:secret:{}", user.id))
-        .query_async(&mut conn)
+    let mfa_secret = redis_pool
+        .get(format!("mfa:secret:{}", user.id))
         .await
         .map_err(|_| Error::InternalServerError("Error getting MFA details from Redis".into()))?;
 
     let mfa = Mfa::new(
         Mfa::secret_from_string(mfa_secret),
         user.email.clone(),
-        &project,
+        &project.map(|Project(p)| p),
     );
     if !mfa.verify(&body.code, VerificationMethod::Code).await? {
         return Err(Error::BadRequest("Invalid MFA code".into()));
@@ -85,16 +102,15 @@ pub async fn confirm(
         .await
         .map_err(|_| Error::InternalServerError("Error generating backup codes".into()))?;
 
-    redis::cmd("DEL")
-        .arg(format!("mfa:secret:{}", user.id))
-        .query_async(&mut conn)
+    redis_pool
+        .del(format!("mfa:secret:{}", user.id))
         .await
         .map_err(|_| Error::InternalServerError("Error deleting MFA details from Redis".into()))?;
 
-    UserType::from(&db)
+    entities::UserType::from(&db)
         .update(
             user.clone(),
-            UpdateAnyUser {
+            entities::UpdateAnyUser {
                 mfa_secret: Some(Some(mfa.get_secret())),
                 mfa_backup_codes: Some(Some(backup_codes.hashed_codes)),
                 ..Default::default()
@@ -103,46 +119,50 @@ pub async fn confirm(
         .await
         .map_err(|_| Error::InternalServerError("Error updating user".into()))?;
 
-    Ok(HttpResponse::Ok().json(backup_codes.codes))
+    Ok(Json(backup_codes.codes))
 }
 
-#[post("/verify")]
 pub async fn verify(
-    db: Database,
-    config: Config,
-    project: Project,
+    jar: CookieJar,
     session: Session,
-    body: web::Json<CVDRBody>,
-) -> actix_web::Result<impl Responder, Error> {
-    let Ok(Some(retries)) = session.get::<u8>(&SessionKey::MfaRetries.to_string()) else {
+    project: Option<Project>,
+    Config(config): Config,
+    Database(db): Database,
+    Json(body): Json<CVDRBody>,
+) -> Result<impl IntoResponse, Error> {
+    let Ok(Some(retries)) = session.get::<u8>(&SessionKey::MfaRetries.to_string()).await else {
         return Err(Error::BadRequest(
             "You have not started the login process".into(),
         ));
     };
     if retries == 0 {
         session
-            .remove(&SessionKey::LoginUserId.to_string())
-            .ok_or(Error::BadRequest(
-                "You have not started the login process".into(),
-            ))?;
+            .remove::<String>(&SessionKey::LoginUserId.to_string())
+            .await
+            .map_err(|_| Error::BadRequest("You have not started the login process".into()))?;
         session
-            .remove(&SessionKey::MfaRetries.to_string())
-            .ok_or(Error::BadRequest(
-                "You have not started the login process".into(),
-            ))?;
+            .remove::<u8>(&SessionKey::MfaRetries.to_string())
+            .await
+            .map_err(|_| Error::BadRequest("You have not started the login process".into()))?;
 
         return Err(Error::BadRequest(
             "You have exceeded the maximum number of retries".into(),
         ));
     }
 
-    let Ok(Some(user_id)) = session.get::<String>(&SessionKey::LoginUserId.to_string()) else {
+    let Ok(Some(user_id)) = session
+        .get::<String>(&SessionKey::LoginUserId.to_string())
+        .await
+    else {
         return Err(Error::BadRequest(
             "You have not started the login process".into(),
         ));
     };
 
-    let user = UserType::from(&db).find_by_id(&user_id).one().await?;
+    let user = entities::UserType::from(&db)
+        .find_by_id(&user_id)
+        .one()
+        .await?;
     let Some(mfa_secret) = user.mfa_secret.clone() else {
         return Err(Error::BadRequest("MFA is disabled".into()));
     };
@@ -150,7 +170,7 @@ pub async fn verify(
     let mfa = Mfa::new(
         Mfa::secret_from_string(mfa_secret),
         user.email.clone(),
-        &project,
+        &project.map(|Project(p)| p),
     );
     if !mfa
         .verify(
@@ -165,17 +185,16 @@ pub async fn verify(
         return Err(Error::BadRequest("Invalid MFA code".into()));
     }
 
-    let auth = auth::authenticate(&db, &config.clone(), &user).await?;
-    Ok(HttpResponse::Ok().cookie(auth.cookie).json(user))
+    let (_, jar) = auth::authenticate(&db, &config.clone(), &user, jar).await?;
+    Ok((jar, Json(user)))
 }
 
-#[post("/disable")]
 pub async fn disable(
-    db: Database,
-    project: Project,
-    body: web::Json<CVDRBody>,
-    user: user::RequiredAnyUser,
-) -> actix_web::Result<impl Responder, Error> {
+    project: Option<Project>,
+    AnyUser(user): AnyUser,
+    Database(db): Database,
+    Json(body): Json<CVDRBody>,
+) -> Result<impl IntoResponse, Error> {
     let Some(mfa_secret) = user.mfa_secret.clone() else {
         return Err(Error::BadRequest("MFA is already disabled".into()));
     };
@@ -183,7 +202,7 @@ pub async fn disable(
     let mfa = Mfa::new(
         Mfa::secret_from_string(mfa_secret),
         user.email.clone(),
-        &project,
+        &project.map(|Project(p)| p),
     );
     if !mfa
         .verify(
@@ -198,10 +217,10 @@ pub async fn disable(
         return Err(Error::BadRequest("Invalid MFA code".into()));
     }
 
-    UserType::from(&db)
+    entities::UserType::from(&db)
         .update(
             user.clone(),
-            UpdateAnyUser {
+            entities::UpdateAnyUser {
                 mfa_secret: Some(None),
                 mfa_backup_codes: Some(None),
                 ..Default::default()
@@ -210,16 +229,15 @@ pub async fn disable(
         .await
         .map_err(|_| Error::InternalServerError("Error updating user".into()))?;
 
-    Ok(HttpResponse::Ok().json(Value::Null))
+    Ok(Json(Value::Null))
 }
 
-#[post("/codes/regenerate")]
 pub async fn regenerate(
-    db: Database,
-    project: Project,
-    body: web::Json<CVDRBody>,
-    user: user::RequiredAnyUser,
-) -> actix_web::Result<impl Responder, Error> {
+    project: Option<Project>,
+    AnyUser(user): AnyUser,
+    Database(db): Database,
+    Json(body): Json<CVDRBody>,
+) -> Result<impl IntoResponse, Error> {
     let Some(mfa_secret) = user.mfa_secret.clone() else {
         return Err(Error::BadRequest("MFA is disabled".into()));
     };
@@ -227,7 +245,7 @@ pub async fn regenerate(
     let mfa = Mfa::new(
         Mfa::secret_from_string(mfa_secret),
         user.email.clone(),
-        &project,
+        &project.map(|Project(p)| p),
     );
     if !mfa.verify(&body.code, VerificationMethod::Code).await? {
         return Err(Error::BadRequest("Invalid MFA code".into()));
@@ -237,10 +255,10 @@ pub async fn regenerate(
         .await
         .map_err(|_| Error::InternalServerError("Error generating backup codes".into()))?;
 
-    UserType::from(&db)
+    entities::UserType::from(&db)
         .update(
             user.clone(),
-            UpdateAnyUser {
+            entities::UpdateAnyUser {
                 mfa_backup_codes: Some(Some(backup_codes.hashed_codes)),
                 ..Default::default()
             },
@@ -248,5 +266,5 @@ pub async fn regenerate(
         .await
         .map_err(|_| Error::InternalServerError("Error updating user".into()))?;
 
-    Ok(HttpResponse::Ok().json(backup_codes.codes))
+    Ok(Json(backup_codes.codes))
 }

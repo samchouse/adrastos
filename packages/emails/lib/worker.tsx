@@ -20,7 +20,7 @@ const worker = async () => {
   await subscriber.subscribe('emails', async (token) => {
     logger.info(`Received request with token: ${token}`);
     await client.publish(
-      'html',
+      `html:${token}`,
       render(
         <VerificationEmail
           token={token}

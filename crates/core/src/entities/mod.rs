@@ -2,8 +2,9 @@
 
 use chrono::Utc;
 use sea_query::{IntoIden, PostgresQueryBuilder, SimpleExpr};
+use secrecy::ExposeSecret;
 
-use crate::{db::postgres::DatabaseType, id::Id};
+use crate::{config::Config, db::postgres::DatabaseType, id::Id};
 
 use self::custom_table::schema::CustomTableSchema;
 
@@ -64,7 +65,7 @@ impl Update {
     }
 }
 
-pub async fn init(db_type: &DatabaseType, db: &deadpool_postgres::Pool) {
+pub async fn init(db_type: &DatabaseType, db: &deadpool_postgres::Pool, config: &Config) {
     let conn = db.get().await.unwrap();
 
     let query = conn
@@ -110,6 +111,53 @@ pub async fn init(db_type: &DatabaseType, db: &deadpool_postgres::Pool) {
     let mut query = &mut sea_query::Query::insert();
     query = query.into_table(System::table());
     if db_type == &DatabaseType::System {
+        let mut google_config = None;
+        let mut facebook_config = None;
+        let mut github_config = None;
+        let mut twitter_config = None;
+        let mut discord_config = None;
+
+        if let Some(client_id) = config.google_client_id.clone() {
+            if let Some(client_secret) = config.google_client_secret.clone() {
+                google_config = Some(OAuth2Config {
+                    client_id,
+                    client_secret: client_secret.expose_secret().to_string(),
+                });
+            }
+        }
+        if let Some(client_id) = config.facebook_client_id.clone() {
+            if let Some(client_secret) = config.facebook_client_secret.clone() {
+                facebook_config = Some(OAuth2Config {
+                    client_id,
+                    client_secret: client_secret.expose_secret().to_string(),
+                });
+            }
+        }
+        if let Some(client_id) = config.github_client_id.clone() {
+            if let Some(client_secret) = config.github_client_secret.clone() {
+                github_config = Some(OAuth2Config {
+                    client_id,
+                    client_secret: client_secret.expose_secret().to_string(),
+                });
+            }
+        }
+        if let Some(client_id) = config.twitter_client_id.clone() {
+            if let Some(client_secret) = config.twitter_client_secret.clone() {
+                twitter_config = Some(OAuth2Config {
+                    client_id,
+                    client_secret: client_secret.expose_secret().to_string(),
+                });
+            }
+        }
+        if let Some(client_id) = config.discord_client_id.clone() {
+            if let Some(client_secret) = config.discord_client_secret.clone() {
+                discord_config = Some(OAuth2Config {
+                    client_id,
+                    client_secret: client_secret.expose_secret().to_string(),
+                });
+            }
+        }
+
         Team {
             id: Id::new().to_string(),
             name: "Personal Projects".into(),
@@ -125,11 +173,36 @@ pub async fn init(db_type: &DatabaseType, db: &deadpool_postgres::Pool) {
                 SystemIden::Id,
                 SystemIden::CurrentVersion,
                 SystemIden::PreviousVersion,
+                SystemIden::GoogleConfig,
+                SystemIden::FacebookConfig,
+                SystemIden::GithubConfig,
+                SystemIden::TwitterConfig,
+                SystemIden::DiscordConfig,
             ])
             .values_panic([
                 "system".into(),
                 env!("CARGO_PKG_VERSION").into(),
                 env!("CARGO_PKG_VERSION").into(),
+                google_config
+                    .as_ref()
+                    .and_then(|v| serde_json::to_string(v).ok())
+                    .into(),
+                facebook_config
+                    .as_ref()
+                    .and_then(|v| serde_json::to_string(v).ok())
+                    .into(),
+                github_config
+                    .as_ref()
+                    .and_then(|v| serde_json::to_string(v).ok())
+                    .into(),
+                twitter_config
+                    .as_ref()
+                    .and_then(|v| serde_json::to_string(v).ok())
+                    .into(),
+                discord_config
+                    .as_ref()
+                    .and_then(|v| serde_json::to_string(v).ok())
+                    .into(),
             ]);
     } else {
         query = query

@@ -1,17 +1,17 @@
-use actix_web::{
-    get,
-    http::header::{CacheControl, CacheDirective},
-    HttpRequest, HttpResponse, Responder,
-};
 use adrastos_core::{
-    db::postgres::{Database, DatabaseType},
+    db::postgres::DatabaseType,
     entities::{SystemUser, User},
     error::Error,
+};
+use axum::{
+    http::{header, StatusCode, Uri},
+    response::IntoResponse,
+    Json,
 };
 
 use crate::{
     assets::handle_embedded_file,
-    middleware::{config::Config, user::RequiredAnyUser},
+    middleware::extractors::{AnyUser, Config, Database},
 };
 
 pub mod auth;
@@ -20,33 +20,32 @@ pub mod storage;
 pub mod tables;
 pub mod teams;
 
-pub async fn default(req: HttpRequest) -> actix_web::Result<impl Responder, Error> {
-    handle_embedded_file(req.path())
+pub async fn root(uri: Uri) -> impl IntoResponse {
+    handle_embedded_file(uri.path())
 }
 
-#[get("/")]
-pub async fn index() -> actix_web::Result<impl Responder, Error> {
-    handle_embedded_file("index.html")
+pub async fn api(Config(config): Config) -> impl IntoResponse {
+    (
+        StatusCode::PERMANENT_REDIRECT,
+        [
+            (header::LOCATION, config.client_url),
+            (header::CACHE_CONTROL, "no-cache".into()),
+        ],
+    )
 }
 
-#[get("/api")]
-pub async fn api_index(config: Config) -> actix_web::Result<impl Responder, Error> {
-    Ok(HttpResponse::PermanentRedirect()
-        .append_header(("Location", config.client_url.clone()))
-        .append_header(CacheControl(vec![CacheDirective::NoCache]))
-        .finish())
-}
-
-#[get("/me")]
-pub async fn me(db: Database, user: RequiredAnyUser) -> actix_web::Result<impl Responder, Error> {
+pub async fn me(
+    Database(db): Database,
+    AnyUser(user): AnyUser,
+) -> Result<impl IntoResponse, Error> {
     match db.1 {
         DatabaseType::System => {
             let system_user = SystemUser::find_by_id(&user.id).one(&db).await?;
-            Ok(HttpResponse::Ok().json(system_user))
+            Ok(Json(system_user).into_response())
         }
         DatabaseType::Project(_) => {
             let user = User::find_by_id(&user.id).one(&db).await?;
-            Ok(HttpResponse::Ok().json(user))
+            Ok(Json(user).into_response())
         }
     }
 }

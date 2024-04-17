@@ -1,10 +1,8 @@
 #![feature(let_chains)]
 
-use actix_multipart::form::MultipartFormConfig;
-use actix_session::{storage::RedisSessionStore, SessionMiddleware};
-use actix_web::{cookie::Key, error::InternalError, web, App, HttpResponse, HttpServer};
+use std::{net::TcpListener, path::PathBuf, process, sync::Arc};
+
 use adrastos_core::{
-    auth::oauth2::OAuth2,
     config::Config,
     db::{
         postgres::{DatabaseType, Databases},
@@ -14,35 +12,36 @@ use adrastos_core::{
     migrations::Migrations,
     s3::S3,
 };
+use axum::{routing::get, Router};
+use axum_server::tls_rustls::RustlsConfig;
 use clap::Parser;
 use cli::{Cli, Command};
 use dotenvy::dotenv;
-use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
-use middleware::content_length_limiter::ContentLengthLimiter;
-use openapi::ApiDoc;
-use rustls::{Certificate, PrivateKey, ServerConfig};
-use rustls_pemfile::{certs, pkcs8_private_keys};
 use sea_query::PostgresQueryBuilder;
 use secrecy::ExposeSecret;
-use serde_json::json;
-use std::{fs::File, io::BufReader, process};
+use sentry_tower::NewSentryLayer;
+use state::{AppState, Flag};
+use tower::ServiceBuilder;
+use tower_http::{
+    normalize_path::NormalizePath, request_id::MakeRequestUuid, trace::TraceLayer,
+    ServiceBuilderExt,
+};
+use tower_sessions::{cookie::Key, SessionManagerLayer};
+use tower_sessions_redis_store::RedisStore;
 use tracing::{error, info};
-use tracing_actix_web::TracingLogger;
 use tracing_unwrap::{OptionExt, ResultExt};
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
 
 mod assets;
 mod cli;
 mod handlers;
 mod middleware;
-mod openapi;
 mod session;
+mod state;
 mod telemetry;
 mod util;
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
+#[tokio::main]
+async fn main() {
     dotenv().ok();
     let _guard = telemetry::register_subscriber();
 
@@ -50,22 +49,25 @@ async fn main() -> std::io::Result<()> {
 
     let _sentry_guard = telemetry::init_sentry(&config);
 
-    let databases = std::sync::Arc::new(Databases::new());
-    let inner_databases = databases.clone();
+    let databases = Arc::new(Databases::new());
+    #[allow(clippy::let_underscore_future)]
+    let _ = Databases::start_expiry_worker(databases.clone());
     let db = databases.get(&DatabaseType::System, &config).await;
 
-    config.attach_system(
-        &db.get()
-            .await
-            .unwrap_or_log()
-            .query(&System::get(), &[])
-            .await
-            .unwrap_or_log()
-            .into_iter()
-            .next()
-            .unwrap_or_log()
-            .into(),
-    );
+    {
+        config.attach_system(
+            &db.get()
+                .await
+                .unwrap_or_log()
+                .query(&System::get(), &[])
+                .await
+                .unwrap_or_log()
+                .into_iter()
+                .next()
+                .unwrap_or_log()
+                .into(),
+        );
+    }
 
     let cli = Cli::parse();
     if cli.command == Some(Command::Migrate) {
@@ -83,220 +85,95 @@ async fn main() -> std::io::Result<()> {
             }
         }
 
-        return Ok(());
+        return;
     }
 
-    let use_tls = config.use_tls;
-    let server_url = config.server_url.clone();
-    let certs_path = config.certs_path.clone();
+    let (redis_pool, subscriber) = redis::create_pool_and_subscriber(&config).await;
+    #[allow(clippy::let_underscore_future)]
+    let _rs_task = subscriber.manage_subscriptions();
 
-    let store = RedisSessionStore::new(config.redis_url.clone())
-        .await
-        .unwrap_or_log();
+    let state = AppState {
+        databases,
+        subscriber,
+        config: config.clone(),
+        redis_pool: redis_pool.clone(),
+        s3: Arc::new(S3::new(&config).await),
+        flags: vec![("/api/storage/get".into(), vec![Flag::AllowProjectIdParam])],
+    };
 
-    let s3 = web::Data::new(S3::new(&config).await);
-
-    let server = HttpServer::new(move || {
-        App::new()
-            .wrap(TracingLogger::default())
-            .wrap(sentry_actix::Sentry::new())
-            .wrap(actix_web::middleware::NormalizePath::trim())
-            .wrap(middleware::Config {
-                config: config.clone(),
-                databases: inner_databases.clone(),
-                flags: vec![(
-                    "/api/storage/get".into(),
-                    vec![middleware::Flag::AllowProjectIdParam],
-                )],
-            })
-            .wrap(middleware::Cors {
-                config: config.clone(),
-            })
-            .wrap(SessionMiddleware::new(
-                store.clone(),
-                Key::from(config.secret_key.expose_secret().as_bytes()),
-            ))
-            .app_data(MultipartFormConfig::default().total_limit(usize::MAX))
-            .app_data(s3.clone())
-            .app_data(web::Data::new(OAuth2::new(&config)))
-            .app_data(web::Data::new(redis::create_pool(&config)))
-            .app_data(web::JsonConfig::default().error_handler(|err, _| {
-                let err_string = err.to_string();
-                InternalError::from_response(
-                    err,
-                    HttpResponse::BadRequest().json(json!({
-                        "message": "Validation failed",
-                        "error": err_string
-                    })),
-                )
-                .into()
-            }))
-            .app_data(web::Data::new(if let Some(smtp_host) = &config.smtp_host {
-                Some(
-                    AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(smtp_host)
-                        .unwrap_or_log()
-                        .port(config.smtp_port.unwrap_or_log())
-                        .credentials(Credentials::new(
-                            config.smtp_username.clone().unwrap_or_log(),
-                            config
-                                .smtp_password
-                                .clone()
-                                .unwrap_or_log()
-                                .expose_secret()
-                                .to_string(),
-                        ))
-                        .build::<Tokio1Executor>(),
-                )
-            } else {
-                None
-            }))
-            .service(
-                SwaggerUi::new("/swagger-ui/{_:.*}")
-                    .url("/api-doc/openapi.json", ApiDoc::openapi()),
-            )
-            .service(handlers::api_index)
-            .service(
-                web::scope("/api")
-                    .service(handlers::me)
-                    .service(
-                        web::scope("/auth")
-                            .service((
-                                handlers::auth::register,
-                                handlers::auth::login,
-                                handlers::auth::logout,
-                                handlers::auth::verify,
-                                handlers::auth::resend_verification,
-                                handlers::auth::token::refresh,
-                            ))
-                            .service(web::scope("/oauth2").service((
-                                handlers::auth::oauth2::login,
-                                handlers::auth::oauth2::callback,
-                            )))
-                            .service(web::scope("/mfa").service((
-                                handlers::auth::mfa::enable,
-                                handlers::auth::mfa::disable,
-                                handlers::auth::mfa::verify,
-                                handlers::auth::mfa::confirm,
-                                handlers::auth::mfa::regenerate,
-                            )))
-                            .service(web::scope("/passkeys").service((
-                                handlers::auth::passkeys::list,
-                                handlers::auth::passkeys::update,
-                                handlers::auth::passkeys::delete,
-                                handlers::auth::passkeys::register_start,
-                                handlers::auth::passkeys::register_finish,
-                                handlers::auth::passkeys::login_start,
-                                handlers::auth::passkeys::login_finish,
-                            ))),
+    let app = tower::make::Shared::new(NormalizePath::trim_trailing_slash(
+        Router::new()
+            .route("/api", get(handlers::api))
+            .route("/api/me", get(handlers::me))
+            .nest("/api/auth", handlers::auth::routes())
+            .nest("/api/teams", handlers::teams::routes())
+            .nest("/api/config", handlers::config::routes())
+            .nest("/api/tables", handlers::tables::routes())
+            .nest("/api/storage", handlers::storage::routes())
+            .fallback(handlers::root)
+            .with_state(state.clone())
+            .layer(
+                ServiceBuilder::new()
+                    .set_x_request_id(MakeRequestUuid)
+                    .layer(
+                        TraceLayer::new_for_http()
+                            .make_span_with(middleware::trace::MakeSpan)
+                            .on_response(middleware::trace::OnResponse),
                     )
-                    .service(web::scope("/config").service((
-                        handlers::config::details,
-                        handlers::config::oauth2,
-                        handlers::config::smtp,
-                    )))
-                    .service(
-                        web::scope("/tables")
-                            .service((
-                                handlers::tables::list,
-                                handlers::tables::create,
-                                handlers::tables::update,
-                                handlers::tables::delete,
-                            ))
-                            .service(web::scope("/{name}").service((
-                                handlers::tables::custom::row,
-                                handlers::tables::custom::rows,
-                                handlers::tables::custom::create,
-                                handlers::tables::custom::update,
-                                handlers::tables::custom::delete,
-                            ))),
+                    .propagate_x_request_id()
+                    .layer(NewSentryLayer::new_from_top())
+                    .layer(axum::middleware::from_fn_with_state(
+                        state.clone(),
+                        middleware::cors::run,
+                    ))
+                    .layer(
+                        SessionManagerLayer::new(RedisStore::new(redis_pool))
+                            .with_signed(Key::from(config.secret_key.expose_secret().as_bytes())),
                     )
-                    .service(
-                        web::scope("/teams")
-                            .service((
-                                handlers::teams::list,
-                                handlers::teams::create,
-                                handlers::teams::delete,
-                                handlers::teams::projects::get,
-                            ))
-                            .service(web::scope("/{team_id}/projects").service((
-                                handlers::teams::projects::list,
-                                handlers::teams::projects::create,
-                                handlers::teams::projects::delete,
-                            ))),
-                    )
-                    .service(web::scope("/storage").wrap(ContentLengthLimiter).service((
-                        handlers::storage::list,
-                        handlers::storage::upload,
-                        handlers::storage::delete,
-                        handlers::storage::get_upload,
-                    ))),
-            )
-            .service(handlers::index)
-            .default_service(web::route().to(handlers::default))
-    });
+                    .layer(axum::middleware::from_fn_with_state(
+                        state.clone(),
+                        middleware::run,
+                    )),
+            ),
+    ));
 
-    let server = if use_tls {
-        let Some(certs_path) = certs_path else {
+    let listener = TcpListener::bind(&config.server_url).unwrap();
+
+    {
+        let mut url = format!("https://{}", config.server_url);
+        if !config.use_tls {
+            url = url.replace("https", "http")
+        };
+
+        info!("server started at {url}");
+
+        if url.contains("0.0.0.0") {
+            info!(
+                "you can access the server at {}",
+                url.replace("0.0.0.0", "127.0.0.1")
+            );
+        }
+    }
+
+    if config.use_tls {
+        let Some(certs_path) = config.certs_path else {
             error!("TLS is enabled but no certs path is provided");
             process::exit(1);
         };
 
-        let rustls_config = ServerConfig::builder()
-            .with_safe_defaults()
-            .with_no_client_auth();
-
-        let cert_file =
-            &mut BufReader::new(File::open(format!("{}/cert.pem", certs_path)).unwrap_or_log());
-        let key_file =
-            &mut BufReader::new(File::open(format!("{}/key.pem", certs_path)).unwrap_or_log());
-
-        let cert_chain = certs(cert_file)
-            .unwrap_or_log()
-            .into_iter()
-            .map(Certificate)
-            .collect();
-        let mut keys: Vec<PrivateKey> = pkcs8_private_keys(key_file)
-            .unwrap_or_log()
-            .into_iter()
-            .map(PrivateKey)
-            .collect();
-
-        if keys.is_empty() {
-            error!("Couldn't locate private keys");
-            process::exit(1);
-        }
-
-        let rustls_config = rustls_config
-            .with_single_cert(cert_chain, keys.remove(0))
-            .unwrap_or_log();
-
-        server.bind_rustls(&server_url, rustls_config)
+        axum_server::from_tcp_rustls(
+            listener,
+            RustlsConfig::from_pem_chain_file(
+                PathBuf::from(&certs_path).join("cert.pem"),
+                PathBuf::from(&certs_path).join("key.pem"),
+            )
+            .await
+            .unwrap(),
+        )
+        .serve(app)
+        .await
     } else {
-        server.bind(&server_url)
-    }?
-    .run();
-
-    let (server, _, _) = tokio::join!(
-        server,
-        server_started(use_tls, &server_url),
-        Databases::start_expiry_worker(databases)
-    );
-
-    server
-}
-
-async fn server_started(use_tls: bool, url: &str) {
-    let mut url = format!("https://{url}");
-    if !use_tls {
-        url = url.replace("https", "http")
-    };
-
-    info!("server started at {url}");
-
-    if url.contains("0.0.0.0") {
-        info!(
-            "you can access the server at {}",
-            url.replace("0.0.0.0", "127.0.0.1")
-        );
+        axum_server::from_tcp(listener).serve(app).await
     }
+    .unwrap();
 }

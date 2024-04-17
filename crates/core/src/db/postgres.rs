@@ -1,12 +1,6 @@
 use core::fmt;
-use std::{
-    fs::File,
-    future::{ready, Ready},
-    io::BufReader,
-    sync::Arc,
-};
+use std::{fs::File, io::BufReader, sync::Arc};
 
-use actix_web::{FromRequest, HttpMessage};
 use chrono::Duration;
 use deadpool_postgres::{
     tokio_postgres::{Config, NoTls},
@@ -14,7 +8,7 @@ use deadpool_postgres::{
 };
 use rustls::{Certificate, ClientConfig, RootCertStore};
 use rustls_pemfile::certs;
-use tokio::sync::RwLock;
+use tokio::{sync::RwLock, task::JoinHandle};
 use tokio_postgres::config::SslMode;
 use tokio_postgres_rustls::MakeRustlsConnect;
 
@@ -121,7 +115,7 @@ impl Databases {
             .execute(&format!("CREATE DATABASE IF NOT EXISTS {}", db_type), &[])
             .await
             .unwrap();
-        entities::init(db_type, &pool).await;
+        entities::init(db_type, &pool, config).await;
 
         self.0.write().await.insert(
             db_type.clone(),
@@ -131,9 +125,9 @@ impl Databases {
         self.0.read().await.get(db_type).unwrap().clone()
     }
 
-    pub async fn start_expiry_worker(databases: Arc<Databases>) {
+    pub async fn start_expiry_worker(databases: Arc<Databases>) -> JoinHandle<()> {
         ExpiringMap::start_expiry_worker(databases.0.clone(), tokio::time::Duration::from_mins(10))
-            .await;
+            .await
     }
 }
 
@@ -145,23 +139,5 @@ impl std::ops::Deref for Database {
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl FromRequest for Database {
-    type Error = actix_web::Error;
-    type Future = Ready<Result<Self, Self::Error>>;
-
-    fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
-        let value = req
-            .extensions()
-            .get::<(Arc<deadpool_postgres::Pool>, DatabaseType)>()
-            .cloned();
-        let result = match value {
-            Some(v) => Ok(Database(v.0, v.1)),
-            None => Err(crate::error::Error::Unauthorized.into()),
-        };
-
-        ready(result)
     }
 }

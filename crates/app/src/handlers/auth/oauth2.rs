@@ -1,27 +1,29 @@
-use actix_session::Session;
-use actix_web::{
-    cookie::{Cookie, SameSite},
-    get,
-    http::header,
-    web, HttpResponse, Responder,
-};
 use adrastos_core::{
     auth::{
         self,
-        oauth2::{providers::OAuth2Provider, OAuth2, OAuth2LoginInfo},
+        oauth2::{providers::OAuth2Provider, OAuth2LoginInfo},
     },
-    db::postgres::Database,
-    entities::{Connection, UserType},
+    entities,
     error::Error,
     id::Id,
 };
+use axum::{
+    extract::{Query, State},
+    http::{header, StatusCode},
+    response::IntoResponse,
+    routing::get,
+    Router,
+};
+use axum_extra::extract::CookieJar;
 use chrono::Utc;
 use serde::Deserialize;
+use tower_sessions::Session;
 use tracing::error;
 
 use crate::{
-    middleware::{config::Config, user::AnyUser},
+    middleware::extractors::{AnyUser, Config, Database, OAuth2},
     session::SessionKey,
+    state::AppState,
 };
 
 #[derive(Deserialize)]
@@ -37,18 +39,19 @@ pub struct CallbackParams {
     code: String,
 }
 
-// TODO(@Xenfo): token dedicated to just oauth2
-// #[get("/authorize")]
-// pub async fn authorize() {}
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route("/login", get(login))
+        .route("/callback", get(callback))
+}
 
-#[get("/login")]
 pub async fn login(
-    user: AnyUser,
     session: Session,
-    oauth2: web::Data<OAuth2>,
-    params: web::Query<LoginParams>,
-    redis_pool: web::Data<deadpool_redis::Pool>,
-) -> actix_web::Result<impl Responder, Error> {
+    user: Option<AnyUser>,
+    OAuth2(oauth2): OAuth2,
+    Query(params): Query<LoginParams>,
+    State(AppState { redis_pool, .. }): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
     let provider = OAuth2Provider::try_from(params.provider.as_str())
         .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;
 
@@ -59,16 +62,18 @@ pub async fn login(
 
     session
         .insert(
-            SessionKey::CsrfToken.to_string(),
+            &SessionKey::CsrfToken.to_string(),
             csrf_token.secret().to_string(),
         )
+        .await
         .map_err(|_| {
             Error::InternalServerError("Unable to insert CSRF token into session".to_string())
         })?;
 
-    if let Some(user) = user.clone() {
+    if let Some(AnyUser(user)) = user {
         session
-            .insert(SessionKey::UserId.to_string(), user.id)
+            .insert(&SessionKey::UserId.to_string(), user.id)
+            .await
             .map_err(|_| {
                 Error::InternalServerError("Unable to insert user ID into session".to_string())
             })?;
@@ -76,32 +81,36 @@ pub async fn login(
 
     if let Some(to) = params.to.clone() {
         session
-            .insert(SessionKey::Redirect.to_string(), to)
+            .insert(&SessionKey::Redirect.to_string(), to)
+            .await
             .map_err(|_| {
                 Error::InternalServerError("Unable to insert redirect URL into session".to_string())
             })?;
     }
 
-    Ok(HttpResponse::Found()
-        .append_header((header::LOCATION, auth_url.to_string()))
-        .finish())
+    Ok((
+        StatusCode::FOUND,
+        [(header::LOCATION, auth_url.to_string())],
+    ))
 }
 
-#[get("/callback")]
 pub async fn callback(
-    db: Database,
-    config: Config,
+    jar: CookieJar,
     session: Session,
-    oauth2: web::Data<OAuth2>,
-    params: web::Query<CallbackParams>,
-    redis_pool: web::Data<deadpool_redis::Pool>,
-) -> actix_web::Result<impl Responder, Error> {
+    Config(config): Config,
+    OAuth2(oauth2): OAuth2,
+    Database(db): Database,
+    Query(params): Query<CallbackParams>,
+    State(AppState { redis_pool, .. }): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
     let client_url = config.client_url.clone();
 
     let provider = OAuth2Provider::try_from(params.provider.as_str())
         .map_err(|_| Error::BadRequest("An invalid provider was provided".into()))?;
 
-    let Ok(Some(session_csrf_token)) = session.get::<String>(&SessionKey::CsrfToken.to_string())
+    let Ok(Some(session_csrf_token)) = session
+        .get::<String>(&SessionKey::CsrfToken.to_string())
+        .await
     else {
         return Err(Error::BadRequest(
             "The request is missing a session CSRF Token".into(),
@@ -127,17 +136,21 @@ pub async fn callback(
         Error::InternalServerError("Unable to fetch the user from the OAuth provider".into())
     })?;
 
-    let connection = Connection::find()
+    let connection = entities::Connection::find()
         .by_provider(provider.to_string())
         .by_provider_id(oauth2_user.id.clone())
         .one(&db)
         .await;
 
     let user = match connection {
-        Ok(conn) => Ok(UserType::from(&db).find_by_id(&conn.user_id).one().await?),
+        Ok(conn) => Ok(entities::UserType::from(&db)
+            .find_by_id(&conn.user_id)
+            .one()
+            .await?),
         Err(..) => {
-            if let Ok(Some(user_id)) = session.get::<String>(&SessionKey::UserId.to_string()) {
-                let conn = Connection {
+            if let Ok(Some(user_id)) = session.get::<String>(&SessionKey::UserId.to_string()).await
+            {
+                let conn = entities::Connection {
                     id: Id::new().to_string(),
                     provider: provider.to_string(),
                     provider_id: oauth2_user.id.clone(),
@@ -148,7 +161,10 @@ pub async fn callback(
 
                 conn.create(&db).await?;
 
-                Ok(UserType::from(&db).find_by_id(&conn.user_id).one().await?)
+                Ok(entities::UserType::from(&db)
+                    .find_by_id(&conn.user_id)
+                    .one()
+                    .await?)
             } else {
                 Err(Error::Unauthorized)
             }
@@ -157,41 +173,30 @@ pub async fn callback(
 
     if user.mfa_secret.is_some() {
         session
-            .insert(SessionKey::LoginUserId.to_string(), user.id)
+            .insert(&SessionKey::LoginUserId.to_string(), user.id)
+            .await
             .map_err(|_| {
                 Error::InternalServerError("An error occurred while setting the session".into())
             })?;
         session
-            .insert(SessionKey::MfaRetries.to_string(), 3)
+            .insert(&SessionKey::MfaRetries.to_string(), 3)
+            .await
             .map_err(|_| {
                 Error::InternalServerError("An error occurred while setting the session".into())
             })?;
 
-        return Ok(HttpResponse::Ok()
-            .append_header(("Location", client_url)) // TODO(@Xenfo): Change this to the MFA page
-            .finish());
+        return Ok([(header::LOCATION, client_url)].into_response()); // TODO(@Xenfo): Change this to the MFA page
     }
 
     let redirect_url = session
         .get::<String>(&SessionKey::Redirect.to_string())
+        .await
         .map_err(|_| {
             Error::InternalServerError("An error occurred while getting the session".into())
         })?
         .map(|url| format!("{}{}", client_url, url))
         .unwrap_or(format!("{}/dashboard", client_url));
 
-    let auth = auth::authenticate(&db, &config.clone(), &user).await?;
-    Ok(HttpResponse::Found()
-        .cookie(auth.cookie.clone())
-        .cookie(
-            Cookie::build("isLoggedIn", true.to_string())
-                .secure(true)
-                .http_only(true)
-                .same_site(SameSite::None)
-                .path("/")
-                .expires(auth.cookie.expires().unwrap())
-                .finish(),
-        )
-        .append_header(("Location", redirect_url))
-        .finish())
+    let (_, jar) = auth::authenticate(&db, &config, &user, jar).await?;
+    Ok((StatusCode::FOUND, [(header::LOCATION, redirect_url)], jar).into_response())
 }

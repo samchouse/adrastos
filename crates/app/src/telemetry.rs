@@ -11,7 +11,8 @@ pub fn register_subscriber() -> Option<tracing_axiom::Guard> {
         .with(
             EnvFilter::builder()
                 .with_default_directive(LevelFilter::INFO.into())
-                .from_env_lossy(),
+                .from_env_lossy()
+                .add_directive("tower_sessions=warn".parse().unwrap()),
         )
         .with(JsonStorageLayer)
         .with(

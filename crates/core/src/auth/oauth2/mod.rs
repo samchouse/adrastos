@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Debug};
 
 use chrono::Duration;
-use deadpool_redis::redis;
+use fred::{clients::RedisPool, interfaces::KeysInterface, types::Expiration};
 use oauth2::{
     basic::{BasicClient, BasicTokenType},
     reqwest::async_http_client,
@@ -126,7 +126,7 @@ impl OAuth2 {
     pub async fn initialize_login(
         &self,
         provider: OAuth2Provider,
-        redis_pool: &deadpool_redis::Pool,
+        redis_pool: &RedisPool,
     ) -> Result<(Url, CsrfToken), String> {
         let client = self.0.get(&provider).ok_or("Invalid OAuth provider")?;
 
@@ -138,12 +138,14 @@ impl OAuth2 {
             .add_required_scopes(&provider.info())
             .url();
 
-        let mut conn = redis_pool.get().await.unwrap();
-        redis::cmd("SETEX")
-            .arg(format!("oauth:code_verifier:{}", csrf_token.secret()))
-            .arg(Duration::try_minutes(10).unwrap().num_seconds())
-            .arg(code_verifier.secret())
-            .query_async(&mut conn)
+        redis_pool
+            .set(
+                format!("oauth:code_verifier:{}", csrf_token.secret()),
+                code_verifier.secret(),
+                Some(Expiration::EX(Duration::minutes(10).num_seconds())),
+                None,
+                false,
+            )
             .await
             .map_err(|e| e.to_string())?;
 
@@ -154,7 +156,7 @@ impl OAuth2 {
         &self,
         provider: OAuth2Provider,
         config: &config::Config,
-        redis_pool: &deadpool_redis::Pool,
+        redis_pool: &RedisPool,
         security_info: OAuth2LoginInfo,
     ) -> Result<StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>, String> {
         let client = self.0.get(&provider).ok_or("Invalid OAuth provider")?;
@@ -169,13 +171,11 @@ impl OAuth2 {
             return Err("Invalid CSRF token".into());
         }
 
-        let mut conn = redis_pool.get().await.unwrap();
-        let code_verifier = redis::cmd("GETDEL")
-            .arg(format!(
+        let code_verifier = redis_pool
+            .getdel(format!(
                 "oauth:code_verifier:{}",
                 session_csrf_token.secret()
             ))
-            .query_async(&mut conn)
             .await
             .map_err(|_| "Error getting Redis value")?;
 

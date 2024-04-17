@@ -1,30 +1,60 @@
-use actix_multipart::form::{tempfile::TempFile, MultipartForm};
-use actix_web::{delete, get, http::header, post, web, HttpResponse, Responder};
+use std::io::{Seek, SeekFrom};
+
 use adrastos_core::{
     entities::{SizeUnit, UploadMetadata},
     error::Error,
     id::Id,
-    s3::S3,
 };
+use axum::{
+    body::Body,
+    extract::{DefaultBodyLimit, Path, State},
+    http::header,
+    response::IntoResponse,
+    routing::{delete, get, post},
+    Json, Router,
+};
+use axum_typed_multipart::{FieldData, TryFromMultipart, TypedMultipart};
 use chrono::Utc;
 use serde_json::{json, Value};
+use tempfile::NamedTempFile;
+use tokio_util::io::ReaderStream;
+use tower::ServiceBuilder;
 
-use crate::middleware::{
-    config::Config, database::ProjectDatabase, project::RequiredProject, user::RequiredAnyUser,
+use crate::{
+    middleware::{
+        self,
+        extractors::{AnyUser, Config, Project, ProjectDatabase},
+    },
+    state::AppState,
 };
 
-#[derive(Debug, MultipartForm)]
-struct UploadForm {
-    #[multipart(rename = "files[]")]
-    files: Vec<TempFile>,
+#[derive(TryFromMultipart)]
+pub struct UploadForm {
+    #[form_data(limit = "unlimited", field_name = "files[]")]
+    files: Vec<FieldData<NamedTempFile>>,
 }
 
-#[get("/list")]
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route("/list", get(list))
+        .route("/get/:id/:name", get(get_upload))
+        .route(
+            "/upload",
+            post(upload).layer(
+                ServiceBuilder::new()
+                    .layer(DefaultBodyLimit::disable())
+                    .layer(axum::middleware::from_fn(middleware::size_limiter::run)),
+            ),
+        )
+        .route("/delete/:id", delete(remove))
+}
+
 pub async fn list(
-    s3: web::Data<S3>,
-    db: ProjectDatabase,
-    project: RequiredProject,
-) -> actix_web::Result<impl Responder, Error> {
+    _: AnyUser,
+    Project(project): Project,
+    ProjectDatabase(db): ProjectDatabase,
+    State(AppState { s3, .. }): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
     let all_metadata = UploadMetadata::find().all(&db).await?;
     let files = s3.list(project.id.clone()).await;
 
@@ -50,17 +80,16 @@ pub async fn list(
         }))
     }
 
-    Ok(HttpResponse::Ok().json(response))
+    Ok(Json(response))
 }
 
-#[get("/get/{id}/{name}")]
 pub async fn get_upload(
-    s3: web::Data<S3>,
-    db: ProjectDatabase,
-    project: RequiredProject,
-    path: web::Path<(String, String)>,
-) -> actix_web::Result<impl Responder, Error> {
-    let (id, name) = path.into_inner();
+    // _: AnyUser, // TODO(@Xenfo): re-enable this
+    Project(project): Project,
+    ProjectDatabase(db): ProjectDatabase,
+    State(AppState { s3, .. }): State<AppState>,
+    Path((id, name)): Path<(String, String)>,
+) -> Result<impl IntoResponse, Error> {
     let upload_meta = UploadMetadata::find_by_id(&id)
         .by_name(name.clone())
         .one(&db)
@@ -69,37 +98,43 @@ pub async fn get_upload(
     let file = s3
         .get(format!("{}/{}/{}", project.id, upload_meta.user_id, id))
         .await?;
-    Ok(HttpResponse::Ok()
-        .append_header(header::ContentDisposition {
-            disposition: if file.content_type.clone().unwrap().starts_with("image/")
-                || file.content_type.clone().unwrap().starts_with("video/")
-            {
-                header::DispositionType::Inline
-            } else {
-                header::DispositionType::Attachment
-            },
-            parameters: vec![header::DispositionParam::Filename(name)],
-        })
-        .content_type(file.content_type.unwrap())
-        .body(file.body.collect().await.unwrap().into_bytes()))
+    Ok((
+        [
+            (
+                header::CONTENT_DISPOSITION,
+                format!(
+                    "{}; filename=\"{}\"",
+                    if file.content_type.clone().unwrap().starts_with("image/")
+                        || file.content_type.clone().unwrap().starts_with("video/")
+                    {
+                        "inline"
+                    } else {
+                        "attachement"
+                    },
+                    name
+                ),
+            ),
+            (header::CONTENT_TYPE, file.content_type.unwrap()),
+        ],
+        Body::from_stream(ReaderStream::new(file.body.into_async_read())),
+    ))
 }
 
-#[post("/upload")]
 pub async fn upload(
-    config: Config,
-    s3: web::Data<S3>,
-    db: ProjectDatabase,
-    user: RequiredAnyUser,
-    project: RequiredProject,
-    MultipartForm(form): MultipartForm<UploadForm>,
-) -> actix_web::Result<impl Responder, Error> {
+    Config(config): Config,
+    AnyUser(user): AnyUser,
+    Project(project): Project,
+    ProjectDatabase(db): ProjectDatabase,
+    State(AppState { s3, .. }): State<AppState>,
+    TypedMultipart(UploadForm { mut files }): TypedMultipart<UploadForm>,
+) -> Result<impl IntoResponse, Error> {
     let mut max_file_size = config.max_file_size.unwrap() * 1000 * 1000;
     if config.size_unit.clone().unwrap() == SizeUnit::Gb {
         max_file_size *= 1000
     }
 
-    for temp_file in form.files.iter() {
-        if temp_file.size > max_file_size as usize {
+    for file in files.iter_mut() {
+        if file.contents.seek(SeekFrom::End(0)).unwrap() as usize > max_file_size as usize {
             return Err(Error::BadRequest(format!(
                 "File is too large, max is {} {}",
                 config.max_file_size.unwrap(),
@@ -111,32 +146,31 @@ pub async fn upload(
 
         s3.upload(
             format!("{}/{}/{}", project.id, user.id, id),
-            temp_file.content_type.clone().unwrap().to_string(),
-            temp_file.file.path(),
+            file.metadata.content_type.clone().unwrap().to_string(),
+            file.contents.path(),
         )
         .await?;
 
         UploadMetadata {
             id,
             user_id: user.id.clone(),
-            name: temp_file.file_name.clone().unwrap(),
+            name: file.metadata.file_name.clone().unwrap(),
             created_at: Utc::now(),
         }
         .create(&db)
         .await?
     }
 
-    Ok(HttpResponse::Ok().json(Value::Null))
+    Ok(Json(Value::Null))
 }
 
-#[delete("/delete/{id}")]
-pub async fn delete(
-    s3: web::Data<S3>,
-    db: ProjectDatabase,
-    user: RequiredAnyUser,
-    path: web::Path<String>,
-    project: RequiredProject,
-) -> actix_web::Result<impl Responder, Error> {
+pub async fn remove(
+    AnyUser(user): AnyUser,
+    Path(path): Path<String>,
+    Project(project): Project,
+    ProjectDatabase(db): ProjectDatabase,
+    State(AppState { s3, .. }): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
     s3.delete(format!("{}/{}/{}", project.id, user.id, path))
         .await?;
 
@@ -146,5 +180,5 @@ pub async fn delete(
         .delete(&db)
         .await?;
 
-    Ok(HttpResponse::Ok().json(Value::Null))
+    Ok(Json(Value::Null))
 }

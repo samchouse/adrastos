@@ -1,237 +1,165 @@
-use std::{
-    future::{ready, Ready},
-    rc::Rc,
-    sync::Arc,
-};
+use std::sync::Arc;
 
-use actix_web::{
-    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    http::header::Header,
-    web, Error, HttpMessage,
-};
-use actix_web_httpauth::headers::authorization::{Authorization, Bearer};
 use adrastos_core::{
     auth::TokenType,
-    config as core_cfg,
-    db::postgres::{Database, DatabaseType, Databases},
+    config::Config,
+    db::postgres::{Database, DatabaseType},
     entities::{self, System, SystemUserJoin, UserJoin},
 };
-use futures_util::future::LocalBoxFuture;
+use axum::{
+    extract::{Query, Request, State},
+    middleware::Next,
+    response::Response,
+};
+use axum_extra::{
+    headers::{authorization::Bearer, Authorization},
+    TypedHeader,
+};
 use serde::Deserialize;
 use tracing_unwrap::{OptionExt, ResultExt};
 
-pub use self::cors::Cors;
+use crate::state::{AppState, Flag};
 
-pub mod config;
-pub mod content_length_limiter;
 pub mod cors;
-pub mod database;
-pub mod project;
-pub mod user;
-
-#[derive(PartialEq, Clone, Debug)]
-pub enum Flag {
-    AllowAuthParam,
-    AllowProjectIdParam,
-}
+pub mod extractors;
+pub mod size_limiter;
+pub mod trace;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct ReqParams {
+pub struct ReqParams {
     auth: Option<String>,
     project_id: Option<String>,
 }
 
-pub struct Config {
-    pub config: core_cfg::Config,
-    pub databases: Arc<Databases>,
-    pub flags: Vec<(String, Vec<Flag>)>,
-}
+pub async fn run(
+    Query(req_params): Query<ReqParams>,
+    authorization: Option<TypedHeader<Authorization<Bearer>>>,
+    State(AppState {
+        config,
+        databases,
+        flags,
+        ..
+    }): State<AppState>,
+    mut req: Request,
+    next: Next,
+) -> Response {
+    let flags = flags
+        .iter()
+        .find(|flag| req.uri().path().starts_with(&flag.0))
+        .cloned()
+        .map(|f| f.1)
+        .unwrap_or_default();
 
-impl<S, B> Transform<S, ServiceRequest> for Config
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    S::Future: 'static,
-    B: 'static,
-{
-    type Response = ServiceResponse<B>;
-    type Error = Error;
-    type InitError = ();
-    type Transform = Middleware<S>;
-    type Future = Ready<Result<Self::Transform, Self::InitError>>;
+    let project_id = req
+        .headers()
+        .get("x-project-id")
+        .map(|h| h.to_str().unwrap().to_string())
+        .or(if flags.contains(&Flag::AllowProjectIdParam) {
+            req_params.project_id
+        } else {
+            None
+        });
 
-    fn new_transform(&self, service: S) -> Self::Future {
-        ready(Ok(Middleware {
-            service: Rc::new(service),
-            flags: self.flags.clone(),
-            config: self.config.clone(),
-            databases: self.databases.clone(),
-        }))
-    }
-}
+    let system_db = databases.get(&DatabaseType::System, &config).await;
+    let db_type = match project_id {
+        Some(project_id) => {
+            match entities::Project::find_by_id(&project_id)
+                .one(&system_db)
+                .await
+                .ok()
+            {
+                Some(project) => {
+                    req.extensions_mut().insert::<entities::Project>(project);
 
-pub struct Middleware<S> {
-    service: Rc<S>,
-    config: core_cfg::Config,
-    databases: Arc<Databases>,
-    flags: Vec<(String, Vec<Flag>)>,
-}
-
-impl<S, B> Service<ServiceRequest> for Middleware<S>
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    S::Future: 'static,
-    B: 'static,
-{
-    type Response = ServiceResponse<B>;
-    type Error = Error;
-    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
-
-    forward_ready!(service);
-
-    fn call(&self, mut req: ServiceRequest) -> Self::Future {
-        let config = self.config.clone();
-        let service = self.service.clone();
-        let databases = self.databases.clone();
-        let flags = self.flags.clone();
-        let authorization = Authorization::<Bearer>::parse(&req);
-
-        Box::pin(async move {
-            let flags = flags
-                .iter()
-                .find(|flag| req.path().starts_with(&flag.0))
-                .cloned()
-                .map(|f| f.1)
-                .unwrap_or_default();
-
-            let project_id = req
-                .headers()
-                .get("X-Project-Id")
-                .map(|h| h.to_str().unwrap().to_string())
-                .or(if flags.contains(&Flag::AllowProjectIdParam) {
-                    req.extract::<web::Query<ReqParams>>()
-                        .await
-                        .map(|q| q.project_id.clone())
-                        .ok()
-                        .flatten()
-                } else {
-                    None
-                });
-
-            let system_db = databases.get(&DatabaseType::System, &config).await;
-            let db_type = match project_id {
-                Some(project_id) => {
-                    match entities::Project::find_by_id(&project_id)
-                        .one(&system_db)
-                        .await
-                        .ok()
-                    {
-                        Some(project) => {
-                            req.extensions_mut().insert::<entities::Project>(project);
-
-                            Some(DatabaseType::Project(project_id))
-                        }
-                        None => None,
-                    }
+                    Some(DatabaseType::Project(project_id))
                 }
-                None => Some(DatabaseType::System),
-            };
+                None => None,
+            }
+        }
+        None => Some(DatabaseType::System),
+    };
 
-            if let Some(db_type) = db_type {
-                let db = databases.get(&db_type, &config).await;
+    if let Some(db_type) = db_type {
+        let db = databases.get(&db_type, &config).await;
 
-                let mut updated_config = config.clone();
-                updated_config.attach_system(
-                    &db.get()
-                        .await
-                        .unwrap_or_log()
-                        .query(&System::get(), &[])
-                        .await
-                        .unwrap_or_log()
-                        .into_iter()
-                        .next()
-                        .unwrap_or_log()
-                        .into(),
-                );
-                req.extensions_mut()
-                    .insert::<core_cfg::Config>(updated_config);
+        let mut updated_config = config.clone();
+        updated_config.attach_system(
+            &db.get()
+                .await
+                .unwrap_or_log()
+                .query(&System::get(), &[])
+                .await
+                .unwrap_or_log()
+                .into_iter()
+                .next()
+                .unwrap_or_log()
+                .into(),
+        );
+        req.extensions_mut().insert::<Config>(updated_config);
 
-                req.extensions_mut()
-                    .insert::<Database>(Database(system_db.clone(), DatabaseType::System));
-                req.extensions_mut()
-                    .insert::<(Arc<deadpool_postgres::Pool>, DatabaseType)>((
-                        db.clone(),
-                        db_type.clone(),
-                    ));
+        req.extensions_mut()
+            .insert::<Database>(Database(system_db.clone(), DatabaseType::System));
+        req.extensions_mut()
+            .insert::<(Arc<deadpool_postgres::Pool>, DatabaseType)>((db.clone(), db_type.clone()));
 
-                let authorization = authorization
-                    .ok()
-                    .map(|a| a.into_scheme().token().to_owned())
-                    .or({
-                        if flags.contains(&Flag::AllowAuthParam) {
-                            req.extract::<web::Query<ReqParams>>() // TODO(@Xenfo): should mark this token as used in the database
-                                .await
-                                .map(|q| q.auth.clone())
-                                .ok()
-                                .flatten()
-                        } else {
-                            None
+        let authorization = authorization.map(|auth| auth.token().to_string()).or({
+            if flags.contains(&Flag::AllowAuthParam) {
+                req_params.auth
+            } else {
+                None
+            }
+        });
+
+        if let Some(token) = authorization {
+            if let Ok(access_token) = TokenType::verify(&config, token) {
+                match db_type {
+                    DatabaseType::Project(_) => {
+                        if let Ok(user) = entities::User::find_by_id(&access_token.claims.sub)
+                            .join(UserJoin::Connections)
+                            .join(UserJoin::RefreshTokenTrees)
+                            .join(UserJoin::Passkeys)
+                            .one(&db)
+                            .await
+                        {
+                            req.extensions_mut().insert::<entities::User>(user.clone());
+                            req.extensions_mut()
+                                .insert::<entities::AnyUser>(user.into());
                         }
-                    });
 
-                if let Some(token) = authorization {
-                    if let Ok(access_token) = TokenType::verify(&config, token) {
-                        match db_type {
-                            DatabaseType::Project(_) => {
-                                if let Ok(user) =
-                                    entities::User::find_by_id(&access_token.claims.sub)
-                                        .join(UserJoin::Connections)
-                                        .join(UserJoin::RefreshTokenTrees)
-                                        .join(UserJoin::Passkeys)
-                                        .one(&db)
-                                        .await
-                                {
-                                    req.extensions_mut().insert::<entities::User>(user.clone());
-                                    req.extensions_mut()
-                                        .insert::<entities::AnyUser>(user.into());
-                                }
-
-                                if let Ok(system_user) =
-                                    entities::SystemUser::find_by_id(&access_token.claims.sub)
-                                        .join(SystemUserJoin::Connections)
-                                        .join(SystemUserJoin::RefreshTokenTrees)
-                                        .join(SystemUserJoin::Passkeys)
-                                        .one(&system_db)
-                                        .await
-                                {
-                                    req.extensions_mut()
-                                        .insert::<entities::SystemUser>(system_user.clone());
-                                    req.extensions_mut()
-                                        .insert::<entities::AnyUser>(system_user.into());
-                                }
-                            }
-                            DatabaseType::System => {
-                                if let Ok(system_user) =
-                                    entities::SystemUser::find_by_id(&access_token.claims.sub)
-                                        .join(SystemUserJoin::Connections)
-                                        .join(SystemUserJoin::RefreshTokenTrees)
-                                        .join(SystemUserJoin::Passkeys)
-                                        .one(&db)
-                                        .await
-                                {
-                                    req.extensions_mut()
-                                        .insert::<entities::SystemUser>(system_user.clone());
-                                    req.extensions_mut()
-                                        .insert::<entities::AnyUser>(system_user.into());
-                                }
-                            }
+                        if let Ok(system_user) =
+                            entities::SystemUser::find_by_id(&access_token.claims.sub)
+                                .join(SystemUserJoin::Connections)
+                                .join(SystemUserJoin::RefreshTokenTrees)
+                                .join(SystemUserJoin::Passkeys)
+                                .one(&system_db)
+                                .await
+                        {
+                            req.extensions_mut()
+                                .insert::<entities::SystemUser>(system_user.clone());
+                            req.extensions_mut()
+                                .insert::<entities::AnyUser>(system_user.into());
+                        }
+                    }
+                    DatabaseType::System => {
+                        if let Ok(system_user) =
+                            entities::SystemUser::find_by_id(&access_token.claims.sub)
+                                .join(SystemUserJoin::Connections)
+                                .join(SystemUserJoin::RefreshTokenTrees)
+                                .join(SystemUserJoin::Passkeys)
+                                .one(&db)
+                                .await
+                        {
+                            req.extensions_mut()
+                                .insert::<entities::SystemUser>(system_user.clone());
+                            req.extensions_mut()
+                                .insert::<entities::AnyUser>(system_user.into());
                         }
                     }
                 }
             }
-
-            let res = service.call(req).await?;
-            Ok(res)
-        })
+        }
     }
+
+    next.run(req).await
 }

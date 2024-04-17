@@ -5,19 +5,18 @@ use regex::Regex;
 use sea_query::{Alias, ColumnDef, ColumnType, SimpleExpr};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use utoipa::ToSchema;
 use validator::ValidationError;
 
 use crate::{url::Url, util};
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum RelationTarget {
     Single,
     Many,
 }
 
-#[derive(Deserialize, Debug, Serialize, Clone, ToSchema)]
+#[derive(Deserialize, Debug, Serialize, Clone)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum FieldInfo {
     #[serde(rename_all = "camelCase")]
@@ -75,7 +74,7 @@ pub enum FieldInfo {
     },
 }
 
-#[derive(Deserialize, Debug, Serialize, Clone, ToSchema)]
+#[derive(Deserialize, Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Field {
     pub name: String,
