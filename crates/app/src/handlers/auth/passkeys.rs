@@ -1,28 +1,30 @@
-use actix_session::Session;
-use actix_web::{
-    cookie::{Cookie, SameSite},
-    delete, get,
-    http::header,
-    post, web, HttpRequest, HttpResponse, Responder,
-};
 use adrastos_core::{
     auth::{self, passkeys},
-    db::postgres::Database,
-    entities::{AnyUserJoin, Passkey, UpdatePasskey, User, UserJoin, UserType},
+    entities,
     error::Error,
     id::Id,
 };
+use axum::{
+    extract::Path,
+    http::{header, HeaderMap},
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
+};
+use axum_extra::extract::CookieJar;
 use chrono::Utc;
 use serde::Deserialize;
 use serde_json::Value;
+use tower_sessions::Session;
 use webauthn_rs::prelude::{
-    Base64UrlSafeData, PasskeyAuthentication, PasskeyRegistration, PublicKeyCredential,
+    CredentialID, PasskeyAuthentication, PasskeyRegistration, PublicKeyCredential,
     RegisterPublicKeyCredential,
 };
 
 use crate::{
-    middleware::{config::Config, project::Project, user::RequiredAnyUser},
+    middleware::extractors::{AnyUser, Config, Database, Project},
     session::SessionKey,
+    state::AppState,
 };
 
 #[derive(Deserialize)]
@@ -41,69 +43,80 @@ pub struct LoginBody {
     id: String,
 }
 
-#[get("/list")]
-pub async fn list(user: RequiredAnyUser) -> actix_web::Result<impl Responder, Error> {
-    Ok(HttpResponse::Ok().json(user.passkeys.clone().unwrap_or_default()))
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route("/list", get(list))
+        .route("/update/:id", post(update))
+        .route("/delete/:id", axum::routing::delete(delete))
+        .route("/register/start", post(register_start))
+        .route("/register/finish", post(register_finish))
+        .route("/login/start", post(login_start))
+        .route("/login/finish", post(login_finish))
 }
 
-#[post("/update/{id}")]
+pub async fn list(AnyUser(user): AnyUser) -> Result<impl IntoResponse, Error> {
+    Ok(Json(user.passkeys.clone().unwrap_or_default()))
+}
+
 pub async fn update(
-    db: Database,
-    user: RequiredAnyUser,
-    id: web::Path<String>,
-    body: web::Json<UpdateBody>,
-) -> actix_web::Result<impl Responder, Error> {
+    Path(id): Path<String>,
+    AnyUser(user): AnyUser,
+    Database(db): Database,
+    Json(body): Json<UpdateBody>,
+) -> Result<impl IntoResponse, Error> {
     let passkey = user
         .passkeys
         .clone()
         .unwrap()
         .into_iter()
-        .find(|pk| pk.id == id.to_string())
+        .find(|pk| pk.id == id)
         .unwrap();
 
     passkey
         .update(
             &db,
-            UpdatePasskey {
+            entities::UpdatePasskey {
                 name: Some(body.name.clone()),
                 ..Default::default()
             },
         )
         .await?;
 
-    let passkey = Passkey::find_by_id(&id).one(&db).await?;
-    Ok(HttpResponse::Ok().json(passkey))
+    let passkey = entities::Passkey::find_by_id(&id).one(&db).await?;
+    Ok(Json(passkey))
 }
 
-#[delete("/delete/{id}")]
 pub async fn delete(
-    db: Database,
-    user: RequiredAnyUser,
-    id: web::Path<String>,
-) -> actix_web::Result<impl Responder, Error> {
+    Database(db): Database,
+    AnyUser(user): AnyUser,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, Error> {
     let passkey = user
         .passkeys
         .clone()
         .unwrap()
         .into_iter()
-        .find(|pk| pk.id == id.to_string())
+        .find(|pk| pk.id == id)
         .unwrap();
 
     passkey.delete(&db).await?;
 
-    Ok(HttpResponse::Ok().json(Value::Null))
+    Ok(Json(Value::Null))
 }
 
-#[post("/register/start")]
 pub async fn register_start(
-    config: Config,
-    req: HttpRequest,
     session: Session,
-    project: Project,
-    user: RequiredAnyUser,
-) -> actix_web::Result<impl Responder, Error> {
-    let webauthn =
-        passkeys::build_webauthn(req.headers().get(header::ORIGIN), &project, &config).await;
+    headers: HeaderMap,
+    project: Option<Project>,
+    Config(config): Config,
+    AnyUser(user): AnyUser,
+) -> Result<impl IntoResponse, Error> {
+    let webauthn = passkeys::build_webauthn(
+        headers.get(header::ORIGIN),
+        &project.map(|Project(p)| p),
+        &config,
+    )
+    .await;
 
     let (ccr, registration) = webauthn
         .start_passkey_registration(
@@ -112,60 +125,69 @@ pub async fn register_start(
             &format!("{} {}", user.first_name, user.last_name),
             user.passkeys.clone().map(|pks| {
                 pks.iter()
-                    .map(|pk| Base64UrlSafeData(pk.cred_id.clone().into_bytes()))
+                    .map(|pk| CredentialID::from(pk.cred_id.clone().into_bytes()))
                     .collect::<Vec<_>>()
             }),
         )
         .unwrap();
 
     session
-        .insert(SessionKey::UserId.to_string(), user.id.clone())
+        .insert(&SessionKey::UserId.to_string(), user.id.clone())
+        .await
         .unwrap();
     session
-        .insert(SessionKey::PasskeyRegistration.to_string(), registration)
+        .insert(&SessionKey::UserType.to_string(), user.clone())
+        .await
+        .unwrap();
+    session
+        .insert(&SessionKey::PasskeyRegistration.to_string(), registration)
+        .await
         .unwrap();
 
-    Ok(HttpResponse::Ok().json(ccr))
+    Ok(Json(ccr))
 }
 
-#[post("/register/finish")]
 pub async fn register_finish(
-    db: Database,
-    req: HttpRequest,
     session: Session,
-    project: Project,
-    config: Config,
-    body: web::Json<RegisterFinishBody>,
-) -> actix_web::Result<impl Responder, Error> {
-    let user = User::find_by_id(
-        &session
-            .get::<String>(&SessionKey::UserId.to_string())
-            .unwrap()
-            .unwrap(),
-    )
-    .one(&db)
-    .await?;
+    headers: HeaderMap,
+    project: Option<Project>,
+    Config(config): Config,
+    Database(db): Database,
+    body: Json<RegisterFinishBody>,
+) -> Result<impl IntoResponse, Error> {
+    let user = entities::UserType::from(&db)
+        .find_by_id(
+            &session
+                .remove::<String>(&SessionKey::UserId.to_string())
+                .await
+                .unwrap()
+                .unwrap(),
+        )
+        .one()
+        .await?;
 
     let registration = session
-        .get::<PasskeyRegistration>(&SessionKey::PasskeyRegistration.to_string())
+        .remove::<PasskeyRegistration>(&SessionKey::PasskeyRegistration.to_string())
+        .await
         .unwrap()
         .unwrap();
 
-    session.remove(&SessionKey::UserId.to_string());
-    session.remove(&SessionKey::PasskeyRegistration.to_string());
-
-    let webauthn =
-        passkeys::build_webauthn(req.headers().get(header::ORIGIN), &project, &config).await;
+    let webauthn = passkeys::build_webauthn(
+        headers.get(header::ORIGIN),
+        &project.map(|Project(p)| p),
+        &config,
+    )
+    .await;
 
     let passkey = webauthn
         .finish_passkey_registration(&body.passkey, &registration)
         .unwrap();
 
-    let passkey = Passkey {
+    let passkey = entities::Passkey {
         id: Id::new().to_string(),
         name: body.name.clone(),
         user_id: user.id.clone(),
-        cred_id: passkey.cred_id().to_string(),
+        cred_id: serde_json::to_string(passkey.cred_id()).unwrap(),
         last_used: None,
         data: passkey,
         created_at: Utc::now(),
@@ -174,30 +196,35 @@ pub async fn register_finish(
 
     passkey.create(&db).await?;
 
-    Ok(HttpResponse::Ok().json(Value::Null))
+    Ok(Json(Value::Null))
 }
 
-#[post("/login/start")]
 pub async fn login_start(
-    db: Database,
-    req: HttpRequest,
     session: Session,
-    project: Project,
-    config: Config,
-    body: web::Json<Option<LoginBody>>,
-) -> actix_web::Result<impl Responder, Error> {
-    let webauthn =
-        passkeys::build_webauthn(req.headers().get(header::ORIGIN), &project, &config).await;
+    headers: HeaderMap,
+    project: Option<Project>,
+    Config(config): Config,
+    Database(db): Database,
+    body: Option<Json<LoginBody>>,
+) -> Result<impl IntoResponse, Error> {
+    let webauthn = passkeys::build_webauthn(
+        headers.get(header::ORIGIN),
+        &project.map(|Project(p)| p),
+        &config,
+    )
+    .await;
 
     let allowed = {
-        if let Some(body) = &body.0 {
-            let user = User::find_by_id(&body.id)
-                .join(UserJoin::Passkeys)
-                .one(&db)
+        if let Some(Json(body)) = &body {
+            let user = entities::UserType::from(&db)
+                .find_by_id(&body.id)
+                .join(entities::AnyUserJoin::Passkeys)
+                .one()
                 .await?;
 
             session
-                .insert(SessionKey::UserId.to_string(), user.id.clone())
+                .insert(&SessionKey::UserId.to_string(), user.id.clone())
+                .await
                 .unwrap();
 
             if let Some(passkeys) = user.passkeys {
@@ -214,31 +241,33 @@ pub async fn login_start(
 
     session
         .insert(
-            SessionKey::PasskeyAuthentication.to_string(),
+            &SessionKey::PasskeyAuthentication.to_string(),
             authentication,
         )
+        .await
         .unwrap();
 
-    Ok(HttpResponse::Ok().json(rcr))
+    Ok(Json(rcr))
 }
 
-#[post("/login/finish")]
 pub async fn login_finish(
-    db: Database,
-    req: HttpRequest,
+    jar: CookieJar,
     session: Session,
-    project: Project,
-    config: Config,
-    body: web::Json<PublicKeyCredential>,
-) -> actix_web::Result<impl Responder, Error> {
+    headers: HeaderMap,
+    project: Option<Project>,
+    Config(config): Config,
+    Database(db): Database,
+    body: Json<PublicKeyCredential>,
+) -> Result<impl IntoResponse, Error> {
     let (user, passkey) = {
         let user_id = session
-            .get::<String>(&SessionKey::UserId.to_string())
+            .remove::<String>(&SessionKey::UserId.to_string())
+            .await
             .unwrap();
         if let Some(user_id) = user_id {
-            let user = UserType::from(&db)
+            let user = entities::UserType::from(&db)
                 .find_by_id(&user_id)
-                .join(AnyUserJoin::Passkeys)
+                .join(entities::AnyUserJoin::Passkeys)
                 .one()
                 .await?;
 
@@ -251,11 +280,14 @@ pub async fn login_finish(
                     .unwrap(),
             )
         } else {
-            let passkey = Passkey::find().by_cred_id(body.id.clone()).one(&db).await?;
+            let passkey = entities::Passkey::find()
+                .by_cred_id(body.id.clone())
+                .one(&db)
+                .await?;
 
-            let user = UserType::from(&db)
+            let user = entities::UserType::from(&db)
                 .find_by_id(&passkey.user_id)
-                .join(AnyUserJoin::Passkeys)
+                .join(entities::AnyUserJoin::Passkeys)
                 .one()
                 .await?;
 
@@ -264,21 +296,23 @@ pub async fn login_finish(
     };
 
     let mut authentication = session
-        .get::<PasskeyAuthentication>(&SessionKey::PasskeyAuthentication.to_string())
+        .remove::<PasskeyAuthentication>(&SessionKey::PasskeyAuthentication.to_string())
+        .await
         .unwrap()
         .unwrap();
 
-    let webauthn =
-        passkeys::build_webauthn(req.headers().get(header::ORIGIN), &project, &config).await;
+    let webauthn = passkeys::build_webauthn(
+        headers.get(header::ORIGIN),
+        &project.map(|Project(p)| p),
+        &config,
+    )
+    .await;
 
     let result = webauthn
         .finish_passkey_authentication(&body, &mut authentication, Some(vec![passkey.data.clone()]))
         .unwrap();
 
-    session.remove(&SessionKey::UserId.to_string());
-    session.remove(&SessionKey::PasskeyAuthentication.to_string());
-
-    let mut passkey_update = UpdatePasskey {
+    let mut passkey_update = entities::UpdatePasskey {
         last_used: Some(Some(Utc::now())),
         ..Default::default()
     };
@@ -294,17 +328,6 @@ pub async fn login_finish(
         .await
         .map_err(|_| Error::InternalServerError("Unable to update passkey".to_string()))?;
 
-    let auth = auth::authenticate(&db, &config.clone(), &user).await?;
-    Ok(HttpResponse::Ok()
-        .cookie(auth.cookie.clone())
-        .cookie(
-            Cookie::build("isLoggedIn", true.to_string())
-                .secure(true)
-                .http_only(true)
-                .same_site(SameSite::None)
-                .path("/")
-                .expires(auth.cookie.expires().unwrap())
-                .finish(),
-        )
-        .json(user))
+    let (_, jar) = auth::authenticate(&db, &config.clone(), &user, jar).await?;
+    Ok((jar, Json(user)).into_response())
 }

@@ -22,14 +22,20 @@ pub struct AnyUser {
     pub last_name: String,
     pub email: String,
     pub username: String,
+    #[serde(skip_serializing)]
     pub password: String,
+    #[serde(skip_serializing)]
     pub mfa_secret: Option<String>,
+    #[serde(skip_serializing)]
     pub mfa_backup_codes: Option<Vec<String>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 
+    #[serde(skip_serializing)]
     pub connections: Option<Vec<Connection>>,
+    #[serde(skip_serializing)]
     pub refresh_token_trees: Option<Vec<RefreshTokenTree>>,
+    #[serde(skip_serializing)]
     pub passkeys: Option<Vec<Passkey>>,
 }
 

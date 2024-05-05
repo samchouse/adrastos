@@ -1,10 +1,18 @@
-use actix_web::{delete, get, post, web, HttpResponse, Responder};
-use adrastos_core::{entities::Project, error::Error, id::Id};
+use adrastos_core::{entities, error::Error, id::Id};
+use axum::{
+    extract::Path,
+    response::IntoResponse,
+    routing::{delete, get, post},
+    Json, Router,
+};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::middleware::{database::SystemDatabase, user::RequiredSystemUser};
+use crate::{
+    middleware::extractors::{SystemDatabase, SystemUser},
+    state::AppState,
+};
 
 #[derive(Serialize, Deserialize)]
 struct DeletePath {
@@ -12,38 +20,42 @@ struct DeletePath {
 }
 
 #[derive(Serialize, Deserialize)]
-struct CreateBody {
+pub struct CreateBody {
     name: String,
     hostnames: Vec<String>,
 }
 
-#[get("/projects/{id}")]
-pub async fn get(
-    db: SystemDatabase,
-    _: RequiredSystemUser,
-    path: web::Path<String>,
-) -> actix_web::Result<impl Responder, Error> {
-    let project = Project::find_by_id(&path).one(&db).await?;
-    Ok(HttpResponse::Ok().json(project))
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route("/list", get(list))
+        .route("/create", post(create))
+        .route("/delete/:id", delete(remove))
 }
 
-#[get("/list")]
+pub async fn get_by_id(
+    _: SystemUser,
+    Path(path): Path<String>,
+    SystemDatabase(db): SystemDatabase,
+) -> Result<impl IntoResponse, Error> {
+    let project = entities::Project::find_by_id(&path).one(&db).await?;
+    Ok(Json(project))
+}
+
 pub async fn list(
-    db: SystemDatabase,
-    _: RequiredSystemUser,
-) -> actix_web::Result<impl Responder, Error> {
-    let projects = Project::find().all(&db).await?;
-    Ok(HttpResponse::Ok().json(projects))
+    _: SystemUser,
+    SystemDatabase(db): SystemDatabase,
+) -> Result<impl IntoResponse, Error> {
+    let projects = entities::Project::find().all(&db).await?;
+    Ok(Json(projects))
 }
 
-#[post("/create")]
 pub async fn create(
-    db: SystemDatabase,
-    _: RequiredSystemUser,
-    body: web::Json<CreateBody>,
-    team_id: web::Path<String>,
-) -> actix_web::Result<impl Responder, Error> {
-    let project = Project {
+    _: SystemUser,
+    Path(team_id): Path<String>,
+    SystemDatabase(db): SystemDatabase,
+    Json(body): Json<CreateBody>,
+) -> Result<impl IntoResponse, Error> {
+    let project = entities::Project {
         id: Id::new().to_string(),
         name: body.name.clone(),
         hostnames: body.hostnames.clone(),
@@ -53,19 +65,18 @@ pub async fn create(
     };
 
     project.create(&db).await?;
-    Ok(HttpResponse::Ok().json(project))
+    Ok(Json(project))
 }
 
-#[delete("/delete/{id}")]
-pub async fn delete(
-    db: SystemDatabase,
-    _: RequiredSystemUser,
-    path: web::Path<DeletePath>,
-) -> actix_web::Result<impl Responder, Error> {
-    Project::find_by_id(&path.id)
+pub async fn remove(
+    _: SystemUser,
+    Path((_, id)): Path<(String, String)>,
+    SystemDatabase(db): SystemDatabase,
+) -> Result<impl IntoResponse, Error> {
+    entities::Project::find_by_id(&id)
         .one(&db)
         .await?
         .delete(&db)
         .await?;
-    Ok(HttpResponse::Ok().json(Value::Null))
+    Ok(Json(Value::Null))
 }

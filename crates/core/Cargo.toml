@@ -6,16 +6,17 @@ license = "AGPL-3.0-or-later"
 edition = "2021"
 
 [dependencies]
-actix-web = { version = "4.5.1", features = ["cookies"] }
 adrastos_macros = { path = "../macros" }
 argon2 = "0.5.3"
 aws-config = { version = "1.1.9", features = ["behavior-version-latest"] }
 aws-credential-types = { version = "1.1.8", features = ["hardcoded-credentials"] }
 aws-sdk-s3 = "1.21.0"
+axum = "0.7.5"
+axum-extra = { version = "0.9.3", features = ["cookie"] }
 chrono = "0.4.37"
 deadpool-postgres = "0.10.5"
-deadpool-redis = "0.12.0"
 fancy-regex = "0.11.0"
+fred = { version = "9.0.1", features = ["subscriber-client"] }
 heck = "0.4.1"
 json-patch = "1.2.0"
 jsonwebtoken = "8.3.0"
@@ -36,6 +37,7 @@ secrecy = { version = "0.8.0", features = ["serde"] }
 semver = "1.0.22"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.115"
+time = "0.3.36"
 tokio = { version = "1.37.0", features = ["macros"] }
 tokio-postgres = { version = "0.7.10", features = [
 	"with-chrono-0_4",
@@ -45,8 +47,8 @@ tokio-postgres-rustls = "0.10.0"
 totp-rs = { version = "5.5.1", features = ["gen_secret", "qr"] }
 tracing = "0.1.40"
 tracing-unwrap = "0.10.0"
-utoipa = { version = "3.5.0", features = ["actix_extras", "chrono"] }
-validator = { version = "0.16.1", features = ["derive"] }
-webauthn-rs = { git = "https://github.com/Xenfo/webauthn-rs", rev = "fbe5b35", features = [
+validator = { version = "0.18.1", features = ["derive"] }
+webauthn-rs = { git = "https://github.com/Xenfo/webauthn-rs", rev = "cad800c", features = [
 	"danger-allow-state-serialisation",
+	"danger-no-uuid"
 ] }

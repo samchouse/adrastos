@@ -22,6 +22,17 @@ enum ConfigKey {
     S3Endpoint,
     S3AccessKey,
     S3SecretKey,
+
+    GoogleClientId,
+    GoogleClientSecret,
+    FacebookClientId,
+    FacebookClientSecret,
+    GitHubClientId,
+    GitHubClientSecret,
+    TwitterClientId,
+    TwitterClientSecret,
+    DiscordClientId,
+    DiscordClientSecret,
 }
 
 impl fmt::Display for ConfigKey {
@@ -40,6 +51,17 @@ impl fmt::Display for ConfigKey {
             Self::S3Endpoint => "S3_ENDPOINT",
             Self::S3AccessKey => "S3_ACCESS_KEY",
             Self::S3SecretKey => "S3_SECRET_KEY",
+
+            Self::GoogleClientId => "GOOGLE_CLIENT_ID",
+            Self::GoogleClientSecret => "GOOGLE_CLIENT_SECRET",
+            Self::FacebookClientId => "FACEBOOK_CLIENT_ID",
+            Self::FacebookClientSecret => "FACEBOOK_CLIENT_SECRET",
+            Self::GitHubClientId => "GITHUB_CLIENT_ID",
+            Self::GitHubClientSecret => "GITHUB_CLIENT_SECRET",
+            Self::TwitterClientId => "TWITTER_CLIENT_ID",
+            Self::TwitterClientSecret => "TWITTER_CLIENT_SECRET",
+            Self::DiscordClientId => "DISCORD_CLIENT_ID",
+            Self::DiscordClientSecret => "DISCORD_CLIENT_SECRET",
         };
 
         write!(f, "{name}")
@@ -48,6 +70,8 @@ impl fmt::Display for ConfigKey {
 
 #[derive(Clone, Debug)]
 pub struct Config {
+    system: Option<System>,
+
     // Environment
     pub sentry_dsn: Option<String>,
 
@@ -103,6 +127,8 @@ pub struct Config {
 impl Config {
     pub fn new() -> Config {
         Config {
+            system: None,
+
             sentry_dsn: env::var(ConfigKey::SentryDsn.to_string()).ok(),
             secret_key: Secret::new(env::var(ConfigKey::SecretKey.to_string()).unwrap_or(
                 "l19OOJaOvpal21ofSlsxYyNVQN2EeTY6gEuq6p_hobH_QmJb3dPELmoGKFstBpCI".into(),
@@ -137,20 +163,36 @@ impl Config {
             smtp_password: None,
             smtp_sender_name: None,
             smtp_sender_email: None,
-            google_client_id: None,
-            google_client_secret: None,
-            facebook_client_id: None,
-            facebook_client_secret: None,
-            github_client_id: None,
-            github_client_secret: None,
-            twitter_client_id: None,
-            twitter_client_secret: None,
-            discord_client_id: None,
-            discord_client_secret: None,
+            google_client_id: env::var(ConfigKey::GoogleClientId.to_string()).ok(),
+            google_client_secret: env::var(ConfigKey::GoogleClientSecret.to_string())
+                .ok()
+                .map(Secret::new),
+            facebook_client_id: env::var(ConfigKey::FacebookClientId.to_string()).ok(),
+            facebook_client_secret: env::var(ConfigKey::FacebookClientSecret.to_string())
+                .ok()
+                .map(Secret::new),
+            github_client_id: env::var(ConfigKey::GitHubClientId.to_string()).ok(),
+            github_client_secret: env::var(ConfigKey::GitHubClientSecret.to_string())
+                .ok()
+                .map(Secret::new),
+            twitter_client_id: env::var(ConfigKey::TwitterClientId.to_string()).ok(),
+            twitter_client_secret: env::var(ConfigKey::TwitterClientSecret.to_string())
+                .ok()
+                .map(Secret::new),
+            discord_client_id: env::var(ConfigKey::DiscordClientId.to_string()).ok(),
+            discord_client_secret: env::var(ConfigKey::DiscordClientSecret.to_string())
+                .ok()
+                .map(Secret::new),
         }
     }
 
+    pub fn system(&self) -> &Option<System> {
+        &self.system
+    }
+
     pub fn attach_system(&mut self, system: &System) {
+        self.system = Some(system.clone());
+
         if let Some(v) = system.current_version.as_ref() {
             self.current_version.clone_from(v)
         }

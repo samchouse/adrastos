@@ -1,4 +1,3 @@
-use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
     db::postgres,
     entities::custom_table::{
@@ -9,19 +8,27 @@ use adrastos_core::{
     error::Error,
     id::Id,
 };
+use axum::{
+    extract::Path,
+    response::IntoResponse,
+    routing::{delete, get, patch, post},
+    Json, Router,
+};
 use chrono::Utc;
 use heck::AsSnakeCase;
 use regex::Regex;
 use sea_query::{Alias, PostgresQueryBuilder, Table, TableCreateStatement};
 use serde::Deserialize;
 use serde_json::Value;
-use utoipa::ToSchema;
 
-use crate::middleware::{database::ProjectDatabase, user::RequiredAnyUser};
+use crate::{
+    middleware::extractors::{AnyUser, ProjectDatabase},
+    state::AppState,
+};
 
 pub mod custom;
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateBody {
     name: String,
@@ -50,24 +57,28 @@ pub struct UpdateBody {
     fields: Option<Vec<UpdateField>>,
 }
 
-#[get("/list")]
-pub async fn list(
-    _: RequiredAnyUser,
-    db: ProjectDatabase,
-) -> actix_web::Result<impl Responder, Error> {
-    let tables = CustomTableSchema::find().all(&db).await?;
-    Ok(HttpResponse::Ok().json(tables))
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route("/list", get(list))
+        .route("/create", post(create))
+        .route("/update/:name", patch(update))
+        .route("/delete/:name", delete(remove))
+        .nest("/:name", custom::routes())
 }
 
-#[utoipa::path(path = "/tables")]
-#[post("/create")]
-pub async fn create(
-    _: RequiredAnyUser,
-    db: ProjectDatabase,
-    body: web::Json<CreateBody>,
-) -> actix_web::Result<impl Responder, Error> {
-    let body = body.into_inner();
+pub async fn list(
+    _: AnyUser,
+    ProjectDatabase(db): ProjectDatabase,
+) -> Result<impl IntoResponse, Error> {
+    let tables = CustomTableSchema::find().all(&db).await?;
+    Ok(Json(tables))
+}
 
+pub async fn create(
+    _: AnyUser,
+    ProjectDatabase(db): ProjectDatabase,
+    Json(body): Json<CreateBody>,
+) -> Result<impl IntoResponse, Error> {
     let custom_table = CustomTableSchema {
         id: Id::new().to_string(),
         name: AsSnakeCase(body.name).to_string(),
@@ -141,18 +152,15 @@ pub async fn create(
             .unwrap();
     }
 
-    Ok(HttpResponse::Ok().json(custom_table))
+    Ok(Json(custom_table))
 }
 
-#[patch("/update/{name}")]
 pub async fn update(
-    _: RequiredAnyUser,
-    db: ProjectDatabase,
-    path: web::Path<String>,
-    body: web::Json<UpdateBody>,
-) -> actix_web::Result<impl Responder, Error> {
-    let body = body.into_inner();
-
+    _: AnyUser,
+    Path(path): Path<String>,
+    ProjectDatabase(db): ProjectDatabase,
+    Json(body): Json<UpdateBody>,
+) -> Result<impl IntoResponse, Error> {
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
         .one(&db)
@@ -250,15 +258,14 @@ pub async fn update(
         .one(&db)
         .await?;
 
-    Ok(HttpResponse::Ok().json(custom_table))
+    Ok(Json(custom_table))
 }
 
-#[delete("/delete/{name}")]
-pub async fn delete(
-    _: RequiredAnyUser,
-    db: ProjectDatabase,
-    path: web::Path<String>,
-) -> actix_web::Result<impl Responder, Error> {
+pub async fn remove(
+    _: AnyUser,
+    Path(path): Path<String>,
+    ProjectDatabase(db): ProjectDatabase,
+) -> Result<impl IntoResponse, Error> {
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
         .one(&db)
@@ -279,5 +286,5 @@ pub async fn delete(
         .await
         .unwrap();
 
-    Ok(HttpResponse::Ok().json(Value::Null))
+    Ok(Json(Value::Null))
 }

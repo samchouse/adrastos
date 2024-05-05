@@ -1,6 +1,6 @@
-use std::fmt::{self, Debug};
+use std::fmt;
 
-use actix_web::{body, error, http::StatusCode, HttpResponse, ResponseError};
+use axum::{http::StatusCode, response::IntoResponse};
 use serde_json::json;
 use validator::ValidationErrors;
 
@@ -22,60 +22,48 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             Self::NotFound => "Not Found",
+            Self::Custom(..) => "Custom Error",
             Self::Unauthorized => "Unauthorized",
             Self::Forbidden { .. } => "Forbidden",
             Self::BadRequest { .. } => "Bad Request",
             Self::ValidationErrors { .. } => "Validation Errors",
             Self::InternalServerError { .. } => "Internal Server Error",
-            Self::Custom(..) => "Custom Error",
         };
 
         write!(f, "{name}")
     }
 }
 
-impl error::ResponseError for Error {
-    fn error_response(&self) -> HttpResponse<body::BoxBody> {
-        self.response()
-    }
-
-    fn status_code(&self) -> StatusCode {
-        match self {
-            Self::NotFound => StatusCode::NOT_FOUND,
-            Self::Unauthorized => StatusCode::UNAUTHORIZED,
-            Self::Forbidden(..) => StatusCode::FORBIDDEN,
-            Self::BadRequest(..) => StatusCode::BAD_REQUEST,
-            Self::Custom(code, ..) => *code,
-            Self::ValidationErrors { .. } => StatusCode::BAD_REQUEST,
-            Self::InternalServerError(..) => StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    }
-}
-
-impl Error
-where
-    Self: error::ResponseError,
-{
-    pub fn response(&self) -> HttpResponse<body::BoxBody> {
+impl IntoResponse for Error {
+    fn into_response(self) -> axum::response::Response {
         let mut response = json!({
             "success": false,
             "status": self.to_string(),
         });
 
-        let patch = match self {
-            Self::NotFound => json!({ "message": "Resource not found" }),
-            Self::Unauthorized => json!({ "message": "User not authenticated" }),
-            Self::Forbidden(message) => json!({ "message": message }),
-            Self::BadRequest(message) => json!({ "message": message }),
-            Self::InternalServerError(error) => json!({ "error": error }),
-            Self::Custom(_, message) => json!({ "message": message }),
-            Self::ValidationErrors { message, errors } => {
-                json!({ "message": message, "errors": errors })
+        let (status_code, patch) = match self {
+            Self::Forbidden(message) => (StatusCode::FORBIDDEN, json!({ "message": message })),
+            Self::BadRequest(message) => (StatusCode::BAD_REQUEST, json!({ "message": message })),
+            Self::Custom(code, message) => (code, json!({ "message": message })),
+            Self::InternalServerError(error) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, json!({ "error": error }))
             }
+            Self::NotFound => (
+                StatusCode::NOT_FOUND,
+                json!({ "message": "Resource not found" }),
+            ),
+            Self::Unauthorized => (
+                StatusCode::UNAUTHORIZED,
+                json!({ "message": "User not authenticated" }),
+            ),
+            Self::ValidationErrors { message, errors } => (
+                StatusCode::BAD_REQUEST,
+                json!({ "message": message, "errors": errors }),
+            ),
         };
 
         json_patch::merge(&mut response, &patch);
 
-        HttpResponse::build(self.status_code()).json(response)
+        (status_code, axum::Json(patch)).into_response()
     }
 }

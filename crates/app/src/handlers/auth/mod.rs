@@ -1,48 +1,39 @@
-use std::time;
-
-use actix_session::Session;
 use adrastos_core::{
     auth::{self, TokenType},
-    db::postgres::Database,
-    entities::{AnyUser, UpdateUser, User, UserType},
+    entities::{self, UserType},
     error::Error,
     id::Id,
     util,
 };
-use tokio::time::timeout;
-
-use actix_web::{
-    cookie::{Cookie, SameSite},
-    get, post, web, HttpRequest, HttpResponse, Responder,
+use axum::{
+    extract::{Query, State},
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
 };
+use axum_extra::extract::CookieJar;
 use chrono::{Duration, Utc};
-use deadpool_redis::redis::{self, AsyncCommands};
-use futures_util::StreamExt;
-use lettre::{
-    message::header::ContentType, AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
+use fred::{
+    interfaces::{EventInterface, KeysInterface, PubsubInterface},
+    types::Expiration,
 };
+use lettre::{message::header::ContentType, AsyncTransport, Message};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use tokio::time::{self, timeout};
+use tower_sessions::Session;
 use tracing::{error, warn};
 
 use crate::{
-    middleware::{
-        config::Config,
-        database::ProjectDatabase,
-        user::{RequiredAnyUser, RequiredUser},
-    },
+    middleware::extractors::{AnyUser, Config, Database, Mailer, ProjectDatabase, User},
     session::SessionKey,
+    state::AppState,
 };
 
 pub mod mfa;
 pub mod oauth2;
 pub mod passkeys;
 pub mod token;
-
-#[derive(Deserialize)]
-pub struct VerifyParams {
-    token: String,
-}
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -60,14 +51,35 @@ pub struct LoginBody {
     password: String,
 }
 
-#[post("/register")]
+#[derive(Deserialize)]
+pub struct VerifyParams {
+    token: String,
+}
+
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route("/register", post(register))
+        .route("/login", post(login))
+        .route("/logout", get(logout))
+        .route("/verify", get(verify))
+        .route("/resend-verification", post(resend_verification))
+        .nest("/mfa", mfa::routes())
+        .nest("/token", token::routes())
+        .nest("/passkeys", passkeys::routes())
+        .nest("/oauth2", oauth2::routes())
+}
+
 pub async fn register(
-    db: Database,
-    body: web::Json<RegisterBody>,
-    config: Config,
-    redis_pool: web::Data<deadpool_redis::Pool>,
-    mailer: web::Data<Option<AsyncSmtpTransport<Tokio1Executor>>>,
-) -> actix_web::Result<impl Responder, Error> {
+    mailer: Option<Mailer>,
+    Config(config): Config,
+    Database(db): Database,
+    State(AppState {
+        redis_pool,
+        subscriber,
+        ..
+    }): State<AppState>,
+    Json(body): Json<RegisterBody>,
+) -> Result<impl IntoResponse, Error> {
     if !mailchecker::is_valid(body.email.as_str()) {
         return Err(Error::BadRequest("Invalid email".into()));
     }
@@ -92,7 +104,7 @@ pub async fn register(
         return Err(Error::BadRequest("Username already in use".into()));
     }
 
-    let user = AnyUser {
+    let user = entities::AnyUser {
         id: Id::new().to_string(),
         first_name: body.first_name.clone(),
         last_name: body.last_name.clone(),
@@ -106,15 +118,18 @@ pub async fn register(
     UserType::from(&db).create(user.clone()).await?;
 
     if let UserType::Normal(_) = UserType::from(&db) {
-        if let Some(mailer) = mailer.get_ref() {
+        if let Some(Mailer(mailer)) = mailer {
             let verification_token = Id::new().to_string();
+            let channel = format!("html:{}", verification_token);
 
-            let mut conn = redis_pool.get().await.unwrap();
-            redis::cmd("SETEX")
-                .arg(format!("verification:{}", verification_token))
-                .arg(Duration::try_hours(1).unwrap().num_seconds())
-                .arg(user.id.clone())
-                .query_async(&mut conn)
+            redis_pool
+                .set(
+                    format!("verification:{}", verification_token),
+                    user.id.clone(),
+                    Some(Expiration::EX(Duration::hours(1).num_seconds())),
+                    None,
+                    false,
+                )
                 .await
                 .map_err(|_| {
                     Error::InternalServerError(
@@ -122,62 +137,68 @@ pub async fn register(
                     )
                 })?;
 
-            let mut conn = redis::Client::open(config.redis_url.clone())
-                .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
-                .get_async_connection()
-                .await
-                .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?;
-            conn.publish::<_, _, ()>("emails", verification_token)
-                .await
-                .unwrap();
+            let (c_channel, c_user) = (channel.clone(), user.clone());
+            let mut message_rx = subscriber.message_rx();
+            let task = tokio::spawn(async move {
+                while let Ok(Ok(message)) =
+                    timeout(time::Duration::from_secs(3), message_rx.recv()).await
+                {
+                    if message.channel != c_channel {
+                        continue;
+                    }
 
-            let mut pubsub = conn.into_pubsub();
-            pubsub.subscribe("html").await.map_err(|_| {
+                    let message = Message::builder()
+                        .from(
+                            format!(
+                                "{} <{}>",
+                                config.smtp_sender_name.unwrap(),
+                                config.smtp_sender_email.unwrap()
+                            )
+                            .parse()
+                            .unwrap(),
+                        )
+                        .to(format!("<{}>", body.email).parse().unwrap())
+                        .subject("Verify Your Email")
+                        .header(ContentType::TEXT_HTML)
+                        .body(message.value.as_str().unwrap().to_string())
+                        .unwrap();
+
+                    let _ = mailer.send(message).await;
+                    return;
+                }
+
+                warn!(
+                    user.id = c_user.id,
+                    "Redis timed out or errored while waiting for verification email"
+                );
+            });
+
+            subscriber.subscribe(channel.clone()).await.map_err(|_| {
                 Error::InternalServerError("An error occurred while subscribing to Redis".into())
             })?;
 
-            let mut stream = pubsub.on_message();
-            if let Ok(Some(msg)) = timeout(time::Duration::from_secs(3), stream.next()).await {
-                drop(stream);
-                pubsub.unsubscribe("html").await.map_err(|_| {
-                    Error::InternalServerError(
-                        "An error occurred while unsubscribing from Redis".into(),
-                    )
+            subscriber
+                .publish("emails", verification_token)
+                .await
+                .map_err(|_| {
+                    Error::InternalServerError("An error occurred while publishing to Redis".into())
                 })?;
 
-                let html = msg.get_payload::<String>().unwrap();
-                let message = Message::builder()
-                    .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
-                    .to(format!("<{}>", body.email).parse().unwrap())
-                    .subject("Verify Your Email")
-                    .header(ContentType::TEXT_HTML)
-                    .body(html)
-                    .unwrap();
-
-                mailer.send(message).await.map_err(|_| {
-                    Error::InternalServerError(
-                        "An error occurred while sending the verification email".into(),
-                    )
-                })?;
-            } else {
-                warn!(
-                    user.id,
-                    "Redis timed out while waiting for verification email"
-                );
-            };
+            let _ = task.await;
+            subscriber.unsubscribe(channel).await.unwrap();
         }
     }
 
-    Ok(HttpResponse::Ok().json(user))
+    Ok(Json(user).into_response())
 }
 
-#[post("/login")]
 pub async fn login(
+    jar: CookieJar,
     session: Session,
-    db: Database,
-    body: web::Json<LoginBody>,
-    config: Config,
-) -> actix_web::Result<impl Responder, Error> {
+    Config(config): Config,
+    Database(db): Database,
+    Json(body): Json<LoginBody>,
+) -> Result<impl IntoResponse, Error> {
     let user = UserType::from(&db)
         .find()
         .by_email(body.email.clone())
@@ -194,45 +215,36 @@ pub async fn login(
 
     if user.mfa_secret.is_some() {
         session
-            .insert(SessionKey::LoginUserId.to_string(), user.id)
+            .insert(&SessionKey::LoginUserId.to_string(), user.id)
+            .await
             .map_err(|_| {
                 Error::InternalServerError("An error occurred while setting the session".into())
             })?;
         session
-            .insert(SessionKey::MfaRetries.to_string(), 3)
+            .insert(&SessionKey::MfaRetries.to_string(), 3)
+            .await
             .map_err(|_| {
                 Error::InternalServerError("An error occurred while setting the session".into())
             })?;
 
-        return Ok(HttpResponse::Ok().json(json!({
+        return Ok(Json(json!({
             "success": true,
             "message": "MFA is required for this user, continue to MFA verification",
-        })));
+        }))
+        .into_response());
     }
 
-    let auth = auth::authenticate(&db, &config.clone(), &user).await?;
-    Ok(HttpResponse::Ok()
-        .cookie(auth.cookie.clone())
-        .cookie(
-            Cookie::build("isLoggedIn", true.to_string())
-                .secure(true)
-                .http_only(true)
-                .same_site(SameSite::None)
-                .path("/")
-                .expires(auth.cookie.expires().unwrap())
-                .finish(),
-        )
-        .json(user))
+    let (_, jar) = auth::authenticate(&db, &config.clone(), &user, jar).await?;
+    Ok((jar, Json(user).into_response()).into_response())
 }
 
-#[get("/logout")]
 pub async fn logout(
-    db: Database,
-    req: HttpRequest,
-    user: RequiredAnyUser,
-    config: Config,
-) -> actix_web::Result<impl Responder, Error> {
-    let mut cookies = util::get_auth_cookies(&req)?;
+    jar: CookieJar,
+    Config(config): Config,
+    AnyUser(user): AnyUser,
+    Database(db): Database,
+) -> Result<impl IntoResponse, Error> {
+    let cookies = util::get_auth_cookies(&jar)?;
     let refresh_token =
         auth::TokenType::verify(&config.clone(), cookies.refresh_token.value().into())?;
     if refresh_token.token_type != TokenType::Refresh {
@@ -248,41 +260,36 @@ pub async fn logout(
         .delete(&db)
         .await?;
 
-    cookies.is_logged_in.make_removal();
-    cookies.refresh_token.make_removal();
-    Ok(HttpResponse::Ok()
-        .cookie(cookies.is_logged_in)
-        .cookie(cookies.refresh_token)
-        .json(Value::Null))
+    let _ = jar.remove("isLoggedIn").remove("refreshToken");
+    Ok(Json(Value::Null))
 }
 
-#[get("/verify")]
 pub async fn verify(
-    req: HttpRequest,
-    db: ProjectDatabase,
-    params: web::Query<VerifyParams>,
-    config: Config,
-    redis_pool: web::Data<deadpool_redis::Pool>,
-) -> actix_web::Result<impl Responder, Error> {
+    jar: CookieJar,
+    Config(config): Config,
+    ProjectDatabase(db): ProjectDatabase,
+    Query(params): Query<VerifyParams>,
+    State(AppState { redis_pool, .. }): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
     // TODO(@Xenfo): make this middleware
     let refresh_token = auth::TokenType::verify(
         &config.clone(),
-        util::get_auth_cookies(&req)?.refresh_token.value().into(),
+        util::get_auth_cookies(&jar)?.refresh_token.value().into(),
     )?;
     if refresh_token.token_type != TokenType::Refresh {
         return Err(Error::Forbidden("Not a refresh token".into()));
     }
 
-    let user = User::find_by_id(&refresh_token.claims.sub).one(&db).await?;
+    let user = entities::User::find_by_id(&refresh_token.claims.sub)
+        .one(&db)
+        .await?;
 
     if user.verified {
         return Err(Error::BadRequest("User is already verified".into()));
     }
 
-    let mut conn = redis_pool.get().await.unwrap();
-    let user_id: String = redis::cmd("GET")
-        .arg(format!("verification:{}", params.token))
-        .query_async(&mut conn)
+    let user_id: String = redis_pool
+        .get(format!("verification:{}", params.token))
         .await
         .map_err(|_| {
             Error::InternalServerError(
@@ -296,7 +303,7 @@ pub async fn verify(
 
     user.update(
         &db,
-        UpdateUser {
+        entities::UpdateUser {
             verified: Some(true),
             ..Default::default()
         },
@@ -304,34 +311,34 @@ pub async fn verify(
     .await
     .map_err(|_| Error::InternalServerError("Unable to update user".to_string()))?;
 
-    Ok(HttpResponse::Ok().json(Value::Null))
+    Ok(Json(Value::Null))
 }
 
-#[post("/resend-verification")]
 pub async fn resend_verification(
-    user: RequiredUser,
-    config: Config,
-    redis_pool: web::Data<deadpool_redis::Pool>,
-    mailer: web::Data<Option<AsyncSmtpTransport<Tokio1Executor>>>,
-) -> actix_web::Result<impl Responder, Error> {
+    User(user): User,
+    Config(config): Config,
+    Mailer(mailer): Mailer,
+    State(AppState {
+        redis_pool,
+        subscriber,
+        ..
+    }): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
     if user.verified {
         return Err(Error::BadRequest("User is already verified".into()));
     }
 
-    let Some(mailer) = mailer.get_ref() else {
-        return Err(Error::InternalServerError(
-            "Mailer is not configured".into(),
-        ));
-    };
-
     let verification_token = Id::new().to_string();
+    let channel = format!("html:{}", verification_token);
 
-    let mut conn = redis_pool.get().await.unwrap();
-    redis::cmd("SETEX")
-        .arg(format!("verification:{}", verification_token))
-        .arg(Duration::try_hours(1).unwrap().num_seconds())
-        .arg(user.id.clone())
-        .query_async(&mut conn)
+    redis_pool
+        .set(
+            format!("verification:{}", verification_token),
+            user.id.clone(),
+            Some(Expiration::EX(Duration::hours(1).num_seconds())),
+            None,
+            false,
+        )
         .await
         .map_err(|_| {
             Error::InternalServerError(
@@ -339,51 +346,61 @@ pub async fn resend_verification(
             )
         })?;
 
-    let mut conn = redis::Client::open(config.redis_url.clone())
-        .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?
-        .get_async_connection()
-        .await
-        .map_err(|_| Error::InternalServerError("Unable to connect to Redis".into()))?;
-    conn.publish::<_, _, ()>("emails", verification_token)
-        .await
-        .unwrap();
+    let (c_channel, c_user) = (channel.clone(), user.clone());
+    let mut message_rx = subscriber.message_rx();
+    let task = tokio::spawn(async move {
+        while let Ok(Ok(message)) = timeout(time::Duration::from_secs(3), message_rx.recv()).await {
+            if message.channel != c_channel {
+                continue;
+            }
 
-    let mut pubsub = conn.into_pubsub();
-    pubsub.subscribe("html").await.map_err(|_| {
+            let message = Message::builder()
+                .from(
+                    format!(
+                        "{} <{}>",
+                        config.smtp_sender_name.unwrap(),
+                        config.smtp_sender_email.unwrap()
+                    )
+                    .parse()
+                    .unwrap(),
+                )
+                .to(format!("<{}>", user.email).parse().unwrap())
+                .subject("Verify Your Email")
+                .header(ContentType::TEXT_HTML)
+                .body(message.value.as_str().unwrap().to_string())
+                .unwrap();
+
+            mailer.send(message).await.map_err(|_| {
+                Error::InternalServerError(
+                    "An error occurred while sending the verification email".into(),
+                )
+            })?;
+
+            return Ok(());
+        }
+
+        error!(
+            user.id = c_user.id,
+            "Redis timed out or errored while waiting for verification email"
+        );
+        Err(Error::InternalServerError(
+            "Redis timed out or errored while waiting for verification email".into(),
+        ))
+    });
+
+    subscriber.subscribe(channel.clone()).await.map_err(|_| {
         Error::InternalServerError("An error occurred while subscribing to Redis".into())
     })?;
 
-    let mut stream = pubsub.on_message();
-    if let Some(msg) = stream.next().await {
-        drop(stream);
-        pubsub.unsubscribe("html").await.map_err(|_| {
-            Error::InternalServerError("An error occurred while unsubscribing from Redis".into())
+    subscriber
+        .publish("emails", verification_token)
+        .await
+        .map_err(|_| {
+            Error::InternalServerError("An error occurred while publishing to Redis".into())
         })?;
 
-        let html = msg.get_payload::<String>().unwrap();
-        let message = Message::builder()
-            .from("Adrastos <no-reply@adrastos.xenfo.dev>".parse().unwrap())
-            .to(format!("<{}>", user.email).parse().unwrap())
-            .subject("Verify Your Email")
-            .header(ContentType::TEXT_HTML)
-            .body(html)
-            .unwrap();
+    let _ = task.await;
+    subscriber.unsubscribe(channel).await.unwrap();
 
-        mailer.send(message).await.map_err(|_| {
-            Error::InternalServerError(
-                "An error occurred while sending the verification email".into(),
-            )
-        })?;
-    } else {
-        error!(
-            user.id,
-            "Redis timed out while waiting for verification email"
-        );
-
-        return Err(Error::InternalServerError(
-            "An error occurred while sending the verification email".into(),
-        ));
-    };
-
-    Ok(HttpResponse::Ok().json(Value::Null))
+    Ok(Json(Value::Null))
 }

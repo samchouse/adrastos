@@ -1,36 +1,39 @@
-use actix_web::{
-    cookie::{time::OffsetDateTime, Cookie, Expiration, SameSite},
-    get, HttpRequest, HttpResponse, Responder,
-};
 use adrastos_core::{
     auth::{self, TokenType},
-    db::postgres::Database,
-    entities::{AnyUserJoin, UserType},
+    entities,
     error::Error,
     util,
 };
+use axum::{response::IntoResponse, routing::get, Json, Router};
+use axum_extra::extract::CookieJar;
 use chrono::Utc;
 
-use crate::middleware::config::Config;
+use crate::{
+    middleware::extractors::{Config, Database},
+    state::AppState,
+};
 
-#[get("/token/refresh")]
-#[tracing::instrument(skip(config, req, db))]
+pub fn routes() -> Router<AppState> {
+    Router::new().route("/refresh", get(refresh))
+}
+
+#[tracing::instrument(skip(config, jar, db))]
 pub async fn refresh(
-    db: Database,
-    config: Config,
-    req: HttpRequest,
-) -> actix_web::Result<impl Responder, Error> {
+    jar: CookieJar,
+    Config(config): Config,
+    Database(db): Database,
+) -> Result<impl IntoResponse, Error> {
     let refresh_token = auth::TokenType::verify(
         &config.clone(),
-        util::get_auth_cookies(&req)?.refresh_token.value().into(),
+        util::get_auth_cookies(&jar)?.refresh_token.value().into(),
     )?;
     if refresh_token.token_type != TokenType::Refresh {
         return Err(Error::Forbidden("Not a refresh token".into()));
     }
 
-    let user = UserType::from(&db)
+    let user = entities::UserType::from(&db)
         .find_by_id(&refresh_token.claims.sub)
-        .join(AnyUserJoin::RefreshTokenTrees)
+        .join(entities::AnyUserJoin::RefreshTokenTrees)
         .one()
         .await?;
 
@@ -58,36 +61,12 @@ pub async fn refresh(
     let access_token = TokenType::Access.sign(&config.clone(), &user)?;
     let refresh_token = TokenType::Refresh.sign(&config.clone(), &user)?;
 
-    let cookie_expiration = OffsetDateTime::from_unix_timestamp(
-        refresh_token.expires_at.timestamp(),
-    )
-    .map_err(|_| {
-        Error::InternalServerError("An error occurred while parsing the cookie expiration".into())
-    })?;
-
     let mut tokens = refresh_token_tree.tokens.clone();
     tokens.push(refresh_token.claims.jti.clone());
-
     refresh_token_tree.update(&db, tokens).await?;
 
-    Ok(HttpResponse::Ok()
-        .cookie(
-            Cookie::build("refreshToken", refresh_token.token)
-                .secure(true)
-                .http_only(true)
-                .same_site(SameSite::None)
-                .path("/api/auth")
-                .expires(Expiration::from(cookie_expiration))
-                .finish(),
-        )
-        .cookie(
-            Cookie::build("isLoggedIn", true.to_string())
-                .secure(true)
-                .http_only(true)
-                .same_site(SameSite::None)
-                .path("/")
-                .expires(Expiration::from(cookie_expiration))
-                .finish(),
-        )
-        .json(access_token.clone().token))
+    Ok((
+        auth::create_auth_cookies(refresh_token, jar)?,
+        Json(access_token.clone().token),
+    ))
 }

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use actix_web::{delete, get, patch, post, web, HttpResponse, Responder};
 use adrastos_core::{
     db::postgres,
     entities::custom_table::{
@@ -11,7 +10,12 @@ use adrastos_core::{
     },
     error::Error,
     id::Id,
-    util,
+};
+use axum::{
+    extract::{Path, Query},
+    response::IntoResponse,
+    routing::{delete, get, patch, post},
+    Json, Router,
 };
 use chrono::{DateTime, Utc};
 use heck::{AsLowerCamelCase, AsSnakeCase};
@@ -20,15 +24,27 @@ use sea_query::{Alias, Expr, PostgresQueryBuilder, SimpleExpr, Value};
 use serde_json::json;
 use validator::ValidationErrors;
 
-use crate::middleware::{database::ProjectDatabase, user::RequiredAnyUser};
+use crate::{
+    middleware::extractors::{AnyUser, ProjectDatabase},
+    state::AppState,
+    util,
+};
 
-#[get("/rows")]
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route("/rows", get(rows))
+        .route("/row", get(row))
+        .route("/create", post(create))
+        .route("/update/:name", patch(update))
+        .route("/delete/:name", delete(remove))
+}
+
 pub async fn rows(
-    _: RequiredAnyUser,
-    db: ProjectDatabase,
-    path: web::Path<String>,
-    web::Query(mut query): web::Query<HashMap<String, String>>,
-) -> actix_web::Result<impl Responder, Error> {
+    _: AnyUser,
+    Path(path): Path<String>,
+    ProjectDatabase(db): ProjectDatabase,
+    Query(mut query): Query<HashMap<String, String>>,
+) -> Result<impl IntoResponse, Error> {
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
         .one(&db)
@@ -64,16 +80,15 @@ pub async fn rows(
         );
     }
 
-    Ok(HttpResponse::Ok().json(response))
+    Ok(Json(response))
 }
 
-#[get("/row")]
 pub async fn row(
-    _: RequiredAnyUser,
-    db: ProjectDatabase,
-    path: web::Path<String>,
-    web::Query(query): web::Query<HashMap<String, String>>,
-) -> actix_web::Result<impl Responder, Error> {
+    _: AnyUser,
+    Path(path): Path<String>,
+    ProjectDatabase(db): ProjectDatabase,
+    Query(query): Query<HashMap<String, String>>,
+) -> Result<impl IntoResponse, Error> {
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
         .one(&db)
@@ -92,23 +107,17 @@ pub async fn row(
         .finish(&db)
         .await?;
 
-    Ok(HttpResponse::Ok().json(row.as_array().unwrap().first()))
+    Ok(Json(row.as_array().unwrap().first().cloned()))
 }
 
-#[post("/create")]
 pub async fn create(
-    bytes: web::Bytes,
-    _: RequiredAnyUser,
-    db: ProjectDatabase,
-    path: web::Path<String>,
-) -> actix_web::Result<impl Responder, Error> {
-    let body = serde_json::from_str::<HashMap<String, serde_json::Value>>(
-        &String::from_utf8(bytes.to_vec()).unwrap(),
-    )
-    .map_err(|err| Error::BadRequest(err.to_string()))?;
-
+    _: AnyUser,
+    Path(path): Path<String>,
+    ProjectDatabase(db): ProjectDatabase,
+    Json(body): Json<HashMap<String, serde_json::Value>>,
+) -> Result<impl IntoResponse, Error> {
     let custom_table = CustomTableSchema::find()
-        .by_name(AsSnakeCase(path.into_inner()).to_string())
+        .by_name(AsSnakeCase(path).to_string())
         .one(&db)
         .await?;
 
@@ -301,22 +310,16 @@ pub async fn create(
         })
         .for_each(|patch| json_patch::merge(&mut data, &patch));
 
-    Ok(HttpResponse::Ok().json(json!(data)))
+    Ok(Json(data))
 }
 
-#[patch("/update")]
 pub async fn update(
-    bytes: web::Bytes,
-    _: RequiredAnyUser,
-    db: ProjectDatabase,
-    path: web::Path<String>,
-    web::Query(query): web::Query<HashMap<String, String>>,
-) -> actix_web::Result<impl Responder, Error> {
-    let body = serde_json::from_str::<HashMap<String, serde_json::Value>>(
-        &String::from_utf8(bytes.to_vec()).unwrap(),
-    )
-    .map_err(|err| Error::BadRequest(err.to_string()))?;
-
+    _: AnyUser,
+    Path(path): Path<String>,
+    ProjectDatabase(db): ProjectDatabase,
+    Query(query): Query<HashMap<String, String>>,
+    Json(body): Json<HashMap<String, serde_json::Value>>,
+) -> Result<impl IntoResponse, Error> {
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
         .one(&db)
@@ -412,16 +415,15 @@ pub async fn update(
         })
         .for_each(|patch| json_patch::merge(&mut data, &patch));
 
-    Ok(HttpResponse::Ok().json(json!(data)))
+    Ok(Json(data))
 }
 
-#[delete("/delete")]
-pub async fn delete(
-    _: RequiredAnyUser,
-    db: ProjectDatabase,
-    path: web::Path<String>,
-    web::Query(query): web::Query<HashMap<String, String>>,
-) -> actix_web::Result<impl Responder, Error> {
+pub async fn remove(
+    _: AnyUser,
+    Path(path): Path<String>,
+    ProjectDatabase(db): ProjectDatabase,
+    Query(query): Query<HashMap<String, String>>,
+) -> Result<impl IntoResponse, Error> {
     let custom_table = CustomTableSchema::find()
         .by_name(path.clone())
         .one(&db)
@@ -448,5 +450,5 @@ pub async fn delete(
         .await
         .unwrap();
 
-    Ok(HttpResponse::Ok().json(serde_json::Value::Null))
+    Ok(Json(serde_json::Value::Null))
 }
