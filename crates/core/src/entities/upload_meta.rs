@@ -5,9 +5,13 @@ use serde::{Deserialize, Serialize};
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, DbSelect, DbCommon, DbQuery)]
-pub struct Upload {
+#[serde(rename_all = "camelCase")]
+#[adrastos(rename = "upload_metadata")]
+pub struct UploadMetadata {
     pub id: String,
     #[adrastos(find)]
     pub name: String,
+    // #[adrastos(relation = User)] // TODO(@Xenfo): undo this
+    pub user_id: String,
     pub created_at: DateTime<Utc>,
 }

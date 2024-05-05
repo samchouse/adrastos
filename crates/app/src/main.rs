@@ -1,5 +1,6 @@
 #![feature(let_chains)]
 
+use actix_multipart::form::MultipartFormConfig;
 use actix_session::{storage::RedisSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, error::InternalError, web, App, HttpResponse, HttpServer};
 use adrastos_core::{
@@ -17,6 +18,7 @@ use clap::Parser;
 use cli::{Cli, Command};
 use dotenvy::dotenv;
 use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
+use middleware::content_length_limiter::ContentLengthLimiter;
 use openapi::ApiDoc;
 use rustls::{Certificate, PrivateKey, ServerConfig};
 use rustls_pemfile::{certs, pkcs8_private_keys};
@@ -24,7 +26,6 @@ use sea_query::PostgresQueryBuilder;
 use secrecy::ExposeSecret;
 use serde_json::json;
 use std::{fs::File, io::BufReader, process};
-use tokio::sync::RwLock;
 use tracing::{error, info};
 use tracing_actix_web::TracingLogger;
 use tracing_unwrap::{OptionExt, ResultExt};
@@ -53,20 +54,18 @@ async fn main() -> std::io::Result<()> {
     let inner_databases = databases.clone();
     let db = databases.get(&DatabaseType::System, &config).await;
 
-    {
-        config.attach_system(
-            &db.get()
-                .await
-                .unwrap_or_log()
-                .query(&System::get(), &[])
-                .await
-                .unwrap_or_log()
-                .into_iter()
-                .next()
-                .unwrap_or_log()
-                .into(),
-        );
-    }
+    config.attach_system(
+        &db.get()
+            .await
+            .unwrap_or_log()
+            .query(&System::get(), &[])
+            .await
+            .unwrap_or_log()
+            .into_iter()
+            .next()
+            .unwrap_or_log()
+            .into(),
+    );
 
     let cli = Cli::parse();
     if cli.command == Some(Command::Migrate) {
@@ -105,6 +104,10 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Config {
                 config: config.clone(),
                 databases: inner_databases.clone(),
+                flags: vec![(
+                    "/api/storage/get".into(),
+                    vec![middleware::Flag::AllowProjectIdParam],
+                )],
             })
             .wrap(middleware::Cors {
                 config: config.clone(),
@@ -113,9 +116,9 @@ async fn main() -> std::io::Result<()> {
                 store.clone(),
                 Key::from(config.secret_key.expose_secret().as_bytes()),
             ))
+            .app_data(MultipartFormConfig::default().total_limit(usize::MAX))
             .app_data(s3.clone())
             .app_data(web::Data::new(OAuth2::new(&config)))
-            .app_data(web::Data::new(RwLock::new(config.clone())))
             .app_data(web::Data::new(redis::create_pool(&config)))
             .app_data(web::JsonConfig::default().error_handler(|err, _| {
                 let err_string = err.to_string();
@@ -221,10 +224,11 @@ async fn main() -> std::io::Result<()> {
                                 handlers::teams::projects::delete,
                             ))),
                     )
-                    .service(web::scope("/storage").service((
-                        handlers::storage::get_upload,
+                    .service(web::scope("/storage").wrap(ContentLengthLimiter).service((
+                        handlers::storage::list,
                         handlers::storage::upload,
                         handlers::storage::delete,
+                        handlers::storage::get_upload,
                     ))),
             )
             .service(handlers::index)

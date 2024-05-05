@@ -7,6 +7,7 @@ use syn::PathSegment;
 #[derive(Debug, PartialEq)]
 pub enum Type {
     Bool,
+    Int64,
     String,
     DateTime,
     Vec(Box<Type>),
@@ -24,6 +25,7 @@ impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             Type::Bool => "bool",
+            Type::Int64 => "i64",
             Type::String => "String",
             Type::DateTime => "DateTime",
             Type::Vec(_) => "Vec",
@@ -48,6 +50,7 @@ impl From<syn::Type> for Type {
                 let seg = ty.path.segments.first().unwrap();
                 match seg.ident.to_string().as_str() {
                     "bool" => Type::Bool,
+                    "i64" => Type::Int64,
                     "String" => Type::String,
                     "DateTime" => Type::DateTime,
                     "Vec" => Type::Vec(recurse_segment(seg)),
@@ -68,6 +71,7 @@ fn recurse_segment(seg: &PathSegment) -> Box<Type> {
             if let Some(seg) = seg {
                 return Box::new(match seg.ident.to_string().as_str() {
                     "bool" => Type::Bool,
+                    "i64" => Type::Int64,
                     "String" => Type::String,
                     "DateTime" => Type::DateTime,
                     "Vec" => Type::Vec(recurse_segment(seg)),

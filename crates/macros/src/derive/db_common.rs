@@ -61,6 +61,7 @@ pub fn db_common(item: TokenStream) -> TokenStream {
         let unique_attr = attrs.get(TokenName::Unique).is_some().then_some(quote! { .unique_key() });
         let props = match ty {
             Type::String => quote! { .string().not_null() },
+            Type::Int64 => quote! { .big_integer().not_null() },
             Type::Bool => quote! { .boolean().not_null().default(false) },
             Type::DateTime => quote! { .timestamp_with_time_zone().not_null().default(sea_query::Keyword::CurrentTimestamp) },
             Type::Vec(_) if attrs.get(TokenName::Json).is_some() => {
@@ -69,6 +70,7 @@ pub fn db_common(item: TokenStream) -> TokenStream {
             Type::Vec(_) => quote! { .array(sea_query::ColumnType::String(None)).not_null().default(vec![] as Vec<String>) },
             Type::Option(generic) => {
                 match *generic {
+                    Type::Int64 => quote! { .big_integer() },
                     Type::DateTime => quote! { .timestamp_with_time_zone() },
                     Type::Vec(_) if attrs.get(TokenName::Json).is_some() => {
                         quote! { .array(sea_query::ColumnType::JsonBinary) }
@@ -101,7 +103,7 @@ pub fn db_common(item: TokenStream) -> TokenStream {
         let attrs = AttributeTokens::from(attrs.clone());
 
         let str_ident = inner_ident.clone().unwrap().to_string();
-        let fk_name = format!("FK_{}_{}", ident.to_string().to_lowercase(), str_ident);
+        let fk_name = format!("FK_{}_{}", AsSnakeCase(ident.to_string()), str_ident);
 
         let relation = attrs.get(TokenName::Relation).map(|t| {
             if let Token::Relation(ident) = t {
@@ -130,20 +132,20 @@ pub fn db_common(item: TokenStream) -> TokenStream {
         let str_ident = ident.clone().unwrap().to_string();
 
         match ty {
-            Type::String | Type::Bool | Type::DateTime => quote! { #ident: row.get(#str_ident) },
+            Type::Int64 | Type::String | Type::Bool | Type::DateTime => quote! { #ident: row.get(#str_ident) },
             Type::Vec(generic) => match *generic {
-                Type::String | Type::Bool | Type::DateTime => quote! { #ident: row.get(#str_ident) },
+                Type::Int64 | Type::String | Type::Bool | Type::DateTime => quote! { #ident: row.get(#str_ident) },
                 _ => quote!{ #ident: row.get::<_, Vec<String>>(#str_ident).iter().map(|s| serde_json::from_str(s).unwrap()).collect::<Vec<_>>() },
             },
             Type::Option(generic) => match *generic {
-                Type::String | Type::Bool | Type::DateTime => quote! { #ident: row.get(#str_ident) },
+                Type::Int64 | Type::String | Type::Bool | Type::DateTime => quote! { #ident: row.get(#str_ident) },
                 Type::Vec(generic) => {
                     match *generic {
-                        Type::String | Type::Bool | Type::DateTime => quote! { #ident: row.get(#str_ident) },
+                        Type::Int64 | Type::String | Type::Bool | Type::DateTime => quote! { #ident: row.get(#str_ident) },
                         _ => quote!{ #ident: row.try_get::<_, serde_json::Value>(#str_ident).ok().map(|v| serde_json::from_value(v).unwrap()) },
                     }
                 },
-                _ => quote! { #ident: row.try_get(#str_ident).ok().map(|v| serde_json::from_value(v).unwrap()) },
+                _ => quote! { #ident: row.try_get::<_, String>(#str_ident).ok().map(|v| serde_json::from_str(&v).unwrap()) },
             },
             _ => quote! { #ident: serde_json::from_value(row.get(#str_ident)).unwrap() },
         }

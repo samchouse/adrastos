@@ -1,27 +1,27 @@
 use actix_web::{
     cookie::{time::OffsetDateTime, Cookie, Expiration, SameSite},
-    get, web, HttpRequest, HttpResponse, Responder,
+    get, HttpRequest, HttpResponse, Responder,
 };
 use adrastos_core::{
     auth::{self, TokenType},
-    config,
     db::postgres::Database,
     entities::{AnyUserJoin, UserType},
     error::Error,
     util,
 };
 use chrono::Utc;
-use tokio::sync::RwLock;
+
+use crate::middleware::config::Config;
 
 #[get("/token/refresh")]
 #[tracing::instrument(skip(config, req, db))]
 pub async fn refresh(
     db: Database,
+    config: Config,
     req: HttpRequest,
-    config: web::Data<RwLock<config::Config>>,
 ) -> actix_web::Result<impl Responder, Error> {
     let refresh_token = auth::TokenType::verify(
-        &config.read().await.clone(),
+        &config.clone(),
         util::get_auth_cookies(&req)?.refresh_token.value().into(),
     )?;
     if refresh_token.token_type != TokenType::Refresh {
@@ -55,8 +55,8 @@ pub async fn refresh(
         return Err(Error::Forbidden("Refresh token is invalid".into()));
     }
 
-    let access_token = TokenType::Access.sign(&config.read().await.clone(), &user)?;
-    let refresh_token = TokenType::Refresh.sign(&config.read().await.clone(), &user)?;
+    let access_token = TokenType::Access.sign(&config.clone(), &user)?;
+    let refresh_token = TokenType::Refresh.sign(&config.clone(), &user)?;
 
     let cookie_expiration = OffsetDateTime::from_unix_timestamp(
         refresh_token.expires_at.timestamp(),

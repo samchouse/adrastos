@@ -12,28 +12,40 @@ use actix_web::{
 use actix_web_httpauth::headers::authorization::{Authorization, Bearer};
 use adrastos_core::{
     auth::TokenType,
-    config,
+    config as core_cfg,
     db::postgres::{Database, DatabaseType, Databases},
-    entities::{self, SystemUserJoin, UserJoin},
+    entities::{self, System, SystemUserJoin, UserJoin},
 };
 use futures_util::future::LocalBoxFuture;
 use serde::Deserialize;
+use tracing_unwrap::{OptionExt, ResultExt};
 
 pub use self::cors::Cors;
 
+pub mod config;
+pub mod content_length_limiter;
 pub mod cors;
 pub mod database;
 pub mod project;
 pub mod user;
 
+#[derive(PartialEq, Clone, Debug)]
+pub enum Flag {
+    AllowAuthParam,
+    AllowProjectIdParam,
+}
+
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct ReqParams {
     auth: Option<String>,
+    project_id: Option<String>,
 }
 
 pub struct Config {
-    pub config: config::Config,
+    pub config: core_cfg::Config,
     pub databases: Arc<Databases>,
+    pub flags: Vec<(String, Vec<Flag>)>,
 }
 
 impl<S, B> Transform<S, ServiceRequest> for Config
@@ -51,6 +63,7 @@ where
     fn new_transform(&self, service: S) -> Self::Future {
         ready(Ok(Middleware {
             service: Rc::new(service),
+            flags: self.flags.clone(),
             config: self.config.clone(),
             databases: self.databases.clone(),
         }))
@@ -59,8 +72,9 @@ where
 
 pub struct Middleware<S> {
     service: Rc<S>,
-    config: config::Config,
+    config: core_cfg::Config,
     databases: Arc<Databases>,
+    flags: Vec<(String, Vec<Flag>)>,
 }
 
 impl<S, B> Service<ServiceRequest> for Middleware<S>
@@ -79,13 +93,35 @@ where
         let config = self.config.clone();
         let service = self.service.clone();
         let databases = self.databases.clone();
+        let flags = self.flags.clone();
         let authorization = Authorization::<Bearer>::parse(&req);
 
         Box::pin(async move {
+            let flags = flags
+                .iter()
+                .find(|flag| req.path().starts_with(&flag.0))
+                .cloned()
+                .map(|f| f.1)
+                .unwrap_or_default();
+
+            let project_id = req
+                .headers()
+                .get("X-Project-Id")
+                .map(|h| h.to_str().unwrap().to_string())
+                .or(if flags.contains(&Flag::AllowProjectIdParam) {
+                    req.extract::<web::Query<ReqParams>>()
+                        .await
+                        .map(|q| q.project_id.clone())
+                        .ok()
+                        .flatten()
+                } else {
+                    None
+                });
+
             let system_db = databases.get(&DatabaseType::System, &config).await;
-            let db_type = match req.headers().get("X-Project-Id") {
+            let db_type = match project_id {
                 Some(project_id) => {
-                    match entities::Project::find_by_id(project_id.to_str().unwrap())
+                    match entities::Project::find_by_id(&project_id)
                         .one(&system_db)
                         .await
                         .ok()
@@ -93,9 +129,7 @@ where
                         Some(project) => {
                             req.extensions_mut().insert::<entities::Project>(project);
 
-                            Some(DatabaseType::Project(
-                                project_id.to_str().unwrap().to_string(),
-                            ))
+                            Some(DatabaseType::Project(project_id))
                         }
                         None => None,
                     }
@@ -105,6 +139,22 @@ where
 
             if let Some(db_type) = db_type {
                 let db = databases.get(&db_type, &config).await;
+
+                let mut updated_config = config.clone();
+                updated_config.attach_system(
+                    &db.get()
+                        .await
+                        .unwrap_or_log()
+                        .query(&System::get(), &[])
+                        .await
+                        .unwrap_or_log()
+                        .into_iter()
+                        .next()
+                        .unwrap_or_log()
+                        .into(),
+                );
+                req.extensions_mut()
+                    .insert::<core_cfg::Config>(updated_config);
 
                 req.extensions_mut()
                     .insert::<Database>(Database(system_db.clone(), DatabaseType::System));
@@ -117,12 +167,17 @@ where
                 let authorization = authorization
                     .ok()
                     .map(|a| a.into_scheme().token().to_owned())
-                    .or(req
-                        .extract::<web::Query<ReqParams>>() // TODO(@Xenfo): should mark this token as used in the database
-                        .await
-                        .map(|q| q.auth.clone())
-                        .ok()
-                        .flatten());
+                    .or({
+                        if flags.contains(&Flag::AllowAuthParam) {
+                            req.extract::<web::Query<ReqParams>>() // TODO(@Xenfo): should mark this token as used in the database
+                                .await
+                                .map(|q| q.auth.clone())
+                                .ok()
+                                .flatten()
+                        } else {
+                            None
+                        }
+                    });
 
                 if let Some(token) = authorization {
                     if let Ok(access_token) = TokenType::verify(&config, token) {

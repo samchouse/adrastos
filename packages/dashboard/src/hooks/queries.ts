@@ -1,11 +1,12 @@
 import { Client, Table } from '@adrastos/lib';
 import { queryOptions } from '@tanstack/react-query';
 
-import { Project, Team } from '~/types';
+import { Project, Team, Upload } from '~/types';
 
 const baseQueryKey = {
   tables: ['tables'] as const,
   teams: ['teams'] as const,
+  storage: ['storage'] as const,
 };
 
 export const queryKeys = {
@@ -20,6 +21,7 @@ export const queryKeys = {
   projects: (teamId: string) =>
     [...baseQueryKey.teams, teamId, 'projects', 'list'] as const,
   project: (projectId: string) => ['projects', projectId] as const,
+  storage: [...baseQueryKey.storage, 'list'] as const,
 };
 
 export const tokenRefreshQueryOptions = (client: Client) =>
@@ -40,7 +42,7 @@ export const configDetailsQueryOptions = (client: Client) =>
   queryOptions({
     queryKey: queryKeys.configDetails,
     queryFn: async () =>
-      await client.request<ReturnType<(typeof client)['config']['details']>>({
+      await client.json<ReturnType<(typeof client)['config']['details']>>({
         path: '/config/details',
         method: 'GET',
         projectIdNeeded: true,
@@ -73,7 +75,7 @@ export const teamsQueryOptions = (client: Client) =>
   queryOptions({
     queryKey: queryKeys.teams,
     queryFn: async () =>
-      await client.request<Team[]>({
+      await client.json<Team[]>({
         method: 'GET',
         path: '/teams/list',
       }),
@@ -83,7 +85,7 @@ export const projectsQueryOptions = (client: Client, teamId: string) =>
   queryOptions({
     queryKey: queryKeys.projects(teamId),
     queryFn: async () =>
-      await client.request<Project[]>({
+      await client.json<Project[]>({
         method: 'GET',
         path: `/teams/${teamId}/projects/list`,
       }),
@@ -93,8 +95,19 @@ export const projectQueryOptions = (client: Client, projectId: string) =>
   queryOptions({
     queryKey: queryKeys.project(projectId),
     queryFn: async () =>
-      await client.request<Project>({
+      await client.json<Project>({
         method: 'GET',
         path: `/teams/projects/${projectId}`,
+      }),
+  });
+
+export const storageQueryOptions = (client: Client) =>
+  queryOptions({
+    queryKey: queryKeys.storage,
+    queryFn: async () =>
+      await client.json<Upload[]>({
+        method: 'GET',
+        path: '/storage/list',
+        projectIdNeeded: true,
       }),
   });

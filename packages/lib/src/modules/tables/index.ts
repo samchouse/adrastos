@@ -25,7 +25,7 @@ interface UnknownData
 
 export class TablesModule extends BaseModule {
   public async list() {
-    return this.client.request<CustomTable[]>({
+    return this.client.json<CustomTable[]>({
       path: '/tables/list',
       method: 'GET',
       projectIdNeeded: true,
@@ -39,7 +39,7 @@ export class TablesModule extends BaseModule {
           Table<Record<string, TFWithModifiers>, string>['requestBody']
         >,
   ) {
-    return this.client.request<CustomTable>({
+    return this.client.json<CustomTable>({
       path: '/tables/create',
       method: 'POST',
       body: JSON.stringify(
@@ -56,7 +56,7 @@ export class TablesModule extends BaseModule {
       fields?: FieldUpdate[];
     },
   ) {
-    return this.client.request<CustomTable>({
+    return this.client.json<CustomTable>({
       path: `/tables/update/${name}`,
       method: 'PATCH',
       body: JSON.stringify(body),
@@ -65,7 +65,7 @@ export class TablesModule extends BaseModule {
   }
 
   public async delete<T>(name: T extends Table<infer _, infer U> ? U : string) {
-    return this.client.request({
+    return this.client.json({
       path: `/tables/delete/${name}`,
       method: 'DELETE',
       projectIdNeeded: true,
@@ -91,7 +91,7 @@ export class TablesModule extends BaseModule {
             : Partial<BaseData>;
         },
   ) {
-    return this.client.request<
+    return this.client.json<
       T extends Table<infer _, string>
         ? TInfer<T>
         : U extends true
@@ -121,7 +121,7 @@ export class TablesModule extends BaseModule {
       ? TInfer<T>
       : Omit<UnknownData, keyof BaseData> & Partial<BaseData>,
   ) {
-    return this.client.request<Required<typeof data>>({
+    return this.client.json<Required<typeof data>>({
       path: `/tables/${table}/create`,
       method: 'POST',
       body: JSON.stringify(data),
@@ -138,7 +138,7 @@ export class TablesModule extends BaseModule {
       ? Partial<TInfer<T>>
       : Partial<UnknownData>,
   ) {
-    return this.client.request<Required<typeof data>>({
+    return this.client.json<Required<typeof data>>({
       path: merge(
         `/tables/${table}/update?`,
         Object.entries<string | number | boolean | string[] | Date | undefined>(
@@ -159,7 +159,7 @@ export class TablesModule extends BaseModule {
       ? Partial<TInfer<T>>
       : Partial<BaseData>,
   ) {
-    return this.client.request({
+    return this.client.json({
       path: merge(
         `/tables/${table}/delete?`,
         Object.entries<string | number | boolean | string[] | Date | undefined>(

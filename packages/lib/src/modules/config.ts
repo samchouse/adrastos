@@ -33,7 +33,7 @@ interface OAuth2Config {
 
 export class ConfigModule extends BaseModule {
   public async details() {
-    return this.client.request<{
+    return this.client.json<{
       smtpConfig: SmtpConfig;
       oauth2Config: OAuth2Config;
     }>({
@@ -45,7 +45,7 @@ export class ConfigModule extends BaseModule {
   public async updateSmtp(
     body: (SmtpConfig & { password: string | null }) | null,
   ) {
-    return this.client.request<SmtpConfig>({
+    return this.client.json<SmtpConfig>({
       path: '/config/smtp',
       method: 'POST',
       body: JSON.stringify(body),
@@ -53,7 +53,7 @@ export class ConfigModule extends BaseModule {
   }
 
   public async updateOAuth2(body: OAuth2Config) {
-    return this.client.request<OAuth2Config>({
+    return this.client.json<OAuth2Config>({
       path: '/config/oauth2',
       method: 'POST',
       body: JSON.stringify(body),

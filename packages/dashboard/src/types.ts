@@ -17,3 +17,11 @@ export interface Project {
   teamId: string;
   hostnames: string[];
 }
+
+export interface Upload {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  createdAt: Date;
+}

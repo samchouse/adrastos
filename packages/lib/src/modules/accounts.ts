@@ -10,7 +10,7 @@ export class AccountsModule extends BaseModule {
     username: string;
     password: string;
   }) {
-    return this.client.request<User>({
+    return this.client.json<User>({
       path: '/auth/register',
       method: 'POST',
       body: JSON.stringify(body),
@@ -18,7 +18,7 @@ export class AccountsModule extends BaseModule {
   }
 
   public async login(body: { email: string; password: string }) {
-    return this.client.request<User>({
+    return this.client.json<User>({
       path: '/auth/login',
       method: 'POST',
       options: {
@@ -44,7 +44,7 @@ export class AccountsModule extends BaseModule {
   }
 
   public async logout() {
-    return this.client.request({
+    return this.client.json({
       path: '/auth/logout',
       method: 'GET',
       options: {
@@ -54,21 +54,21 @@ export class AccountsModule extends BaseModule {
   }
 
   public async resendVerification() {
-    return this.client.request({
+    return this.client.json({
       path: '/auth/resend-verification',
       method: 'POST',
     });
   }
 
   public async enableMfa() {
-    return this.client.request<{ secret: string; qrCode: string }>({
+    return this.client.json<{ secret: string; qrCode: string }>({
       path: '/auth/mfa/enable',
       method: 'GET',
     });
   }
 
   public async confirmMfa(body: { code: string }) {
-    return this.client.request<string[]>({
+    return this.client.json<string[]>({
       path: '/auth/mfa/confirm',
       method: 'POST',
       body: JSON.stringify(body),
@@ -76,7 +76,7 @@ export class AccountsModule extends BaseModule {
   }
 
   public async verifyMfa(body: { code: string }) {
-    return this.client.request<User>({
+    return this.client.json<User>({
       path: '/auth/mfa/verify',
       method: 'POST',
       body: JSON.stringify(body),
@@ -84,7 +84,7 @@ export class AccountsModule extends BaseModule {
   }
 
   public async disableMfa(body: { code: string }) {
-    return this.client.request({
+    return this.client.json({
       path: '/auth/mfa/disable',
       method: 'POST',
       body: JSON.stringify(body),
@@ -92,7 +92,7 @@ export class AccountsModule extends BaseModule {
   }
 
   public async regenerateMfaCodes(body: { code: string }) {
-    return this.client.request<string[]>({
+    return this.client.json<string[]>({
       path: '/auth/mfa/codes/regenerate',
       method: 'POST',
       body: JSON.stringify(body),
@@ -100,7 +100,7 @@ export class AccountsModule extends BaseModule {
   }
 
   public async refreshToken() {
-    return this.client.request<string>({
+    return this.client.json<string>({
       path: '/auth/token/refresh',
       method: 'GET',
       options: {
@@ -110,14 +110,14 @@ export class AccountsModule extends BaseModule {
   }
 
   public async currentUser() {
-    return this.client.request<User>({
+    return this.client.json<User>({
       path: '/me',
       method: 'GET',
     });
   }
 
   public async listPasskeys() {
-    return this.client.request<
+    return this.client.json<
       {
         id: string;
         name: string;
@@ -132,7 +132,7 @@ export class AccountsModule extends BaseModule {
   }
 
   public async updatePasskey(id: string, body: { name: string }) {
-    return this.client.request({
+    return this.client.json({
       path: `/auth/passkeys/update/${id}`,
       method: 'POST',
       body: JSON.stringify(body),
@@ -140,14 +140,14 @@ export class AccountsModule extends BaseModule {
   }
 
   public async deletePasskey(id: string) {
-    return this.client.request({
+    return this.client.json({
       path: `/auth/passkeys/delete/${id}`,
       method: 'DELETE',
     });
   }
 
   public async startPasskeyRegistration() {
-    return this.client.request<{
+    return this.client.json<{
       publicKey: {
         rp: PublicKeyCredentialRpEntity;
         user: {
@@ -210,7 +210,7 @@ export class AccountsModule extends BaseModule {
       type: PublicKeyCredentialType;
     };
   }) {
-    return this.client.request({
+    return this.client.json({
       path: '/auth/passkeys/register/finish',
       method: 'POST',
       options: {
@@ -221,7 +221,7 @@ export class AccountsModule extends BaseModule {
   }
 
   public async startPasskeyLogin(body?: { id: string }) {
-    return this.client.request<{
+    return this.client.json<{
       publicKey: {
         challenge: string;
         timeout?: number;
@@ -265,7 +265,7 @@ export class AccountsModule extends BaseModule {
     clientExtensionResults: AuthenticationExtensionsClientOutputs;
     type: PublicKeyCredentialType;
   }) {
-    return this.client.request({
+    return this.client.json({
       path: '/auth/passkeys/login/finish',
       method: 'POST',
       options: {

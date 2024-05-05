@@ -5,7 +5,7 @@ use std::{env, fmt};
 use secrecy::Secret;
 use tracing_unwrap::ResultExt;
 
-use crate::entities::System;
+use crate::entities::{SizeUnit, System};
 
 #[derive(Clone, Debug)]
 enum ConfigKey {
@@ -22,23 +22,6 @@ enum ConfigKey {
     S3Endpoint,
     S3AccessKey,
     S3SecretKey,
-
-    SmtpHost,
-    SmtpPort,
-    SmtpUsername,
-    SmtpPassword,
-    SmtpSenderName,
-    SmtpSenderEmail,
-    GoogleClientId,
-    GoogleClientSecret,
-    FacebookClientId,
-    FacebookClientSecret,
-    GitHubClientId,
-    GitHubClientSecret,
-    TwitterClientId,
-    TwitterClientSecret,
-    DiscordClientId,
-    DiscordClientSecret,
 }
 
 impl fmt::Display for ConfigKey {
@@ -57,23 +40,6 @@ impl fmt::Display for ConfigKey {
             Self::S3Endpoint => "S3_ENDPOINT",
             Self::S3AccessKey => "S3_ACCESS_KEY",
             Self::S3SecretKey => "S3_SECRET_KEY",
-
-            Self::SmtpHost => "SMTP_HOST",
-            Self::SmtpPort => "SMTP_PORT",
-            Self::SmtpUsername => "SMTP_USERNAME",
-            Self::SmtpPassword => "SMTP_PASSWORD",
-            Self::SmtpSenderName => "SMTP_SENDER_NAME",
-            Self::SmtpSenderEmail => "SMTP_SENDER_EMAIL",
-            Self::GoogleClientId => "GOOGLE_CLIENT_ID",
-            Self::GoogleClientSecret => "GOOGLE_CLIENT_SECRET",
-            Self::FacebookClientId => "FACEBOOK_CLIENT_ID",
-            Self::FacebookClientSecret => "FACEBOOK_CLIENT_SECRET",
-            Self::GitHubClientId => "GITHUB_CLIENT_ID",
-            Self::GitHubClientSecret => "GITHUB_CLIENT_SECRET",
-            Self::TwitterClientId => "TWITTER_CLIENT_ID",
-            Self::TwitterClientSecret => "TWITTER_CLIENT_SECRET",
-            Self::DiscordClientId => "DISCORD_CLIENT_ID",
-            Self::DiscordClientSecret => "DISCORD_CLIENT_SECRET",
         };
 
         write!(f, "{name}")
@@ -105,6 +71,11 @@ pub struct Config {
     // System
     pub current_version: String,
     pub previous_version: String,
+
+    pub max_files: Option<i64>,
+    pub max_file_size: Option<i64>,
+    pub size_unit: Option<SizeUnit>,
+    pub accepted_file_extensions: Option<Vec<String>>,
 
     pub smtp_host: Option<String>,
     pub smtp_port: Option<u16>,
@@ -156,42 +127,42 @@ impl Config {
 
             current_version: env!("CARGO_PKG_VERSION").into(),
             previous_version: env!("CARGO_PKG_VERSION").into(),
-            smtp_host: env::var(ConfigKey::SmtpHost.to_string()).ok(),
-            smtp_port: env::var(ConfigKey::SmtpPort.to_string())
-                .ok()
-                .map(|p| p.parse().unwrap_or_log()),
-            smtp_username: env::var(ConfigKey::SmtpUsername.to_string()).ok(),
-            smtp_password: env::var(ConfigKey::SmtpPassword.to_string())
-                .ok()
-                .map(Secret::new),
-            smtp_sender_name: env::var(ConfigKey::SmtpSenderName.to_string()).ok(),
-            smtp_sender_email: env::var(ConfigKey::SmtpSenderEmail.to_string()).ok(),
-            google_client_id: env::var(ConfigKey::GoogleClientId.to_string()).ok(),
-            google_client_secret: env::var(ConfigKey::GoogleClientSecret.to_string())
-                .ok()
-                .map(Secret::new),
-            facebook_client_id: env::var(ConfigKey::FacebookClientId.to_string()).ok(),
-            facebook_client_secret: env::var(ConfigKey::FacebookClientSecret.to_string())
-                .ok()
-                .map(Secret::new),
-            github_client_id: env::var(ConfigKey::GitHubClientId.to_string()).ok(),
-            github_client_secret: env::var(ConfigKey::GitHubClientSecret.to_string())
-                .ok()
-                .map(Secret::new),
-            twitter_client_id: env::var(ConfigKey::TwitterClientId.to_string()).ok(),
-            twitter_client_secret: env::var(ConfigKey::TwitterClientSecret.to_string())
-                .ok()
-                .map(Secret::new),
-            discord_client_id: env::var(ConfigKey::DiscordClientId.to_string()).ok(),
-            discord_client_secret: env::var(ConfigKey::DiscordClientSecret.to_string())
-                .ok()
-                .map(Secret::new),
+            max_files: None,
+            max_file_size: None,
+            size_unit: None,
+            accepted_file_extensions: None,
+            smtp_host: None,
+            smtp_port: None,
+            smtp_username: None,
+            smtp_password: None,
+            smtp_sender_name: None,
+            smtp_sender_email: None,
+            google_client_id: None,
+            google_client_secret: None,
+            facebook_client_id: None,
+            facebook_client_secret: None,
+            github_client_id: None,
+            github_client_secret: None,
+            twitter_client_id: None,
+            twitter_client_secret: None,
+            discord_client_id: None,
+            discord_client_secret: None,
         }
     }
 
     pub fn attach_system(&mut self, system: &System) {
-        self.current_version.clone_from(&system.current_version);
-        self.previous_version.clone_from(&system.previous_version);
+        if let Some(v) = system.current_version.as_ref() {
+            self.current_version.clone_from(v)
+        }
+        if let Some(v) = system.previous_version.as_ref() {
+            self.previous_version.clone_from(v)
+        }
+
+        self.max_files = system.max_files;
+        self.max_file_size = system.max_file_size;
+        self.size_unit.clone_from(&system.size_unit);
+        self.accepted_file_extensions
+            .clone_from(&system.accepted_file_extensions);
 
         self.smtp_host = system.smtp_config.clone().map(|c| c.host.clone());
         self.smtp_port = system.smtp_config.clone().map(|c| c.port);
