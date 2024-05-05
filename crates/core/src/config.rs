@@ -17,6 +17,11 @@ enum ConfigKey {
     ServerUrl,
     PostgresUrl,
     RedisUrl,
+    S3Bucket,
+    S3Region,
+    S3Endpoint,
+    S3AccessKey,
+    S3SecretKey,
 
     SmtpHost,
     SmtpPort,
@@ -47,6 +52,11 @@ impl fmt::Display for ConfigKey {
             Self::ServerUrl => "SERVER_URL",
             Self::PostgresUrl => "POSTGRES_URL",
             Self::RedisUrl => "REDIS_URL",
+            Self::S3Bucket => "S3_BUCKET",
+            Self::S3Region => "S3_REGION",
+            Self::S3Endpoint => "S3_ENDPOINT",
+            Self::S3AccessKey => "S3_ACCESS_KEY",
+            Self::S3SecretKey => "S3_SECRET_KEY",
 
             Self::SmtpHost => "SMTP_HOST",
             Self::SmtpPort => "SMTP_PORT",
@@ -85,6 +95,12 @@ pub struct Config {
     pub redis_url: String,
 
     pub secret_key: Secret<String>,
+
+    pub s3_bucket: String,
+    pub s3_region: String,
+    pub s3_endpoint: String,
+    pub s3_access_key: String,
+    pub s3_secret_key: Secret<String>,
 
     // System
     pub current_version: String,
@@ -130,6 +146,13 @@ impl Config {
                 .unwrap_or("127.0.0.1:8000".into()),
             postgres_url: env::var(ConfigKey::PostgresUrl.to_string()).unwrap_or_log(),
             redis_url: env::var(ConfigKey::RedisUrl.to_string()).unwrap_or_log(),
+            s3_bucket: env::var(ConfigKey::S3Bucket.to_string()).unwrap_or_log(),
+            s3_region: env::var(ConfigKey::S3Region.to_string()).unwrap_or_log(),
+            s3_endpoint: env::var(ConfigKey::S3Endpoint.to_string()).unwrap_or_log(),
+            s3_access_key: env::var(ConfigKey::S3AccessKey.to_string()).unwrap_or_log(),
+            s3_secret_key: env::var(ConfigKey::S3SecretKey.to_string())
+                .map(Secret::new)
+                .unwrap_or_log(),
 
             current_version: env!("CARGO_PKG_VERSION").into(),
             previous_version: env!("CARGO_PKG_VERSION").into(),

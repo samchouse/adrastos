@@ -6,6 +6,8 @@ use secrecy::ExposeSecret;
 
 use crate::{config::Config, db::postgres::DatabaseType, id::Id};
 
+use self::custom_table::schema::CustomTableSchema;
+
 pub use any_user::*;
 pub use connection::*;
 pub use passkey::*;
@@ -14,9 +16,8 @@ pub use refresh_token_tree::*;
 pub use system::*;
 pub use system_user::*;
 pub use team::*;
+pub use upload::*;
 pub use user::*;
-
-use self::custom_table::schema::CustomTableSchema;
 
 pub mod any_user;
 pub mod connection;
@@ -27,6 +28,7 @@ pub mod refresh_token_tree;
 pub mod system;
 pub mod system_user;
 pub mod team;
+pub mod upload;
 pub mod user;
 
 #[derive(Debug, Clone)]
@@ -98,6 +100,7 @@ pub async fn init(db_type: &DatabaseType, db: &deadpool_postgres::Pool, config: 
                 RefreshTokenTree::init(),
                 CustomTableSchema::init(),
                 Passkey::init(),
+                Upload::init(),
             ]
         }
     };

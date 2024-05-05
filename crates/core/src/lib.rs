@@ -8,5 +8,6 @@ pub mod error;
 pub mod expiring_map;
 pub mod id;
 pub mod migrations;
+pub mod s3;
 pub mod url;
 pub mod util;

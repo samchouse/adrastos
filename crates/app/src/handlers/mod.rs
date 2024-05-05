@@ -15,6 +15,7 @@ use crate::{assets::handle_embedded_file, middleware::user::RequiredAnyUser};
 
 pub mod auth;
 pub mod config;
+pub mod storage;
 pub mod tables;
 pub mod teams;
 
