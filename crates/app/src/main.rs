@@ -43,7 +43,7 @@ mod util;
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    let _guard = telemetry::register_subscriber();
+    telemetry::register_subscriber();
 
     let mut config = Config::new();
 

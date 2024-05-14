@@ -6,7 +6,7 @@ use deadpool_postgres::{
     tokio_postgres::{Config, NoTls},
     Manager, ManagerConfig, Pool, RecyclingMethod,
 };
-use rustls::{Certificate, ClientConfig, RootCertStore};
+use rustls::{ClientConfig, RootCertStore};
 use rustls_pemfile::certs;
 use tokio::{sync::RwLock, task::JoinHandle};
 use tokio_postgres::config::SslMode;
@@ -59,13 +59,12 @@ fn create_pool(db_type: &DatabaseType, config: &config::Config) -> Pool {
 
             let ca_cert =
                 &mut BufReader::new(File::open(format!("{}/cockroach.crt", certs_path)).unwrap());
-            let ca_cert = Certificate(certs(ca_cert).unwrap()[0].clone());
+            let ca_cert = certs(ca_cert).next().unwrap().unwrap();
 
             let mut root_store = RootCertStore::empty();
-            root_store.add(&ca_cert).unwrap();
+            root_store.add(ca_cert).unwrap();
 
             let config = ClientConfig::builder()
-                .with_safe_defaults()
                 .with_root_certificates(root_store)
                 .with_no_client_auth();
 

@@ -8,25 +8,25 @@ edition = "2021"
 [dependencies]
 adrastos_macros = { path = "../macros" }
 argon2 = "0.5.3"
-aws-config = { version = "1.1.9", features = ["behavior-version-latest"] }
-aws-credential-types = { version = "1.1.8", features = ["hardcoded-credentials"] }
-aws-sdk-s3 = "1.21.0"
+aws-config = { version = "1.4.0", features = ["behavior-version-latest"] }
+aws-credential-types = { version = "1.2.0", features = ["hardcoded-credentials"] }
+aws-sdk-s3 = "1.28.0"
 axum = "0.7.5"
 axum-extra = { version = "0.9.3", features = ["cookie"] }
-chrono = "0.4.37"
-deadpool-postgres = "0.10.5"
-fancy-regex = "0.11.0"
-fred = { version = "9.0.1", features = ["subscriber-client"] }
-heck = "0.4.1"
-json-patch = "1.2.0"
-jsonwebtoken = "8.3.0"
+chrono = "0.4.38"
+deadpool-postgres = "0.13.2"
+fancy-regex = "0.13.0"
+fred = { version = "9.0.3", features = ["subscriber-client"] }
+heck = "0.5.0"
+json-patch = "2.0.0"
+jsonwebtoken = "9.3.0"
 nanoid = "0.4.0"
 oauth2 = "4.4.2"
 rand = "0.8.5"
 regex = "1.10.4"
-reqwest = { version = "0.11.27", features = ["json"] }
-rustls = "0.21.10"
-rustls-pemfile = "1.0.4"
+reqwest = { version = "0.12.4", features = ["json"] }
+rustls = "0.23.5"
+rustls-pemfile = "2.1.2"
 sea-query = { version = "0.30.7", features = [
 	"attr",
 	"with-chrono",
@@ -34,19 +34,19 @@ sea-query = { version = "0.30.7", features = [
 	"thread-safe",
 ] }
 secrecy = { version = "0.8.0", features = ["serde"] }
-semver = "1.0.22"
-serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0.115"
+semver = "1.0.23"
+serde = { version = "1.0.201", features = ["derive"] }
+serde_json = "1.0.117"
 time = "0.3.36"
 tokio = { version = "1.37.0", features = ["macros"] }
 tokio-postgres = { version = "0.7.10", features = [
 	"with-chrono-0_4",
 	"with-serde_json-1",
 ] }
-tokio-postgres-rustls = "0.10.0"
+tokio-postgres-rustls = "0.12.0"
 totp-rs = { version = "5.5.1", features = ["gen_secret", "qr"] }
 tracing = "0.1.40"
-tracing-unwrap = "0.10.0"
+tracing-unwrap = "1.0.1"
 validator = { version = "0.18.1", features = ["derive"] }
 webauthn-rs = { git = "https://github.com/Xenfo/webauthn-rs", rev = "cad800c", features = [
 	"danger-allow-state-serialisation",

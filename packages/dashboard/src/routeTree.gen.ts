@@ -122,66 +122,114 @@ const DashboardProjectsProjectIdTablesTableIdRoute =
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/_layout': {
+      id: '/_layout'
+      path: ''
+      fullPath: ''
       preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRoute
     }
     '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRoute
     }
     '/_layout/login': {
+      id: '/_layout/login'
+      path: '/login'
+      fullPath: '/login'
       preLoaderRoute: typeof LayoutLoginImport
       parentRoute: typeof LayoutRouteImport
     }
     '/_layout/register': {
+      id: '/_layout/register'
+      path: '/register'
+      fullPath: '/register'
       preLoaderRoute: typeof LayoutRegisterImport
       parentRoute: typeof LayoutRouteImport
     }
     '/dashboard/profile': {
+      id: '/dashboard/profile'
+      path: '/profile'
+      fullPath: '/dashboard/profile'
       preLoaderRoute: typeof DashboardProfileImport
       parentRoute: typeof DashboardRouteImport
     }
     '/_layout/': {
+      id: '/_layout/'
+      path: '/'
+      fullPath: '/'
       preLoaderRoute: typeof LayoutIndexImport
       parentRoute: typeof LayoutRouteImport
     }
     '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexImport
       parentRoute: typeof DashboardRouteImport
     }
     '/dashboard/projects/$projectId': {
+      id: '/dashboard/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/dashboard/projects/$projectId'
       preLoaderRoute: typeof DashboardProjectsProjectIdRouteImport
       parentRoute: typeof DashboardRouteImport
     }
     '/dashboard/teams/$teamId': {
+      id: '/dashboard/teams/$teamId'
+      path: '/teams/$teamId'
+      fullPath: '/dashboard/teams/$teamId'
       preLoaderRoute: typeof DashboardTeamsTeamIdRouteImport
       parentRoute: typeof DashboardRouteImport
     }
     '/dashboard/projects/$projectId/tables': {
+      id: '/dashboard/projects/$projectId/tables'
+      path: '/tables'
+      fullPath: '/dashboard/projects/$projectId/tables'
       preLoaderRoute: typeof DashboardProjectsProjectIdTablesRouteImport
       parentRoute: typeof DashboardProjectsProjectIdRouteImport
     }
     '/dashboard/projects/$projectId/auth': {
+      id: '/dashboard/projects/$projectId/auth'
+      path: '/auth'
+      fullPath: '/dashboard/projects/$projectId/auth'
       preLoaderRoute: typeof DashboardProjectsProjectIdAuthImport
       parentRoute: typeof DashboardProjectsProjectIdRouteImport
     }
     '/dashboard/projects/$projectId/settings': {
+      id: '/dashboard/projects/$projectId/settings'
+      path: '/settings'
+      fullPath: '/dashboard/projects/$projectId/settings'
       preLoaderRoute: typeof DashboardProjectsProjectIdSettingsImport
       parentRoute: typeof DashboardProjectsProjectIdRouteImport
     }
     '/dashboard/projects/$projectId/storage': {
+      id: '/dashboard/projects/$projectId/storage'
+      path: '/storage'
+      fullPath: '/dashboard/projects/$projectId/storage'
       preLoaderRoute: typeof DashboardProjectsProjectIdStorageImport
       parentRoute: typeof DashboardProjectsProjectIdRouteImport
     }
     '/dashboard/teams/$teamId/settings': {
+      id: '/dashboard/teams/$teamId/settings'
+      path: '/settings'
+      fullPath: '/dashboard/teams/$teamId/settings'
       preLoaderRoute: typeof DashboardTeamsTeamIdSettingsImport
       parentRoute: typeof DashboardTeamsTeamIdRouteImport
     }
     '/dashboard/teams/$teamId/': {
+      id: '/dashboard/teams/$teamId/'
+      path: '/'
+      fullPath: '/dashboard/teams/$teamId/'
       preLoaderRoute: typeof DashboardTeamsTeamIdIndexImport
       parentRoute: typeof DashboardTeamsTeamIdRouteImport
     }
     '/dashboard/projects/$projectId/tables/$tableId': {
+      id: '/dashboard/projects/$projectId/tables/$tableId'
+      path: '/$tableId'
+      fullPath: '/dashboard/projects/$projectId/tables/$tableId'
       preLoaderRoute: typeof DashboardProjectsProjectIdTablesTableIdImport
       parentRoute: typeof DashboardProjectsProjectIdTablesRouteImport
     }
@@ -190,28 +238,30 @@ declare module '@tanstack/react-router' {
 
 // Create and export the route tree
 
-export const routeTree = rootRoute.addChildren([
-  LayoutRouteRoute.addChildren([
+export const routeTree = rootRoute.addChildren({
+  LayoutRouteRoute: LayoutRouteRoute.addChildren({
     LayoutLoginRoute,
     LayoutRegisterRoute,
     LayoutIndexRoute,
-  ]),
-  DashboardRouteRoute.addChildren([
+  }),
+  DashboardRouteRoute: DashboardRouteRoute.addChildren({
     DashboardProfileRoute,
     DashboardIndexRoute,
-    DashboardProjectsProjectIdRouteRoute.addChildren([
-      DashboardProjectsProjectIdTablesRouteRoute.addChildren([
-        DashboardProjectsProjectIdTablesTableIdRoute,
-      ]),
-      DashboardProjectsProjectIdAuthRoute,
-      DashboardProjectsProjectIdSettingsRoute,
-      DashboardProjectsProjectIdStorageRoute,
-    ]),
-    DashboardTeamsTeamIdRouteRoute.addChildren([
+    DashboardProjectsProjectIdRouteRoute:
+      DashboardProjectsProjectIdRouteRoute.addChildren({
+        DashboardProjectsProjectIdTablesRouteRoute:
+          DashboardProjectsProjectIdTablesRouteRoute.addChildren({
+            DashboardProjectsProjectIdTablesTableIdRoute,
+          }),
+        DashboardProjectsProjectIdAuthRoute,
+        DashboardProjectsProjectIdSettingsRoute,
+        DashboardProjectsProjectIdStorageRoute,
+      }),
+    DashboardTeamsTeamIdRouteRoute: DashboardTeamsTeamIdRouteRoute.addChildren({
       DashboardTeamsTeamIdSettingsRoute,
       DashboardTeamsTeamIdIndexRoute,
-    ]),
-  ]),
-])
+    }),
+  }),
+})
 
 /* prettier-ignore-end */

@@ -2,7 +2,7 @@ use adrastos_core::config::Config;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{filter::LevelFilter, prelude::*, EnvFilter};
 
-pub fn register_subscriber() -> Option<tracing_axiom::Guard> {
+pub fn register_subscriber() {
     let axiom_layer = tracing_axiom::builder()
         .with_service_name("adrastos")
         .layer();
@@ -22,13 +22,12 @@ pub fn register_subscriber() -> Option<tracing_axiom::Guard> {
         )
         .with(sentry_tracing::layer());
 
-    if let Ok((layer, guard)) = axiom_layer {
+    if let Ok(layer) = axiom_layer {
         subscriber.with(layer).init();
-        return Some(guard);
+        return;
     }
 
     subscriber.init();
-    None
 }
 
 pub fn init_sentry(config: &Config) -> Option<sentry::ClientInitGuard> {
