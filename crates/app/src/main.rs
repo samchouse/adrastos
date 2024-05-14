@@ -17,6 +17,7 @@ use axum_server::tls_rustls::RustlsConfig;
 use clap::Parser;
 use cli::{Cli, Command};
 use dotenvy::dotenv;
+use rustls::crypto;
 use sea_query::PostgresQueryBuilder;
 use secrecy::ExposeSecret;
 use sentry_tower::NewSentryLayer;
@@ -44,6 +45,7 @@ mod util;
 async fn main() {
     dotenv().ok();
     telemetry::register_subscriber();
+    let _ = crypto::ring::default_provider().install_default();
 
     let mut config = Config::new();
 
