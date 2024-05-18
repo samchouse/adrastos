@@ -17,7 +17,6 @@ EOF
 
     cat <<EOF >"staging/docker-compose.pr-$PR.yml"
 name: adrastos-staging-pr-$PR
-version: '3.9'
 
 services:
   emails:
