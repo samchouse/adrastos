@@ -17,19 +17,22 @@ const worker = async () => {
   const subscriber = client.duplicate();
   await subscriber.connect();
 
-  await subscriber.subscribe('emails', async (token) => {
-    logger.info(`Received request with token: ${token}`);
-    await client.publish(
-      `html:${token}`,
-      render(
-        <VerificationEmail
-          token={token}
-          baseUrl={`${env.CLIENT_URL ?? 'http://localhost:3000'}/api`}
-        />,
-      ),
-    );
-    logger.info(`Finished request with token: ${token}`);
-  });
+  await subscriber.subscribe(
+    `${env.REDIS_PREFIX && `${env.REDIS_PREFIX}:`}emails`,
+    async (token) => {
+      logger.info(`Received request with token: ${token}`);
+      await client.publish(
+        `${env.REDIS_PREFIX && `${env.REDIS_PREFIX}:`}html:${token}`,
+        render(
+          <VerificationEmail
+            token={token}
+            baseUrl={`${env.CLIENT_URL ?? 'http://localhost:3000'}/api`}
+          />,
+        ),
+      );
+      logger.info(`Finished request with token: ${token}`);
+    },
+  );
 };
 
 void worker();

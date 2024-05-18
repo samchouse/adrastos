@@ -13,3 +13,11 @@ pub async fn create_pool_and_subscriber(config: &config::Config) -> (RedisPool, 
 
     (pool, subscriber)
 }
+
+pub fn build_key(config: &config::Config, key: String) -> String {
+    config
+        .redis_prefix
+        .clone()
+        .map(|p| format!("{p}:{key}"))
+        .unwrap_or(key)
+}

@@ -17,6 +17,7 @@ enum ConfigKey {
     ServerUrl,
     PostgresUrl,
     RedisUrl,
+    RedisPrefix,
     S3Bucket,
     S3Region,
     S3Endpoint,
@@ -46,6 +47,7 @@ impl fmt::Display for ConfigKey {
             Self::ServerUrl => "SERVER_URL",
             Self::PostgresUrl => "POSTGRES_URL",
             Self::RedisUrl => "REDIS_URL",
+            Self::RedisPrefix => "REDIS_PREFIX",
             Self::S3Bucket => "S3_BUCKET",
             Self::S3Region => "S3_REGION",
             Self::S3Endpoint => "S3_ENDPOINT",
@@ -83,6 +85,7 @@ pub struct Config {
 
     pub postgres_url: String,
     pub redis_url: String,
+    pub redis_prefix: Option<String>,
 
     pub secret_key: Secret<String>,
 
@@ -143,6 +146,7 @@ impl Config {
                 .unwrap_or("127.0.0.1:8000".into()),
             postgres_url: env::var(ConfigKey::PostgresUrl.to_string()).unwrap_or_log(),
             redis_url: env::var(ConfigKey::RedisUrl.to_string()).unwrap_or_log(),
+            redis_prefix: env::var(ConfigKey::RedisPrefix.to_string()).ok(),
             s3_bucket: env::var(ConfigKey::S3Bucket.to_string()).unwrap_or_log(),
             s3_region: env::var(ConfigKey::S3Region.to_string()).unwrap_or_log(),
             s3_endpoint: env::var(ConfigKey::S3Endpoint.to_string()).unwrap_or_log(),
