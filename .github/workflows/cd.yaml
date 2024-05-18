@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Create comment
-        uses: peter-evans/create-or-update-comment@v3
+        uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
@@ -36,12 +36,12 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: git fetch origin pull/${{ github.event.issue.number }}/head
       - run: git checkout FETCH_HEAD
 
       - name: Update comment
-        uses: peter-evans/create-or-update-comment@v3
+        uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ github.event.comment.id }}
           edit-mode: replace
@@ -50,12 +50,12 @@ jobs:
             Status: **[DEPLOYING](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) :hourglass:**
             - [ ] Deploy this PR
 
-      - uses: docker/login-action@v2
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: Xenfo
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v2
+      - uses: docker/setup-buildx-action@v3
 
       - run: corepack enable
       - uses: jdx/mise-action@v2
@@ -73,7 +73,7 @@ jobs:
         run: cargo build --release
 
       - name: Build and push the app image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         id: app
         with:
           push: true
@@ -82,7 +82,7 @@ jobs:
           tags: ghcr.io/xenfo/adrastos-app:staging-pr-${{ github.event.issue.number }}
 
       - name: Build and push the worker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         id: emails
         with:
           push: true
@@ -95,7 +95,7 @@ jobs:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
-          version: 1.58.2
+          version: 1.66.3
 
       - name: Deploy to VPS
         id: ssh
@@ -108,7 +108,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update comment
-        uses: peter-evans/create-or-update-comment@v3
+        uses: peter-evans/create-or-update-comment@v4
         if: always()
         with:
           comment-id: ${{ github.event.comment.id }}
@@ -116,7 +116,7 @@ jobs:
           body: |
             ## Staging
             **Status:** [${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && 'SUCCEEDED' || !contains(steps.*.conclusion, 'cancelled') && 'FAILED' || 'CANCELLED' }}](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) ${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && ':white_check_mark:' || !contains(steps.*.conclusion, 'cancelled') && ':x:' || ':grey_question:' }}
-            ${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && '**Deployment:** https://adi-pr-${{ github.event.issue.number }}.xenfo.dev' }}
+            ${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && format('**Deployment:** https://adi-pr-{0}.xenfo.dev', github.event.issue.number) }}
             - [ ] Deploy this PR
 
   staging-end:
@@ -131,7 +131,7 @@ jobs:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
-          version: 1.58.2
+          version: 1.66.3
 
       - name: Remove from VPS
         run: |
@@ -159,9 +159,9 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: docker/login-action@v2
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: Xenfo
@@ -183,7 +183,7 @@ jobs:
       - run: cargo build --release
 
       - name: Build and push the app image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           push: true
           context: .
@@ -191,7 +191,7 @@ jobs:
           tags: ghcr.io/xenfo/adrastos-app:git
 
       - name: Build and push the worker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           push: true
           file: .github/deploy/Dockerfile.emails
@@ -203,7 +203,7 @@ jobs:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
-          version: 1.58.2
+          version: 1.66.3
 
       - name: Deploy to VPS
         run: |
@@ -225,7 +225,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -233,7 +233,7 @@ jobs:
           echo "data=$(echo ${{ github.ref_name }} | sed 's/v//')" >> $GITHUB_OUTPUT
         id: version
 
-      - uses: docker/login-action@v2
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: Xenfo
@@ -256,7 +256,7 @@ jobs:
       - run: cargo build --release
 
       - name: Build and push the app image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           push: true
           context: .
@@ -264,14 +264,14 @@ jobs:
           tags: ghcr.io/xenfo/adrastos-app:latest,ghcr.io/xenfo/adrastos-app:${{ steps.version.outputs.data }}
 
       - name: Build and push the worker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           push: true
           file: .github/deploy/Dockerfile.emails
           tags: ghcr.io/xenfo/adrastos-emails:latest,ghcr.io/xenfo/adrastos-emails:${{ steps.version.outputs.data }}
 
       - name: Generate changelog
-        uses: orhun/git-cliff-action@v2
+        uses: orhun/git-cliff-action@v3
         with:
           config: .github/deploy/cliff.toml
           args: -l
