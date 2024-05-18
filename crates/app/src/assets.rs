@@ -8,7 +8,6 @@ use rust_embed::RustEmbed;
 #[folder = "../../packages/dashboard/dist"]
 pub struct Asset;
 
-// TODO: serve favicon
 pub fn handle_embedded_file(path: &str) -> Result<impl IntoResponse, Error> {
     match Asset::get(path.strip_prefix('/').unwrap_or(path)) {
         Some(content) => Ok((
