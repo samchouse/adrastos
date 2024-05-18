@@ -17,22 +17,12 @@ enum ConfigKey {
     ServerUrl,
     PostgresUrl,
     RedisUrl,
+    RedisPrefix,
     S3Bucket,
     S3Region,
     S3Endpoint,
     S3AccessKey,
     S3SecretKey,
-
-    GoogleClientId,
-    GoogleClientSecret,
-    FacebookClientId,
-    FacebookClientSecret,
-    GitHubClientId,
-    GitHubClientSecret,
-    TwitterClientId,
-    TwitterClientSecret,
-    DiscordClientId,
-    DiscordClientSecret,
 }
 
 impl fmt::Display for ConfigKey {
@@ -46,22 +36,12 @@ impl fmt::Display for ConfigKey {
             Self::ServerUrl => "SERVER_URL",
             Self::PostgresUrl => "POSTGRES_URL",
             Self::RedisUrl => "REDIS_URL",
+            Self::RedisPrefix => "REDIS_PREFIX",
             Self::S3Bucket => "S3_BUCKET",
             Self::S3Region => "S3_REGION",
             Self::S3Endpoint => "S3_ENDPOINT",
             Self::S3AccessKey => "S3_ACCESS_KEY",
             Self::S3SecretKey => "S3_SECRET_KEY",
-
-            Self::GoogleClientId => "GOOGLE_CLIENT_ID",
-            Self::GoogleClientSecret => "GOOGLE_CLIENT_SECRET",
-            Self::FacebookClientId => "FACEBOOK_CLIENT_ID",
-            Self::FacebookClientSecret => "FACEBOOK_CLIENT_SECRET",
-            Self::GitHubClientId => "GITHUB_CLIENT_ID",
-            Self::GitHubClientSecret => "GITHUB_CLIENT_SECRET",
-            Self::TwitterClientId => "TWITTER_CLIENT_ID",
-            Self::TwitterClientSecret => "TWITTER_CLIENT_SECRET",
-            Self::DiscordClientId => "DISCORD_CLIENT_ID",
-            Self::DiscordClientSecret => "DISCORD_CLIENT_SECRET",
         };
 
         write!(f, "{name}")
@@ -83,6 +63,7 @@ pub struct Config {
 
     pub postgres_url: String,
     pub redis_url: String,
+    pub redis_prefix: Option<String>,
 
     pub secret_key: Secret<String>,
 
@@ -143,6 +124,7 @@ impl Config {
                 .unwrap_or("127.0.0.1:8000".into()),
             postgres_url: env::var(ConfigKey::PostgresUrl.to_string()).unwrap_or_log(),
             redis_url: env::var(ConfigKey::RedisUrl.to_string()).unwrap_or_log(),
+            redis_prefix: env::var(ConfigKey::RedisPrefix.to_string()).ok(),
             s3_bucket: env::var(ConfigKey::S3Bucket.to_string()).unwrap_or_log(),
             s3_region: env::var(ConfigKey::S3Region.to_string()).unwrap_or_log(),
             s3_endpoint: env::var(ConfigKey::S3Endpoint.to_string()).unwrap_or_log(),
@@ -163,26 +145,16 @@ impl Config {
             smtp_password: None,
             smtp_sender_name: None,
             smtp_sender_email: None,
-            google_client_id: env::var(ConfigKey::GoogleClientId.to_string()).ok(),
-            google_client_secret: env::var(ConfigKey::GoogleClientSecret.to_string())
-                .ok()
-                .map(Secret::new),
-            facebook_client_id: env::var(ConfigKey::FacebookClientId.to_string()).ok(),
-            facebook_client_secret: env::var(ConfigKey::FacebookClientSecret.to_string())
-                .ok()
-                .map(Secret::new),
-            github_client_id: env::var(ConfigKey::GitHubClientId.to_string()).ok(),
-            github_client_secret: env::var(ConfigKey::GitHubClientSecret.to_string())
-                .ok()
-                .map(Secret::new),
-            twitter_client_id: env::var(ConfigKey::TwitterClientId.to_string()).ok(),
-            twitter_client_secret: env::var(ConfigKey::TwitterClientSecret.to_string())
-                .ok()
-                .map(Secret::new),
-            discord_client_id: env::var(ConfigKey::DiscordClientId.to_string()).ok(),
-            discord_client_secret: env::var(ConfigKey::DiscordClientSecret.to_string())
-                .ok()
-                .map(Secret::new),
+            google_client_id: None,
+            google_client_secret: None,
+            facebook_client_id: None,
+            facebook_client_secret: None,
+            github_client_id: None,
+            github_client_secret: None,
+            twitter_client_id: None,
+            twitter_client_secret: None,
+            discord_client_id: None,
+            discord_client_secret: None,
         }
     }
 

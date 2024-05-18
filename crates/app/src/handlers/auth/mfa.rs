@@ -3,6 +3,7 @@ use adrastos_core::{
         self,
         mfa::{Mfa, VerificationMethod},
     },
+    db::redis,
     entities,
     error::Error,
 };
@@ -42,7 +43,9 @@ pub fn routes() -> Router<AppState> {
 pub async fn enable(
     project: Option<Project>,
     AnyUser(user): AnyUser,
-    State(AppState { redis_pool, .. }): State<AppState>,
+    State(AppState {
+        config, redis_pool, ..
+    }): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     if user.mfa_secret.is_some() {
         return Err(Error::BadRequest("MFA is already enabled".into()));
@@ -56,7 +59,7 @@ pub async fn enable(
 
     redis_pool
         .set(
-            format!("mfa:secret:{}", user.id),
+            redis::build_key(&config, format!("mfa:secret:{}", user.id)),
             mfa.get_secret(),
             Some(Expiration::EX(Duration::minutes(10).num_seconds())),
             None,
@@ -77,7 +80,9 @@ pub async fn confirm(
     project: Option<Project>,
     AnyUser(user): AnyUser,
     Database(db): Database,
-    State(AppState { redis_pool, .. }): State<AppState>,
+    State(AppState {
+        config, redis_pool, ..
+    }): State<AppState>,
     Json(body): Json<CVDRBody>,
 ) -> Result<impl IntoResponse, Error> {
     if user.mfa_secret.is_some() {
@@ -85,7 +90,7 @@ pub async fn confirm(
     }
 
     let mfa_secret = redis_pool
-        .get(format!("mfa:secret:{}", user.id))
+        .get(redis::build_key(&config, format!("mfa:secret:{}", user.id)))
         .await
         .map_err(|_| Error::InternalServerError("Error getting MFA details from Redis".into()))?;
 
@@ -103,7 +108,7 @@ pub async fn confirm(
         .map_err(|_| Error::InternalServerError("Error generating backup codes".into()))?;
 
     redis_pool
-        .del(format!("mfa:secret:{}", user.id))
+        .del(redis::build_key(&config, format!("mfa:secret:{}", user.id)))
         .await
         .map_err(|_| Error::InternalServerError("Error deleting MFA details from Redis".into()))?;
 

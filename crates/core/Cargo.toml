@@ -10,7 +10,7 @@ adrastos_macros = { path = "../macros" }
 argon2 = "0.5.3"
 aws-config = { version = "1.4.0", features = ["behavior-version-latest"] }
 aws-credential-types = { version = "1.2.0", features = ["hardcoded-credentials"] }
-aws-sdk-s3 = "1.28.0"
+aws-sdk-s3 = "1.29.0"
 axum = "0.7.5"
 axum-extra = { version = "0.9.3", features = ["cookie"] }
 chrono = "0.4.38"
@@ -25,7 +25,7 @@ oauth2 = "4.4.2"
 rand = "0.8.5"
 regex = "1.10.4"
 reqwest = { version = "0.12.4", features = ["json"] }
-rustls = "0.23.5"
+rustls = "0.23.7"
 rustls-pemfile = "2.1.2"
 sea-query = { version = "0.30.7", features = [
 	"attr",
@@ -35,7 +35,7 @@ sea-query = { version = "0.30.7", features = [
 ] }
 secrecy = { version = "0.8.0", features = ["serde"] }
 semver = "1.0.23"
-serde = { version = "1.0.201", features = ["derive"] }
+serde = { version = "1.0.202", features = ["derive"] }
 serde_json = "1.0.117"
 time = "0.3.36"
 tokio = { version = "1.37.0", features = ["macros"] }

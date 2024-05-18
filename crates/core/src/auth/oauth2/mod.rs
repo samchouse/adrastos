@@ -13,14 +13,14 @@ use oauth2::{
 use secrecy::ExposeSecret;
 use serde::{de::DeserializeOwned, Deserialize};
 
-use crate::config;
+use crate::{config, db::redis};
 
 use self::providers::{OAuth2Provider, OAuth2ProviderInfo, OAuth2User, OAuth2UserMethods};
 
 pub mod providers;
 
 #[derive(Clone, Default)]
-pub struct OAuth2(HashMap<OAuth2Provider, BasicClient>);
+pub struct OAuth2(HashMap<OAuth2Provider, BasicClient>, config::Config);
 
 struct ClientInfo {
     client_id: String,
@@ -85,7 +85,10 @@ impl OAuth2 {
     }
 
     pub fn new(config: &config::Config) -> Self {
-        let mut oauth2 = Self::default();
+        let mut oauth2 = Self {
+            1: config.clone(),
+            ..Self::default()
+        };
 
         Self::providers().iter().for_each(|provider| {
             let info = provider.info();
@@ -140,7 +143,10 @@ impl OAuth2 {
 
         redis_pool
             .set(
-                format!("oauth:code_verifier:{}", csrf_token.secret()),
+                redis::build_key(
+                    &self.1,
+                    format!("oauth:code_verifier:{}", csrf_token.secret()),
+                ),
                 code_verifier.secret(),
                 Some(Expiration::EX(Duration::minutes(10).num_seconds())),
                 None,
@@ -172,9 +178,9 @@ impl OAuth2 {
         }
 
         let code_verifier = redis_pool
-            .getdel(format!(
-                "oauth:code_verifier:{}",
-                session_csrf_token.secret()
+            .getdel(redis::build_key(
+                &self.1,
+                format!("oauth:code_verifier:{}", session_csrf_token.secret()),
             ))
             .await
             .map_err(|_| "Error getting Redis value")?;

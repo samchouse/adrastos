@@ -1,5 +1,6 @@
 use adrastos_core::{
     auth::{self, TokenType},
+    db::redis,
     entities::{self, UserType},
     error::Error,
     id::Id,
@@ -120,11 +121,11 @@ pub async fn register(
     if let UserType::Normal(_) = UserType::from(&db) {
         if let Some(Mailer(mailer)) = mailer {
             let verification_token = Id::new().to_string();
-            let channel = format!("html:{}", verification_token);
+            let channel = redis::build_key(&config, format!("html:{}", verification_token));
 
             redis_pool
                 .set(
-                    format!("verification:{}", verification_token),
+                    redis::build_key(&config, format!("verification:{}", verification_token)),
                     user.id.clone(),
                     Some(Expiration::EX(Duration::hours(1).num_seconds())),
                     None,
@@ -137,7 +138,7 @@ pub async fn register(
                     )
                 })?;
 
-            let (c_channel, c_user) = (channel.clone(), user.clone());
+            let (c_channel, c_user, c_config) = (channel.clone(), user.clone(), config.clone());
             let mut message_rx = subscriber.message_rx();
             let task = tokio::spawn(async move {
                 while let Ok(Ok(message)) =
@@ -151,8 +152,8 @@ pub async fn register(
                         .from(
                             format!(
                                 "{} <{}>",
-                                config.smtp_sender_name.unwrap(),
-                                config.smtp_sender_email.unwrap()
+                                c_config.smtp_sender_name.unwrap(),
+                                c_config.smtp_sender_email.unwrap()
                             )
                             .parse()
                             .unwrap(),
@@ -178,7 +179,10 @@ pub async fn register(
             })?;
 
             subscriber
-                .publish("emails", verification_token)
+                .publish(
+                    redis::build_key(&config, "emails".to_string()),
+                    verification_token,
+                )
                 .await
                 .map_err(|_| {
                     Error::InternalServerError("An error occurred while publishing to Redis".into())
@@ -289,7 +293,10 @@ pub async fn verify(
     }
 
     let user_id: String = redis_pool
-        .get(format!("verification:{}", params.token))
+        .get(redis::build_key(
+            &config,
+            format!("verification:{}", params.token),
+        ))
         .await
         .map_err(|_| {
             Error::InternalServerError(
@@ -333,7 +340,7 @@ pub async fn resend_verification(
 
     redis_pool
         .set(
-            format!("verification:{}", verification_token),
+            redis::build_key(&config, format!("verification:{}", verification_token)),
             user.id.clone(),
             Some(Expiration::EX(Duration::hours(1).num_seconds())),
             None,

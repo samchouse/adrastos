@@ -3,6 +3,7 @@
 case $1 in
 cou)
   PR=$2
+  HASH=$(echo -n "$PR" | md5sum | cut -c1-8)
 
   mkdir -p staging
 
@@ -16,13 +17,14 @@ EOF
 
     cat <<EOF >"staging/docker-compose.pr-$PR.yml"
 name: adrastos-staging-pr-$PR
-version: '3.9'
 
 services:
   emails:
     image: ghcr.io/xenfo/adrastos-emails:staging-pr-$PR
     pull_policy: always
     restart: unless-stopped
+    environment:
+      - REDIS_PREFIX=$HASH
     env_file:
       - ../staging.env
 
@@ -32,6 +34,8 @@ services:
     restart: unless-stopped
     depends_on:
       - emails
+    environment:
+      - REDIS_PREFIX=$HASH
     env_file:
       - ../staging.env
     networks:

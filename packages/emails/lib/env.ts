@@ -10,6 +10,7 @@ export const env = createEnv({
   server: {
     CLIENT_URL: z.string().optional(),
     REDIS_URL: z.string(),
+    REDIS_PREFIX: z.string().optional(),
   },
   runtimeEnv: process.env,
 });
