@@ -14,6 +14,12 @@ pub enum UserType<'a> {
     Normal(&'a Database),
 }
 
+#[derive(Debug, Clone)]
+pub enum AlternateUserType {
+    System,
+    Normal,
+}
+
 #[enum_def]
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct AnyUser {

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use adrastos_core::auth::oauth2;
+use adrastos_core::entities::AlternateUserType;
 use adrastos_core::{config, entities};
 use adrastos_core::{
     db::postgres::{self, DatabaseType},
@@ -153,7 +154,7 @@ where
     }
 }
 
-pub struct AnyUser(pub entities::AnyUser);
+pub struct AnyUser(pub entities::AnyUser, pub AlternateUserType);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for AnyUser
@@ -163,8 +164,12 @@ where
     type Rejection = Error;
 
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
-        match parts.extensions.get::<entities::AnyUser>().cloned() {
-            Some(v) => Ok(AnyUser(v)),
+        match parts
+            .extensions
+            .get::<(entities::AnyUser, AlternateUserType)>()
+            .cloned()
+        {
+            Some(v) => Ok(AnyUser(v.0, v.1)),
             None => Err(Error::Unauthorized),
         }
     }

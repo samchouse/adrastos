@@ -36,7 +36,7 @@ pub async fn api(Config(config): Config) -> impl IntoResponse {
 
 pub async fn me(
     Database(db): Database,
-    AnyUser(user): AnyUser,
+    AnyUser(user, _): AnyUser,
 ) -> Result<impl IntoResponse, Error> {
     match db.1 {
         DatabaseType::System => {

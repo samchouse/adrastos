@@ -245,7 +245,7 @@ pub async fn login(
 pub async fn logout(
     jar: CookieJar,
     Config(config): Config,
-    AnyUser(user): AnyUser,
+    AnyUser(user, _): AnyUser,
     Database(db): Database,
 ) -> Result<impl IntoResponse, Error> {
     let cookies = util::get_auth_cookies(&jar)?;

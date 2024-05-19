@@ -122,7 +122,7 @@ pub async fn get_upload(
 
 pub async fn upload(
     Config(config): Config,
-    AnyUser(user): AnyUser,
+    AnyUser(user, _): AnyUser,
     Project(project): Project,
     ProjectDatabase(db): ProjectDatabase,
     State(AppState { s3, .. }): State<AppState>,
@@ -165,7 +165,7 @@ pub async fn upload(
 }
 
 pub async fn remove(
-    AnyUser(user): AnyUser,
+    AnyUser(user, _): AnyUser,
     Path(path): Path<String>,
     Project(project): Project,
     ProjectDatabase(db): ProjectDatabase,

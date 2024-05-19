@@ -2,11 +2,15 @@ use std::collections::HashMap;
 
 use adrastos_core::{
     db::postgres,
-    entities::custom_table::{
-        fields::{FieldInfo, RelationTarget},
-        mm_relation::ManyToManyRelationTable,
-        schema::CustomTableSchema,
-        CustomTableSelectBuilder,
+    entities::{
+        custom_table::{
+            fields::{FieldInfo, RelationTarget},
+            mm_relation::ManyToManyRelationTable,
+            permissions::Permission,
+            schema::CustomTableSchema,
+            CustomTableSelectBuilder,
+        },
+        AlternateUserType,
     },
     error::Error,
     id::Id,
@@ -40,7 +44,7 @@ pub fn routes() -> Router<AppState> {
 }
 
 pub async fn rows(
-    _: AnyUser,
+    AnyUser(user, user_type): AnyUser,
     Path(path): Path<String>,
     ProjectDatabase(db): ProjectDatabase,
     Query(mut query): Query<HashMap<String, String>>,
@@ -66,6 +70,12 @@ pub async fn rows(
         .paginate(page, limit)
         .join();
 
+    if matches!(user_type, AlternateUserType::Normal) {
+        if let Some(permission) = custom_table.permissions.view.clone() {
+            builder.cond_where(Permission::parse(&custom_table, permission)?.to_sql_cond(&user));
+        }
+    }
+
     let rows = builder.finish(&db).await?;
     let mut response = json!({ "rows": rows });
 
@@ -84,7 +94,7 @@ pub async fn rows(
 }
 
 pub async fn row(
-    _: AnyUser,
+    AnyUser(user, user_type): AnyUser,
     Path(path): Path<String>,
     ProjectDatabase(db): ProjectDatabase,
     Query(query): Query<HashMap<String, String>>,
@@ -94,17 +104,23 @@ pub async fn row(
         .one(&db)
         .await?;
 
-    let row = CustomTableSelectBuilder::from(&custom_table)
+    let mut builder = CustomTableSelectBuilder::from(&custom_table);
+    builder
         .and_where(
             query
                 .iter()
-                .map(|(field, equals)| Expr::col(Alias::new(field.to_snake_case())).eq(equals))
+                .map(|(field, equals)| Expr::col(Alias::new(field)).eq(equals))
                 .collect(),
         )
-        .join()
-        .finish(&db)
-        .await?;
+        .join();
 
+    if matches!(user_type, AlternateUserType::Normal) {
+        if let Some(permission) = custom_table.permissions.view.clone() {
+            builder.cond_where(Permission::parse(&custom_table, permission)?.to_sql_cond(&user));
+        }
+    }
+
+    let row = builder.finish(&db).await?;
     Ok(Json(row.as_array().unwrap().first().cloned()))
 }
 
