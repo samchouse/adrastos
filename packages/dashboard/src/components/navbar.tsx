@@ -89,8 +89,10 @@ export const Navbar: React.FC<
             <div className="mr-4 flex flex-row items-center">
               <Button variant="ghost">Changelog</Button>
               <Button variant="ghost">Docs</Button>
-              <Button variant="ghost" size="icon">
-                <SiGithub className="h-4 w-4" />
+              <Button variant="ghost" size="icon" asChild>
+                <a href="https://github.com/Xenfo/adrastos" target="_blank">
+                  <SiGithub className="h-4 w-4" />
+                </a>
               </Button>
             </div>
 

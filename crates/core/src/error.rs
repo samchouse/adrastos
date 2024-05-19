@@ -4,7 +4,7 @@ use axum::{http::StatusCode, response::IntoResponse};
 use serde_json::json;
 use validator::ValidationErrors;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     NotFound,
     Unauthorized,

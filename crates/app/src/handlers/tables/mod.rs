@@ -3,6 +3,7 @@ use adrastos_core::{
     entities::custom_table::{
         fields::Field,
         mm_relation::ManyToManyRelationTable,
+        permissions::Permissions,
         schema::{CustomTableSchema, UpdateCustomTableSchema},
     },
     error::Error,
@@ -90,6 +91,12 @@ pub async fn create(
                 info: f.info,
             })
             .collect(),
+        permissions: Permissions {
+            view: None,
+            create: None,
+            update: None,
+            delete: None,
+        },
         created_at: Utc::now(),
         updated_at: None,
     };

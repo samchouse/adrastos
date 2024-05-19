@@ -17,6 +17,7 @@ use self::{
 
 pub mod fields;
 pub mod mm_relation;
+pub mod permissions;
 pub mod schema;
 
 #[derive(Clone, Debug)]

@@ -319,7 +319,7 @@ function StorageComponent() {
   );
 
   return (
-    <div className="px-96 py-7">
+    <div className="px-60 py-7 2xl:px-96">
       <Tabs defaultValue="files" className="w-full">
         <div className="flex w-full justify-between">
           <TabsList>
