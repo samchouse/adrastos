@@ -122,3 +122,9 @@ export {
   CommandShortcut,
 } from './command';
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
+export {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './tooltip';

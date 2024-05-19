@@ -60,7 +60,7 @@ function RootComponent() {
   }, [accessToken, client]);
 
   return (
-    <div className="bg-background text-primary flex h-screen flex-col font-['Work_Sans']">
+    <div className="flex h-screen flex-col bg-background font-['Work_Sans'] text-primary">
       <Outlet />
 
       <Suspense fallback={null}>

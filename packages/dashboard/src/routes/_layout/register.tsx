@@ -236,7 +236,7 @@ function RegisterComponent() {
 
                 <Link
                   to="/login"
-                  className="text-muted-foreground mt-5 block text-center text-sm underline underline-offset-4"
+                  className="mt-5 block text-center text-sm text-muted-foreground underline underline-offset-4"
                 >
                   Already have an account? Login
                 </Link>

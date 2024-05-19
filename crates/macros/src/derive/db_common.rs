@@ -1,4 +1,4 @@
-use heck::{AsSnakeCase, AsUpperCamelCase};
+use heck::{ToSnakeCase, ToUpperCamelCase};
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse_macro_input, Field, Fields, ItemStruct};
@@ -26,7 +26,7 @@ pub fn db_common(item: TokenStream) -> TokenStream {
 
             panic!("Expected rename token")
         })
-        .unwrap_or(format!("{}s", AsSnakeCase(ident.to_string())));
+        .unwrap_or(format!("{}s", ident.to_string().to_snake_case()));
 
     let iden_ident = format_ident!("{}Iden", ident);
     let error_identifier = table_name.replace('_', " ");
@@ -43,7 +43,7 @@ pub fn db_common(item: TokenStream) -> TokenStream {
         let Field { ident, .. } = it;
 
         let ident = ident.clone().unwrap().to_string();
-        let branch_ident = format_ident!("{}", AsUpperCamelCase(ident.to_string()).to_string());
+        let branch_ident = format_ident!("{}", ident.to_string().to_upper_camel_case());
 
         quote! { Self::#branch_ident => #ident }
     });
@@ -103,7 +103,7 @@ pub fn db_common(item: TokenStream) -> TokenStream {
         let attrs = AttributeTokens::from(attrs.clone());
 
         let str_ident = inner_ident.clone().unwrap().to_string();
-        let fk_name = format!("FK_{}_{}", AsSnakeCase(ident.to_string()), str_ident);
+        let fk_name = format!("FK_{}_{}", ident.to_string().to_snake_case(), str_ident);
 
         let relation = attrs.get(TokenName::Relation).map(|t| {
             if let Token::Relation(ident) = t {

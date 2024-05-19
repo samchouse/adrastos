@@ -13,6 +13,7 @@
     "^[.]"
   ],
   "tailwindFunctions": ["clsx", "cn", "twmerge", "cva"],
+  "tailwindConfig": "packages/dashboard/tailwind.config.ts",
   "plugins": [
     "@ianvs/prettier-plugin-sort-imports",
     "prettier-plugin-tailwindcss"

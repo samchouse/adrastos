@@ -172,7 +172,7 @@ function LoginComponent() {
                     <span className="w-full border-t"></span>
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background text-muted-foreground px-2">
+                    <span className="bg-background px-2 text-muted-foreground">
                       Or continue with
                     </span>
                   </div>
@@ -222,7 +222,7 @@ function LoginComponent() {
 
                 <Link
                   to="/register"
-                  className="text-muted-foreground mt-4 block text-center text-sm underline underline-offset-4"
+                  className="mt-4 block text-center text-sm text-muted-foreground underline underline-offset-4"
                 >
                   Don&apos;t have an account? Register
                 </Link>

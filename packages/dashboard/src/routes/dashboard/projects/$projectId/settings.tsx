@@ -202,7 +202,7 @@ export const SmtpCard: React.FC = () => {
                           value={field.value ?? '********'}
                           disabled={!!data?.smtpConfig && field.value === null}
                           {...(field.value === null && {
-                            rightAdornment: (
+                            endAdornment: (
                               <button
                                 type="button"
                                 onClick={() => {
@@ -214,7 +214,7 @@ export const SmtpCard: React.FC = () => {
                                 }}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 disabled:cursor-not-allowed disabled:opacity-50"
                               >
-                                <Edit2 className="text-primary h-4 w-4" />
+                                <Edit2 className="h-4 w-4 text-primary" />
                               </button>
                             ),
                           })}

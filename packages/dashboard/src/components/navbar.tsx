@@ -30,7 +30,7 @@ export const Navbar: React.FC<
   | PropsWithProject
 > = ({ user, ...props }) => (
   <header>
-    <nav className="bg-background flex w-screen select-none flex-col justify-between space-y-3 border-b px-4 pb-2 pt-3">
+    <nav className="flex w-screen select-none flex-col justify-between space-y-3 border-b bg-background px-4 pb-2 pt-3">
       <div className="flex w-full flex-row justify-between">
         <div className="flex flex-row items-center">
           <Link
@@ -56,13 +56,13 @@ export const Navbar: React.FC<
           </Link>
           {('teams' in props || 'breadcrumbUser' in props) && (
             <>
-              <p className="text-muted mx-4 text-3xl font-medium">/</p>
+              <p className="mx-4 text-3xl font-medium text-muted">/</p>
               {'teams' in props ? (
                 <>
                   <TeamCombobox teamId={props.teamId} teams={props.teams} />
                   {'project' in props && (
                     <>
-                      <p className="text-muted ml-2 mr-4 text-3xl font-medium">
+                      <p className="ml-2 mr-4 text-3xl font-medium text-muted">
                         /
                       </p>
                       <Link
@@ -121,7 +121,7 @@ export const Navbar: React.FC<
               to="/dashboard/projects/$projectId"
               params={{ projectId: props.project.id }}
               activeOptions={{ exact: true }}
-              className="text-muted-foreground data-[status=active]:text-primary data-[status=active]:bg-accent hover:bg-accent/70"
+              className="text-muted-foreground hover:bg-accent/70 data-[status=active]:bg-accent data-[status=active]:text-primary"
             >
               Overview
             </Link>
@@ -130,7 +130,7 @@ export const Navbar: React.FC<
             <Link
               to="/dashboard/projects/$projectId/auth"
               params={{ projectId: props.project.id }}
-              className="text-muted-foreground data-[status=active]:text-primary data-[status=active]:bg-accent hover:bg-accent/70"
+              className="text-muted-foreground hover:bg-accent/70 data-[status=active]:bg-accent data-[status=active]:text-primary"
             >
               Auth
             </Link>
@@ -139,7 +139,7 @@ export const Navbar: React.FC<
             <Link
               to="/dashboard/projects/$projectId/tables"
               params={{ projectId: props.project.id }}
-              className="text-muted-foreground data-[status=active]:text-primary data-[status=active]:bg-accent hover:bg-accent/70"
+              className="text-muted-foreground hover:bg-accent/70 data-[status=active]:bg-accent data-[status=active]:text-primary"
             >
               Tables
             </Link>
@@ -148,7 +148,7 @@ export const Navbar: React.FC<
             <Link
               to="/dashboard/projects/$projectId/storage"
               params={{ projectId: props.project.id }}
-              className="text-muted-foreground data-[status=active]:text-primary data-[status=active]:bg-accent hover:bg-accent/70"
+              className="text-muted-foreground hover:bg-accent/70 data-[status=active]:bg-accent data-[status=active]:text-primary"
             >
               Storage
             </Link>
@@ -157,7 +157,7 @@ export const Navbar: React.FC<
             <Link
               to="/dashboard/projects/$projectId/settings"
               params={{ projectId: props.project.id }}
-              className="text-muted-foreground data-[status=active]:text-primary data-[status=active]:bg-accent hover:bg-accent/70"
+              className="text-muted-foreground hover:bg-accent/70 data-[status=active]:bg-accent data-[status=active]:text-primary"
             >
               Settings
             </Link>
@@ -171,7 +171,7 @@ export const Navbar: React.FC<
                 to="/dashboard/teams/$teamId"
                 params={{ teamId: props.teamId }}
                 activeOptions={{ exact: true }}
-                className="text-muted-foreground data-[status=active]:text-primary data-[status=active]:bg-accent hover:bg-accent/70"
+                className="text-muted-foreground hover:bg-accent/70 data-[status=active]:bg-accent data-[status=active]:text-primary"
               >
                 Projects
               </Link>
@@ -181,7 +181,7 @@ export const Navbar: React.FC<
                 to="/dashboard/teams/$teamId/settings"
                 params={{ teamId: props.teamId }}
                 activeOptions={{ exact: true }}
-                className="text-muted-foreground data-[status=active]:text-primary data-[status=active]:bg-accent hover:bg-accent/70"
+                className="text-muted-foreground hover:bg-accent/70 data-[status=active]:bg-accent data-[status=active]:text-primary"
               >
                 Settings
               </Link>

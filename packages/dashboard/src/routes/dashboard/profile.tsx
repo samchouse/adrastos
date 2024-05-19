@@ -255,7 +255,7 @@ function ProfileComponent() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <main className="bg-background h-full overflow-y-auto">
+      <main className="h-full overflow-y-auto bg-background">
         <div className="flex flex-col gap-y-5 p-5">
           {!user?.verified && (
             <Alert
@@ -331,7 +331,7 @@ function ProfileComponent() {
                               {passkey.name}
                               <Badge
                                 variant="secondary"
-                                className="hover:bg-secondary ml-2"
+                                className="ml-2 hover:bg-secondary"
                               >
                                 {passkey.lastUsed
                                   ? `Last used ${formatDistanceToNow(passkey.lastUsed, { addSuffix: true })}`

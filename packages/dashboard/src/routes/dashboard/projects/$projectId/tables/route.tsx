@@ -46,7 +46,7 @@ function RouteComponent() {
     <section className="flex h-full w-full flex-row">
       {tables.length === 0 ? (
         <div className="flex h-full w-full flex-col items-center justify-center space-y-5">
-          <h1 className="text-muted-foreground text-2xl">
+          <h1 className="text-2xl text-muted-foreground">
             No tables have been created
           </h1>
           <TableSheet client={client} className="w-72" />
