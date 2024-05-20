@@ -204,7 +204,7 @@ function TableIdComponent() {
               <p className="mb-[3px] leading-none">
                 {format(value, 'MM-dd-yyyy')}
               </p>
-              <p className="text-muted-foreground leading-none">
+              <p className="leading-none text-muted-foreground">
                 {format(value, 'h:mm:ss a')}
               </p>
             </>
@@ -255,7 +255,7 @@ function TableIdComponent() {
               <p className="mb-[3px] leading-none">
                 {format(value, 'MM-dd-yyyy')}
               </p>
-              <p className="text-muted-foreground leading-none">
+              <p className="leading-none text-muted-foreground">
                 {format(value, 'h:mm:ss a')}
               </p>
             </>

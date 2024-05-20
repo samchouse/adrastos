@@ -188,7 +188,21 @@ export class Table<
 
         return acc;
       },
-      { name: this.name, fields: [] as Field[] },
+      {
+        name: this.name,
+        fields: [] as Field[],
+        permissions: {
+          view: null,
+          create: null,
+          update: null,
+          delete: null,
+        } as {
+          view: string | null;
+          create: string | null;
+          update: string | null;
+          delete: string | null;
+        },
+      },
     );
   }
 

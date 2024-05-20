@@ -46,7 +46,7 @@ function RouteComponent() {
         project={project}
       />
 
-      <main className="bg-background h-full overflow-y-auto">
+      <main className="h-full overflow-y-auto bg-background">
         <Outlet />
       </main>
     </>

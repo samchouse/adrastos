@@ -16,7 +16,7 @@ use axum::{
     Json, Router,
 };
 use chrono::Utc;
-use heck::AsSnakeCase;
+use heck::ToSnakeCase;
 use regex::Regex;
 use sea_query::{Alias, PostgresQueryBuilder, Table, TableCreateStatement};
 use serde::Deserialize;
@@ -34,6 +34,7 @@ pub mod custom;
 pub struct CreateBody {
     name: String,
     fields: Vec<Field>,
+    permissions: Permissions,
 }
 
 #[derive(Deserialize, Debug)]
@@ -82,21 +83,16 @@ pub async fn create(
 ) -> Result<impl IntoResponse, Error> {
     let custom_table = CustomTableSchema {
         id: Id::new().to_string(),
-        name: AsSnakeCase(body.name).to_string(),
+        name: body.name.to_snake_case(),
         fields: body
             .fields
             .into_iter()
             .map(|f| Field {
-                name: AsSnakeCase(f.name).to_string(),
+                name: f.name.to_snake_case(),
                 info: f.info,
             })
             .collect(),
-        permissions: Permissions {
-            view: None,
-            create: None,
-            update: None,
-            delete: None,
-        },
+        permissions: body.permissions,
         created_at: Utc::now(),
         updated_at: None,
     };

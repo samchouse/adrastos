@@ -104,7 +104,7 @@ export const DataTable: React.FC<{
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="text-muted-foreground h-24 text-center"
+                  className="h-24 text-center text-muted-foreground"
                 >
                   No results
                   <br />
@@ -119,7 +119,7 @@ export const DataTable: React.FC<{
       </div>
 
       <div className="mt-3 flex items-center justify-between px-1">
-        <div className="text-muted-foreground text-sm">
+        <div className="text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length.toString()} of{' '}
           {table.getFilteredRowModel().rows.length}{' '}
           {table.getFilteredRowModel().rows.length === 1 ? 'row' : 'rows'}{' '}

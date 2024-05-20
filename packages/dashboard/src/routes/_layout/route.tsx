@@ -18,7 +18,7 @@ function RouteComponent() {
     <>
       <Navbar user={user} />
 
-      <main className="bg-background h-full overflow-y-auto">
+      <main className="h-full overflow-y-auto bg-background">
         <Outlet />
       </main>
     </>

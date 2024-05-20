@@ -18,7 +18,7 @@ use axum::{
     Json, Router,
 };
 use chrono::{DateTime, Utc};
-use heck::{AsLowerCamelCase, AsSnakeCase};
+use heck::{ToLowerCamelCase, ToSnakeCase};
 use regex::Regex;
 use sea_query::{Alias, Expr, PostgresQueryBuilder, SimpleExpr, Value};
 use serde_json::json;
@@ -98,9 +98,7 @@ pub async fn row(
         .and_where(
             query
                 .iter()
-                .map(|(field, equals)| {
-                    Expr::col(Alias::new(AsSnakeCase(field).to_string())).eq(equals)
-                })
+                .map(|(field, equals)| Expr::col(Alias::new(field.to_snake_case())).eq(equals))
                 .collect(),
         )
         .join()
@@ -117,7 +115,7 @@ pub async fn create(
     Json(body): Json<HashMap<String, serde_json::Value>>,
 ) -> Result<impl IntoResponse, Error> {
     let custom_table = CustomTableSchema::find()
-        .by_name(AsSnakeCase(path).to_string())
+        .by_name(path.to_snake_case())
         .one(&db)
         .await?;
 
@@ -147,7 +145,7 @@ pub async fn create(
 
     custom_table.fields.iter().for_each(|field| {
         let validation_results =
-            field.validate(body.get(&AsLowerCamelCase(field.name.clone()).to_string()));
+            field.validate(body.get(&field.name.clone().to_lower_camel_case()));
 
         match validation_results {
             Ok(value) => {
@@ -156,9 +154,7 @@ pub async fn create(
             Err(validation_errors) => {
                 validation_errors.iter().for_each(|error| {
                     errors.add(
-                        util::string_to_static_str(
-                            AsLowerCamelCase(field.name.clone()).to_string(),
-                        ),
+                        util::string_to_static_str(field.name.clone().to_lower_camel_case()),
                         error.clone(),
                     );
                 });
@@ -177,7 +173,7 @@ pub async fn create(
             match target {
                 RelationTarget::Single => {
                     let value = body
-                        .get(&AsLowerCamelCase(field.name.clone()).to_string())
+                        .get(&field.name.clone().to_lower_camel_case())
                         .unwrap()
                         .as_str()
                         .unwrap();
@@ -188,7 +184,7 @@ pub async fn create(
                 }
                 RelationTarget::Many => {
                     let values = body
-                        .get(&AsLowerCamelCase(field.name.clone()).to_string())
+                        .get(&field.name.clone().to_lower_camel_case())
                         .unwrap()
                         .as_array()
                         .unwrap()
@@ -330,15 +326,14 @@ pub async fn update(
     db_query.limit(1);
 
     query.iter().for_each(|(field, equals)| {
-        db_query.and_where(Expr::col(Alias::new(AsSnakeCase(field).to_string())).eq(equals));
+        db_query.and_where(Expr::col(Alias::new(field.to_snake_case())).eq(equals));
     });
 
     let mut errors = ValidationErrors::new();
     let mut table_values: Vec<(_, SimpleExpr)> = vec![("updated_at", Utc::now().into())];
 
     custom_table.fields.iter().for_each(|field| {
-        let validation_results =
-            field.validate(body.get(&AsLowerCamelCase(field.name.clone()).to_string()));
+        let validation_results = field.validate(body.get(&field.name.clone().to_snake_case()));
 
         match validation_results {
             Ok(value) => {
@@ -347,9 +342,7 @@ pub async fn update(
             Err(validation_errors) => {
                 validation_errors.iter().for_each(|error| {
                     errors.add(
-                        util::string_to_static_str(
-                            AsLowerCamelCase(field.name.clone()).to_string(),
-                        ),
+                        util::string_to_static_str(field.name.clone().to_snake_case()),
                         error.clone(),
                     );
                 });
@@ -434,7 +427,7 @@ pub async fn remove(
     db_query.limit(1);
 
     query.iter().for_each(|(field, equals)| {
-        db_query.and_where(Expr::col(Alias::new(AsSnakeCase(field).to_string())).eq(equals));
+        db_query.and_where(Expr::col(Alias::new(field.to_snake_case())).eq(equals));
     });
 
     db.get()

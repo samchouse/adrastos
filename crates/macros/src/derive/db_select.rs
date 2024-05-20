@@ -1,4 +1,4 @@
-use heck::{AsSnakeCase, AsUpperCamelCase};
+use heck::{ToSnakeCase, ToUpperCamelCase};
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse_macro_input, Field, Fields, ItemStruct};
@@ -69,7 +69,7 @@ pub fn db_select(item: TokenStream) -> TokenStream {
             it,
             format_ident!(
                 "{}",
-                AsUpperCamelCase(ident.clone().unwrap().to_string()).to_string()
+                ident.clone().unwrap().to_string().to_upper_camel_case()
             ),
         ))
     });
@@ -103,7 +103,7 @@ pub fn db_select(item: TokenStream) -> TokenStream {
         let Field { ty, .. } = it;
         let ty = Type::from(ty.clone());
 
-        let ident = AsSnakeCase(format!(
+        let ident = format!(
             "{}s",
             match ty {
                 Type::Vec(generic) => *generic,
@@ -113,8 +113,8 @@ pub fn db_select(item: TokenStream) -> TokenStream {
                 },
                 _ => ty,
             }
-        ))
-        .to_string();
+        )
+        .to_snake_case();
 
         quote! { #join_ident::#variant_ident => #ident.to_string(), }
     });

@@ -33,7 +33,7 @@ function RouteComponent() {
     <>
       <Navbar user={user} teamId={teamId} teams={teams} />
 
-      <main className="bg-background h-full overflow-y-auto">
+      <main className="h-full overflow-y-auto bg-background">
         <Outlet />
       </main>
     </>
