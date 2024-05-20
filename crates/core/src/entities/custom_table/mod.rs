@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use sea_query::{
-    Alias, ColumnDef, Expr, ForeignKey, ForeignKeyAction, Keyword, PostgresQueryBuilder,
+    Alias, ColumnDef, Cond, Expr, ForeignKey, ForeignKeyAction, Keyword, PostgresQueryBuilder,
     SimpleExpr, Table, TableCreateStatement,
 };
 use serde_json::{json, Map};
@@ -102,6 +102,12 @@ impl CustomTableSelectBuilder {
         for expression in expressions {
             self.query_builder.and_where(expression);
         }
+
+        self
+    }
+
+    pub fn cond_where(&mut self, condition: Cond) -> &mut Self {
+        self.query_builder.cond_where(condition);
 
         self
     }

@@ -54,13 +54,13 @@ pub fn routes() -> Router<AppState> {
         .route("/login/finish", post(login_finish))
 }
 
-pub async fn list(AnyUser(user): AnyUser) -> Result<impl IntoResponse, Error> {
+pub async fn list(AnyUser(user, _): AnyUser) -> Result<impl IntoResponse, Error> {
     Ok(Json(user.passkeys.clone().unwrap_or_default()))
 }
 
 pub async fn update(
     Path(id): Path<String>,
-    AnyUser(user): AnyUser,
+    AnyUser(user, _): AnyUser,
     Database(db): Database,
     Json(body): Json<UpdateBody>,
 ) -> Result<impl IntoResponse, Error> {
@@ -88,7 +88,7 @@ pub async fn update(
 
 pub async fn delete(
     Database(db): Database,
-    AnyUser(user): AnyUser,
+    AnyUser(user, _): AnyUser,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, Error> {
     let passkey = user
@@ -109,7 +109,7 @@ pub async fn register_start(
     headers: HeaderMap,
     project: Option<Project>,
     Config(config): Config,
-    AnyUser(user): AnyUser,
+    AnyUser(user, _): AnyUser,
 ) -> Result<impl IntoResponse, Error> {
     let webauthn = passkeys::build_webauthn(
         headers.get(header::ORIGIN),

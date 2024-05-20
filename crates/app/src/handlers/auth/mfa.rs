@@ -42,7 +42,7 @@ pub fn routes() -> Router<AppState> {
 
 pub async fn enable(
     project: Option<Project>,
-    AnyUser(user): AnyUser,
+    AnyUser(user, _): AnyUser,
     State(AppState {
         config, redis_pool, ..
     }): State<AppState>,
@@ -78,7 +78,7 @@ pub async fn enable(
 
 pub async fn confirm(
     project: Option<Project>,
-    AnyUser(user): AnyUser,
+    AnyUser(user, _): AnyUser,
     Database(db): Database,
     State(AppState {
         config, redis_pool, ..
@@ -196,7 +196,7 @@ pub async fn verify(
 
 pub async fn disable(
     project: Option<Project>,
-    AnyUser(user): AnyUser,
+    AnyUser(user, _): AnyUser,
     Database(db): Database,
     Json(body): Json<CVDRBody>,
 ) -> Result<impl IntoResponse, Error> {
@@ -239,7 +239,7 @@ pub async fn disable(
 
 pub async fn regenerate(
     project: Option<Project>,
-    AnyUser(user): AnyUser,
+    AnyUser(user, _): AnyUser,
     Database(db): Database,
     Json(body): Json<CVDRBody>,
 ) -> Result<impl IntoResponse, Error> {

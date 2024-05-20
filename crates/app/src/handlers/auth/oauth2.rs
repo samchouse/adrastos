@@ -70,7 +70,7 @@ pub async fn login(
             Error::InternalServerError("Unable to insert CSRF token into session".to_string())
         })?;
 
-    if let Some(AnyUser(user)) = user {
+    if let Some(AnyUser(user, _)) = user {
         session
             .insert(&SessionKey::UserId.to_string(), user.id)
             .await

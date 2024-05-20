@@ -54,6 +54,12 @@ export class TablesModule extends BaseModule {
     body: {
       name?: string;
       fields?: FieldUpdate[];
+      permissions?: {
+        view: string | null;
+        create: string | null;
+        update: string | null;
+        delete: string | null;
+      };
     },
   ) {
     return this.client.json<CustomTable>({

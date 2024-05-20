@@ -4,7 +4,7 @@ use adrastos_core::{
     auth::TokenType,
     config::Config,
     db::postgres::{Database, DatabaseType},
-    entities::{self, System, SystemUserJoin, UserJoin},
+    entities::{self, AlternateUserType, System, SystemUserJoin, UserJoin},
 };
 use axum::{
     extract::{Query, Request, State},
@@ -124,36 +124,43 @@ pub async fn run(
                         {
                             req.extensions_mut().insert::<entities::User>(user.clone());
                             req.extensions_mut()
-                                .insert::<entities::AnyUser>(user.into());
+                                .insert::<(entities::AnyUser, AlternateUserType)>((
+                                    user.into(),
+                                    AlternateUserType::Normal,
+                                ));
                         }
 
-                        if let Ok(system_user) =
-                            entities::SystemUser::find_by_id(&access_token.claims.sub)
-                                .join(SystemUserJoin::Connections)
-                                .join(SystemUserJoin::RefreshTokenTrees)
-                                .join(SystemUserJoin::Passkeys)
-                                .one(&system_db)
-                                .await
+                        if let Ok(user) = entities::SystemUser::find_by_id(&access_token.claims.sub)
+                            .join(SystemUserJoin::Connections)
+                            .join(SystemUserJoin::RefreshTokenTrees)
+                            .join(SystemUserJoin::Passkeys)
+                            .one(&system_db)
+                            .await
                         {
                             req.extensions_mut()
-                                .insert::<entities::SystemUser>(system_user.clone());
+                                .insert::<entities::SystemUser>(user.clone());
                             req.extensions_mut()
-                                .insert::<entities::AnyUser>(system_user.into());
+                                .insert::<(entities::AnyUser, AlternateUserType)>((
+                                    user.into(),
+                                    AlternateUserType::System,
+                                ));
                         }
                     }
                     DatabaseType::System => {
-                        if let Ok(system_user) =
-                            entities::SystemUser::find_by_id(&access_token.claims.sub)
-                                .join(SystemUserJoin::Connections)
-                                .join(SystemUserJoin::RefreshTokenTrees)
-                                .join(SystemUserJoin::Passkeys)
-                                .one(&db)
-                                .await
+                        if let Ok(user) = entities::SystemUser::find_by_id(&access_token.claims.sub)
+                            .join(SystemUserJoin::Connections)
+                            .join(SystemUserJoin::RefreshTokenTrees)
+                            .join(SystemUserJoin::Passkeys)
+                            .one(&db)
+                            .await
                         {
                             req.extensions_mut()
-                                .insert::<entities::SystemUser>(system_user.clone());
+                                .insert::<entities::SystemUser>(user.clone());
                             req.extensions_mut()
-                                .insert::<entities::AnyUser>(system_user.into());
+                                .insert::<(entities::AnyUser, AlternateUserType)>((
+                                    user.into(),
+                                    AlternateUserType::System,
+                                ));
                         }
                     }
                 }

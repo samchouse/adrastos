@@ -89,6 +89,12 @@ export const TableSheet: React.FC<{
         setIsOpen((o) => !o);
         setName('');
         setFields([]);
+        setPermissions({
+          view: null,
+          create: null,
+          update: null,
+          delete: null,
+        });
       }}
     >
       <SheetTrigger asChild>

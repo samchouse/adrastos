@@ -10,7 +10,7 @@ use crate::{entities::Update, error::Error};
 use super::{fields::Field, permissions::Permissions};
 
 #[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, DbSelect, DbCommon, DbQuery)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, DbSelect, DbCommon, DbQuery)]
 #[adrastos(rename = "custom_tables")]
 pub struct CustomTableSchema {
     pub id: String,
@@ -27,6 +27,7 @@ pub struct CustomTableSchema {
 pub struct UpdateCustomTableSchema {
     pub name: Option<String>,
     pub fields: Option<Vec<Field>>,
+    pub permissions: Option<Permissions>,
 }
 
 impl CustomTableSchema {
@@ -49,6 +50,13 @@ impl CustomTableSchema {
                                 .map(|v| serde_json::to_string(&v).unwrap_or_log())
                                 .collect::<Vec<_>>()
                         })
+                        .into(),
+                ),
+                (
+                    CustomTableSchemaIden::Permissions,
+                    update
+                        .permissions
+                        .map(|p| serde_json::to_string(&p).unwrap())
                         .into(),
                 ),
                 (CustomTableSchemaIden::UpdatedAt, Some(Utc::now()).into()),

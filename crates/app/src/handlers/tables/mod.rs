@@ -57,6 +57,7 @@ struct UpdateField {
 pub struct UpdateBody {
     name: Option<String>,
     fields: Option<Vec<UpdateField>>,
+    permissions: Option<Permissions>,
 }
 
 pub fn routes() -> Router<AppState> {
@@ -226,6 +227,7 @@ pub async fn update(
         update.fields = Some(updated_fields);
     }
 
+    update.permissions = body.permissions;
     custom_table.update(&db, update.clone()).await?;
 
     db.get()
