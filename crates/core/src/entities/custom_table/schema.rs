@@ -7,7 +7,7 @@ use tracing_unwrap::ResultExt;
 
 use crate::{entities::Update, error::Error};
 
-use super::fields::Field;
+use super::{fields::Field, permissions::Permissions};
 
 #[enum_def]
 #[derive(Debug, Serialize, Deserialize, Clone, DbSelect, DbCommon, DbQuery)]
@@ -17,6 +17,8 @@ pub struct CustomTableSchema {
     #[adrastos(find, unique)]
     pub name: String,
     pub fields: Vec<Field>,
+    #[adrastos(json)]
+    pub permissions: Permissions,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 }
