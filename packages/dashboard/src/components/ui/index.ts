@@ -128,3 +128,4 @@ export {
   TooltipProvider,
   TooltipTrigger,
 } from './tooltip';
+export { Calendar } from './calendar';

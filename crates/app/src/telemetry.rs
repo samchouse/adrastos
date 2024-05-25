@@ -3,9 +3,7 @@ use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{filter::LevelFilter, prelude::*, EnvFilter};
 
 pub fn register_subscriber() {
-    let axiom_layer = tracing_axiom::builder()
-        .with_service_name("adrastos")
-        .layer();
+    let axiom_layer = tracing_axiom::default("adrastos");
 
     let subscriber = tracing_subscriber::registry()
         .with(

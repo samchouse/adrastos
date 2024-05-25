@@ -1,4 +1,4 @@
-import { Field, FieldUpdate } from '../../types';
+import { Field, FieldCrud } from '../../types';
 import { merge } from '../../util';
 import { BaseModule } from '../util';
 import { Table, TFWithModifiers, TInfer } from './fields';
@@ -9,6 +9,12 @@ export interface CustomTable {
   id: string;
   name: string;
   fields: Field[];
+  permissions: {
+    view: string | null;
+    create: string | null;
+    update: string | null;
+    delete: string | null;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -53,7 +59,7 @@ export class TablesModule extends BaseModule {
     name: T extends Table<infer _, infer U> ? U : string,
     body: {
       name?: string;
-      fields?: FieldUpdate[];
+      fields?: FieldCrud[];
       permissions?: {
         view: string | null;
         create: string | null;

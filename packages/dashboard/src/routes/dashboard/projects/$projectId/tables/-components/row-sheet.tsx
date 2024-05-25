@@ -1,7 +1,8 @@
 import { CustomTable, Field } from '@adrastos/lib';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { flexRender, Row as TableRowType } from '@tanstack/react-table';
-import { Trash2 } from 'lucide-react';
+import { CommandList } from 'cmdk';
+import { Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { title } from 'radash';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -9,6 +10,12 @@ import { z } from 'zod';
 
 import {
   Button,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  DateTimePicker,
   Form,
   FormControl,
   FormField,
@@ -16,6 +23,11 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  MultiSelect,
+  Option,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Sheet,
   SheetClose,
   SheetContent,
@@ -23,6 +35,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  Switch,
   TableCell,
   TableRow,
 } from '~/components';
@@ -61,7 +74,37 @@ const createFormSchema = (fields: Field[]) =>
               .string()
               .transform((v) => (v ? parseFloat(v) : undefined))
               .pipe(f.isRequired ? type : type.optional());
+            break;
+          }
+          case 'boolean': {
+            finalType = z.coerce.boolean();
+            break;
+          }
+          case 'date': {
+            const type = z.date();
+            finalType = type.pipe(f.isRequired ? type : type.optional());
+            break;
+          }
+          case 'email': {
+            const type = z.string().email();
+            finalType = type.pipe(f.isRequired ? type : type.optional());
+            break;
+          }
+          case 'url': {
+            const type = z.string().url();
+            finalType = type.pipe(f.isRequired ? type : type.optional());
+            break;
+          }
+          case 'select': {
+            let type = z.array(z.string());
+            if (f.maxSelected) type = type.max(f.maxSelected);
+            if (f.minSelected) type = type.min(f.minSelected);
 
+            finalType = (
+              f.maxSelected === 1 && f.minSelected === 1
+                ? z.coerce.string().transform((v) => [v])
+                : type
+            ).pipe(f.isRequired ? type : type.optional());
             break;
           }
           default:
@@ -76,6 +119,75 @@ const createFormSchema = (fields: Field[]) =>
           .transform((v) => (v ? v : undefined)),
       }),
   );
+
+const SingleSelect: React.FC<{
+  options: Option[];
+  name?: string;
+  disabled?: boolean;
+  value?: string;
+  onBlur?: () => void;
+  onSelect?: (value: string) => void;
+}> = ({ options, disabled, onSelect, onBlur, name, value: passedValue }) => {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(passedValue ?? '');
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o === false) onBlur?.();
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          name={name}
+          disabled={disabled}
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+        >
+          {value
+            ? options.find((option) => option.value === value)?.label
+            : 'Select option...'}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[451px] p-0">
+        <Command>
+          <CommandInput placeholder="Search options..." />
+          <CommandEmpty>No option found.</CommandEmpty>
+
+          <CommandList>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={option.value}
+                  onSelect={(currentValue) => {
+                    const newValue = currentValue === value ? '' : currentValue;
+                    setValue(newValue);
+                    onSelect?.(newValue);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      value === option.value ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                  {option.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 export const RowSheet: React.FC<{
   tableRow?: TableRowType<Row>;
@@ -217,6 +329,166 @@ export const RowSheet: React.FC<{
                               <FormMessage />
                             </FormItem>
                           )}
+                        />
+                      );
+                      break;
+                    case 'boolean':
+                      field = (
+                        <FormField
+                          control={form.control}
+                          name={f.name}
+                          render={({ field }) => (
+                            <FormItem className="mt-1 flex items-center space-x-2">
+                              <FormControl>
+                                <Switch
+                                  size="sm"
+                                  {...{
+                                    ...field,
+                                    value: undefined,
+                                    onChange: undefined,
+                                  }}
+                                  checked={field.value as boolean}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel>{title(f.name)}</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      );
+                      break;
+                    case 'date':
+                      field = (
+                        <FormField
+                          control={form.control}
+                          name={f.name}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel htmlFor={undefined}>
+                                {title(f.name)}
+                              </FormLabel>
+                              <FormControl>
+                                <DateTimePicker
+                                  {...{
+                                    ...field,
+                                    value: undefined,
+                                    onChange: undefined,
+                                  }}
+                                  jsDate={
+                                    typeof field.value === 'string' &&
+                                    field.value !== ''
+                                      ? new Date(field.value)
+                                      : (field.value as Date)
+                                  }
+                                  onJsDateChange={field.onChange}
+                                  granularity="second"
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      );
+                      break;
+                    case 'email':
+                      field = (
+                        <FormField
+                          control={form.control}
+                          name={f.name}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{title(f.name)}</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      );
+                      break;
+                    case 'url':
+                      field = (
+                        <FormField
+                          control={form.control}
+                          name={f.name}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{title(f.name)}</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      );
+                      break;
+                    case 'select':
+                      field = (
+                        <FormField
+                          control={form.control}
+                          name={f.name}
+                          render={({ field }) => {
+                            const options = f.options.reduce(
+                              (acc, curr) => [
+                                ...acc,
+                                { label: title(curr), value: curr },
+                              ],
+                              [] as Option[],
+                            );
+
+                            return (
+                              <FormItem>
+                                <FormLabel>{title(f.name)}</FormLabel>
+                                <FormControl>
+                                  {f.minSelected === 1 &&
+                                  f.maxSelected === 1 ? (
+                                    <SingleSelect
+                                      {...{
+                                        ...field,
+                                        ref: undefined,
+                                        value: undefined,
+                                        onChange: undefined,
+                                      }}
+                                      options={options}
+                                      value={
+                                        Array.isArray(field.value)
+                                          ? (field.value[0] as string)
+                                          : (field.value as string)
+                                      }
+                                      onSelect={(value) =>
+                                        form.setValue(field.name, value)
+                                      }
+                                    />
+                                  ) : (
+                                    <MultiSelect
+                                      {...{
+                                        ...field,
+                                        value: undefined,
+                                        onChange: undefined,
+                                      }}
+                                      options={options}
+                                      placeholder="Select options..."
+                                      selected={
+                                        field.value === ''
+                                          ? []
+                                          : ((field.value as string[]).map(
+                                              (v) => ({
+                                                label: title(v),
+                                                value: v,
+                                              }),
+                                            ) satisfies Option[])
+                                      }
+                                      onSelectedChange={(values) =>
+                                        form.setValue(
+                                          field.name,
+                                          values.map((v) => v.value),
+                                        )
+                                      }
+                                    />
+                                  )}
+                                </FormControl>
+                              </FormItem>
+                            );
+                          }}
                         />
                       );
                       break;

@@ -38,17 +38,17 @@ pub struct CreateBody {
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", tag = "action")]
 enum Action {
-    Create,
-    Update,
+    Create { field: Field },
+    Update { field: Field },
     Delete,
 }
 
 #[derive(Deserialize, Debug)]
 struct UpdateField {
     name: String,
-    field: Field,
+    #[serde(flatten)]
     action: Action,
 }
 
@@ -170,6 +170,7 @@ pub async fn update(
         .one(&db)
         .await?;
 
+    let mut altered = false;
     let mut alter_query = Table::alter();
     let mut update = UpdateCustomTableSchema {
         ..Default::default()
@@ -193,26 +194,28 @@ pub async fn update(
     if let Some(fields) = body.fields {
         let mut updated_fields = custom_table.fields.clone();
 
-        fields.iter().for_each(|update| match update.action {
-            Action::Create => {
-                updated_fields.push(update.field.clone());
+        fields.iter().for_each(|update| match &update.action {
+            Action::Create { field } => {
+                updated_fields.push(field.clone());
+                alter_query.add_column(&mut field.column());
+                altered = true;
             }
-            Action::Update => {
+            Action::Update { field } => {
                 updated_fields = updated_fields
                     .clone()
                     .into_iter()
                     .map(|f| {
                         if f.name == update.name {
-                            return update.field.clone();
+                            return field.clone();
                         }
 
                         f
                     })
                     .collect();
 
-                if update.name != update.field.name {
-                    alter_query
-                        .rename_column(Alias::new(&update.name), Alias::new(&update.field.name));
+                if update.name != field.name {
+                    alter_query.rename_column(Alias::new(&update.name), Alias::new(&field.name));
+                    altered = true;
                 }
             }
             Action::Delete => {
@@ -221,6 +224,8 @@ pub async fn update(
                     .into_iter()
                     .filter(|f| f.name != update.name)
                     .collect();
+                alter_query.drop_column(Alias::new(&update.name));
+                altered = true;
             }
         });
 
@@ -230,18 +235,20 @@ pub async fn update(
     update.permissions = body.permissions;
     custom_table.update(&db, update.clone()).await?;
 
-    db.get()
-        .await
-        .unwrap()
-        .execute(
-            alter_query
-                .table(Alias::new(&custom_table.name))
-                .to_string(PostgresQueryBuilder)
-                .as_str(),
-            &[],
-        )
-        .await
-        .unwrap();
+    if altered {
+        db.get()
+            .await
+            .unwrap()
+            .execute(
+                alter_query
+                    .table(Alias::new(&custom_table.name))
+                    .to_string(PostgresQueryBuilder)
+                    .as_str(),
+                &[],
+            )
+            .await
+            .unwrap();
+    }
 
     if let Some(name) = update.name {
         db.get()

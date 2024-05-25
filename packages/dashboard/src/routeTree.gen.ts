@@ -265,3 +265,103 @@ export const routeTree = rootRoute.addChildren({
 })
 
 /* prettier-ignore-end */
+
+/* ROUTE_MANIFEST_START
+{
+  "routes": {
+    "__root__": {
+      "filePath": "__root.tsx",
+      "children": [
+        "/_layout",
+        "/dashboard"
+      ]
+    },
+    "/_layout": {
+      "filePath": "_layout/route.tsx",
+      "children": [
+        "/_layout/login",
+        "/_layout/register",
+        "/_layout/"
+      ]
+    },
+    "/dashboard": {
+      "filePath": "dashboard/route.tsx",
+      "children": [
+        "/dashboard/profile",
+        "/dashboard/",
+        "/dashboard/projects/$projectId",
+        "/dashboard/teams/$teamId"
+      ]
+    },
+    "/_layout/login": {
+      "filePath": "_layout/login.tsx",
+      "parent": "/_layout"
+    },
+    "/_layout/register": {
+      "filePath": "_layout/register.tsx",
+      "parent": "/_layout"
+    },
+    "/dashboard/profile": {
+      "filePath": "dashboard/profile.tsx",
+      "parent": "/dashboard"
+    },
+    "/_layout/": {
+      "filePath": "_layout/index.tsx",
+      "parent": "/_layout"
+    },
+    "/dashboard/": {
+      "filePath": "dashboard/index.tsx",
+      "parent": "/dashboard"
+    },
+    "/dashboard/projects/$projectId": {
+      "filePath": "dashboard/projects/$projectId/route.tsx",
+      "parent": "/dashboard",
+      "children": [
+        "/dashboard/projects/$projectId/tables",
+        "/dashboard/projects/$projectId/auth",
+        "/dashboard/projects/$projectId/settings",
+        "/dashboard/projects/$projectId/storage"
+      ]
+    },
+    "/dashboard/teams/$teamId": {
+      "filePath": "dashboard/teams/$teamId/route.tsx",
+      "parent": "/dashboard",
+      "children": [
+        "/dashboard/teams/$teamId/settings",
+        "/dashboard/teams/$teamId/"
+      ]
+    },
+    "/dashboard/projects/$projectId/tables": {
+      "filePath": "dashboard/projects/$projectId/tables/route.tsx",
+      "parent": "/dashboard/projects/$projectId",
+      "children": [
+        "/dashboard/projects/$projectId/tables/$tableId"
+      ]
+    },
+    "/dashboard/projects/$projectId/auth": {
+      "filePath": "dashboard/projects/$projectId/auth.tsx",
+      "parent": "/dashboard/projects/$projectId"
+    },
+    "/dashboard/projects/$projectId/settings": {
+      "filePath": "dashboard/projects/$projectId/settings.tsx",
+      "parent": "/dashboard/projects/$projectId"
+    },
+    "/dashboard/projects/$projectId/storage": {
+      "filePath": "dashboard/projects/$projectId/storage.tsx",
+      "parent": "/dashboard/projects/$projectId"
+    },
+    "/dashboard/teams/$teamId/settings": {
+      "filePath": "dashboard/teams/$teamId/settings.tsx",
+      "parent": "/dashboard/teams/$teamId"
+    },
+    "/dashboard/teams/$teamId/": {
+      "filePath": "dashboard/teams/$teamId/index.tsx",
+      "parent": "/dashboard/teams/$teamId"
+    },
+    "/dashboard/projects/$projectId/tables/$tableId": {
+      "filePath": "dashboard/projects/$projectId/tables/$tableId.tsx",
+      "parent": "/dashboard/projects/$projectId/tables"
+    }
+  }
+}
+ROUTE_MANIFEST_END */

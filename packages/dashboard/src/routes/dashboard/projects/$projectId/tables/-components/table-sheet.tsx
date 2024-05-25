@@ -1,5 +1,5 @@
-import { Client, CustomTable, Field } from '@adrastos/lib';
-import { PopoverContent, PopoverTrigger } from '@radix-ui/react-popover';
+import { Client, CustomTable, FieldCrud } from '@adrastos/lib';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import {
@@ -16,14 +16,30 @@ import {
   Trash2,
   Type,
 } from 'lucide-react';
-import { title } from 'radash';
-import { useState } from 'react';
+import { omit, title } from 'radash';
+import { useCallback, useState } from 'react';
+import isEqual from 'react-fast-compare';
+import {
+  FieldArrayWithId,
+  useFieldArray,
+  UseFieldArrayUpdate,
+  useForm,
+  UseFormReturn,
+} from 'react-hook-form';
+import { z } from 'zod';
 
 import {
   Button,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
   Input,
-  Label,
   Popover,
+  PopoverContent,
+  PopoverTrigger,
   Sheet,
   SheetClose,
   SheetContent,
@@ -45,8 +61,262 @@ import {
   tablesQueryOptions,
   useCreateTableMutation,
   useDeleteTableMutation,
+  useUpdateTableMutation,
 } from '~/hooks';
-import { cn, mkId } from '~/lib';
+import { cn } from '~/lib';
+
+const formSchema = z.object({
+  name: z.string(),
+  fields: z.array(
+    z.union([
+      z.object({
+        originalName: z.string().optional(),
+        name: z.string(),
+        type: z.literal('string'),
+        minLength: z
+          .string()
+          .transform((v) => (v ? parseInt(v, 10) : null))
+          .nullable(),
+        maxLength: z
+          .string()
+          .transform((v) => (v ? parseInt(v, 10) : null))
+          .nullable(),
+        pattern: z.string().nullable(),
+        isRequired: z.boolean(),
+        isUnique: z.boolean(),
+      }),
+      z.object({
+        originalName: z.string().optional(),
+        name: z.string(),
+        type: z.literal('number'),
+        min: z
+          .string()
+          .transform((v) => (v ? parseInt(v, 10) : null))
+          .nullable(),
+        max: z
+          .string()
+          .transform((v) => (v ? parseInt(v, 10) : null))
+          .nullable(),
+        isRequired: z.boolean(),
+        isUnique: z.boolean(),
+      }),
+      z.object({
+        originalName: z.string().optional(),
+        name: z.string(),
+        type: z.literal('boolean'),
+      }),
+      z.object({
+        originalName: z.string().optional(),
+        name: z.string(),
+        type: z.literal('date'),
+        isRequired: z.boolean(),
+        isUnique: z.boolean(),
+      }),
+      z.object({
+        originalName: z.string().optional(),
+        name: z.string(),
+        type: z.union([z.literal('email'), z.literal('url')]),
+        except: z.array(z.string()),
+        only: z.array(z.string()),
+        isRequired: z.boolean(),
+        isUnique: z.boolean(),
+      }),
+      z.object({
+        originalName: z.string().optional(),
+        name: z.string(),
+        type: z.literal('select'),
+        options: z.array(z.string()),
+        minSelected: z
+          .string()
+          .transform((v) => (v ? parseInt(v, 10) : null))
+          .nullable(),
+        maxSelected: z
+          .string()
+          .transform((v) => (v ? parseInt(v, 10) : null))
+          .nullable(),
+        isRequired: z.boolean(),
+        isUnique: z.boolean(),
+      }),
+      z.object({
+        originalName: z.string().optional(),
+        name: z.string(),
+        type: z.literal('relation'),
+        target: z.literal('many'),
+        table: z.string(),
+        cascadeDelete: z.boolean(),
+        minSelected: z
+          .string()
+          .transform((v) => (v ? parseInt(v, 10) : null))
+          .nullable(),
+        maxSelected: z
+          .string()
+          .transform((v) => (v ? parseInt(v, 10) : null))
+          .nullable(),
+        isRequired: z.boolean(),
+        isUnique: z.boolean(),
+      }),
+      z.object({
+        originalName: z.string().optional(),
+        name: z.string(),
+        type: z.literal('relation'),
+        target: z.literal('single'),
+        table: z.string(),
+        cascadeDelete: z.boolean(),
+        isRequired: z.boolean(),
+        isUnique: z.boolean(),
+      }),
+    ]),
+  ),
+  permissions: z.object({
+    view: z.string().nullable(),
+    create: z.string().nullable(),
+    update: z.string().nullable(),
+    delete: z.string().nullable(),
+  }),
+});
+
+const FieldCard: React.FC<
+  React.PropsWithChildren<{
+    index: number;
+    form: UseFormReturn<z.infer<typeof formSchema>>;
+    update: UseFieldArrayUpdate<z.infer<typeof formSchema>, 'fields'>;
+    field: FieldArrayWithId<z.infer<typeof formSchema>, 'fields', 'id'>;
+  }>
+> = ({ children, form, index, update, field: f }) => (
+  <div className="mt-2 grid grid-cols-2 gap-2">
+    <FormField
+      control={form.control}
+      name={`fields.${index}.name`}
+      render={({ field }) => (
+        <FormItem className="col-span-2">
+          <FormLabel>Name</FormLabel>
+          <FormControl>
+            <Input {...field} placeholder="Name" data-form-type="other" />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+
+    {children}
+
+    {f.type !== 'boolean' && (
+      <div className="mt-2 flex flex-row space-x-5">
+        <FormField
+          control={form.control}
+          name={`fields.${index}.isRequired`}
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center space-x-2">
+                <FormControl>
+                  <Switch
+                    {...{
+                      ...field,
+                      value: undefined,
+                      onChange: undefined,
+                    }}
+                    size="sm"
+                    checked={f.isRequired}
+                    onCheckedChange={(checked) =>
+                      update(index, {
+                        ...f,
+                        isRequired: checked,
+                      })
+                    }
+                  />
+                </FormControl>
+                <FormLabel>Required</FormLabel>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name={`fields.${index}.isUnique`}
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center space-x-2">
+                <FormControl>
+                  <Switch
+                    {...{
+                      ...field,
+                      value: undefined,
+                      onChange: undefined,
+                    }}
+                    size="sm"
+                    checked={f.isUnique}
+                    onCheckedChange={(checked) =>
+                      update(index, {
+                        ...f,
+                        isUnique: checked,
+                      })
+                    }
+                  />
+                </FormControl>
+                <FormLabel>Unique</FormLabel>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+    )}
+  </div>
+);
+
+type Types<T = z.infer<typeof formSchema>['fields']> = T extends (infer U)[]
+  ? U extends { type: string }
+    ? U['type']
+    : never
+  : never;
+
+type Properties<
+  T extends Types,
+  U = z.infer<typeof formSchema>['fields'],
+> = U extends (infer V)[]
+  ? V extends unknown
+    ? Extract<V, { type: T }> extends never
+      ? never
+      : Exclude<
+          {
+            [K in keyof V]: number extends V[K] ? K : never;
+          }[keyof V],
+          undefined
+        >
+    : never
+  : never;
+
+const NumberInput = <T extends Types>({
+  form,
+  index,
+  property,
+}: {
+  index: number;
+  property: Properties<T>;
+  form: UseFormReturn<z.infer<typeof formSchema>>;
+}) => (
+  <FormField
+    control={form.control}
+    name={`fields.${index}.${property}`}
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>{title(property)}</FormLabel>
+        <FormControl>
+          <Input
+            {...field}
+            type="number"
+            value={field.value ?? ''}
+            placeholder={title(property)}
+            data-form-type="other"
+          />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    )}
+  />
+);
 
 export const TableSheet: React.FC<{
   client: Client;
@@ -59,41 +329,70 @@ export const TableSheet: React.FC<{
     from: '/dashboard/projects/$projectId',
   });
 
-  const [name, setName] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [isOpenPopover, setIsOpenPopover] = useState(false);
-  const [fields, setFields] = useState<
-    (Field & {
-      id: string;
-    })[]
-  >([]);
-  const [permissions, setPermissions] = useState<{
-    view: string | null;
-    create: string | null;
-    update: string | null;
-    delete: string | null;
-  }>({
-    view: null,
-    create: null,
-    update: null,
-    delete: null,
-  });
 
   const { mutateAsync: createMutateAsync } = useCreateTableMutation();
+  const { mutateAsync: updateMutateAsync } = useUpdateTableMutation();
   const { mutateAsync: deleteMutateAsync } = useDeleteTableMutation();
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    mode: 'onChange',
+    resolver: zodResolver(formSchema),
+  });
+  const { fields, append, update, remove } = useFieldArray({
+    name: 'fields',
+    control: form.control,
+  });
+
+  const lowestId = useCallback(() => {
+    const usedSuffixes = fields
+      .filter(
+        (field) =>
+          new RegExp(/field\d*/).exec(field.name)?.[0].length ===
+          field.name.length,
+      )
+      .map((field) => field.name.replace('field', ''))
+      .concat(
+        table?.fields
+          .filter(
+            (field) =>
+              new RegExp(/field\d*/).exec(field.name)?.[0].length ===
+              field.name.length,
+          )
+          .map((field) => field.name.replace('field', '')) ?? [],
+      )
+      .reduce(
+        (acc, curr) => (acc.includes(curr) ? acc : [...acc, curr]),
+        [] as string[],
+      )
+      .map((suffix) => (suffix === '' ? 0 : parseInt(suffix, 10)))
+      .sort();
+
+    console.log(usedSuffixes);
+
+    const varianceSuffix = usedSuffixes.findIndex((s, i) => s !== i);
+    const lastSuffix = usedSuffixes.pop();
+    return `field${varianceSuffix !== -1 ? (varianceSuffix === 0 ? '' : varianceSuffix) : lastSuffix !== undefined ? lastSuffix + 1 : ''}`;
+  }, [fields, table]);
 
   return (
     <Sheet
       open={isOpen}
       onOpenChange={() => {
         setIsOpen((o) => !o);
-        setName('');
-        setFields([]);
-        setPermissions({
-          view: null,
-          create: null,
-          update: null,
-          delete: null,
+        setIsOpenPopover(false);
+
+        form.reset({
+          name: table?.name ?? '',
+          fields:
+            table?.fields.map((f) => ({ ...f, originalName: f.name })) ?? [],
+          permissions: table?.permissions ?? {
+            view: null,
+            create: null,
+            update: null,
+            delete: null,
+          },
         });
       }}
     >
@@ -108,724 +407,687 @@ export const TableSheet: React.FC<{
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent className="flex w-[500px] flex-col justify-between lg:max-w-[500px]">
-        <div className="h-full">
-          <SheetHeader className="mb-5">
-            <SheetTitle>Create A New Table</SheetTitle>
-          </SheetHeader>
+      <SheetContent className="w-[500px] lg:max-w-[500px]">
+        <Form {...form}>
+          <form
+            className="flex h-full flex-col justify-between"
+            onSubmit={(e) =>
+              void form.handleSubmit(async (values) => {
+                let tableName = '';
+                if (table) {
+                  const updatedTable = await updateMutateAsync({
+                    name: table.name,
+                    data: {
+                      ...values,
+                      fields: (
+                        values.fields
+                          .filter((field) => {
+                            const omittedField = omit(field, ['originalName']);
+                            const previousField = table.fields.find(
+                              (f) => f.name === field.originalName,
+                            );
 
-          <div className="mb-3">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
-          <Tabs defaultValue="fields">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="fields">Fields</TabsTrigger>
-              <TabsTrigger value="permissions">Permissions</TabsTrigger>
-            </TabsList>
-            <TabsContent value="fields">
-              {fields.length > 0 && (
-                <div className="mb-3 max-h-[calc(100vh-330px)] space-y-3 overflow-auto">
-                  {fields.map((f, index) => {
-                    let field: React.ReactNode = null;
-                    switch (f.type) {
-                      case 'string':
-                        field = (
-                          <div className="mt-2 grid grid-cols-2 gap-2">
-                            <div>
-                              <Label htmlFor={mkId(f.id, 'name')}>Name</Label>
-                              <Input
-                                value={f.name}
-                                id={mkId(f.id, 'name')}
-                                placeholder="Name"
-                                onChange={(e) =>
-                                  setFields((fields) =>
-                                    fields.map((field) =>
-                                      field.id === f.id
-                                        ? {
-                                            ...field,
-                                            name: e.target.value,
-                                          }
-                                        : field,
-                                    ),
-                                  )
-                                }
-                              />
-                            </div>
-
-                            <div>
-                              <Label htmlFor={mkId(f.id, 'pattern')}>
-                                Pattern
-                              </Label>
-                              <Input
-                                id={mkId(f.id, 'pattern')}
-                                placeholder="Pattern"
-                                onChange={(e) =>
-                                  setFields((fields) =>
-                                    fields.map((field) =>
-                                      field.id === f.id
-                                        ? {
-                                            ...field,
-                                            pattern: e.target.value,
-                                          }
-                                        : field,
-                                    ),
-                                  )
-                                }
-                              />
-                            </div>
-
-                            <div>
-                              <Label htmlFor={mkId(f.id, 'minLength')}>
-                                Min Length
-                              </Label>
-                              <Input
-                                type="number"
-                                id={mkId(f.id, 'minLength')}
-                                placeholder="Min Length"
-                                onChange={(e) =>
-                                  setFields((fields) =>
-                                    fields.map((field) =>
-                                      field.id === f.id
-                                        ? {
-                                            ...field,
-                                            minLength: !isNaN(
-                                              e.target.valueAsNumber,
-                                            )
-                                              ? e.target.valueAsNumber
-                                              : null,
-                                          }
-                                        : field,
-                                    ),
-                                  )
-                                }
-                              />
-                            </div>
-
-                            <div>
-                              <Label htmlFor={mkId(f.id, 'maxLength')}>
-                                Max Length
-                              </Label>
-                              <Input
-                                type="number"
-                                id={mkId(f.id, 'maxLength')}
-                                placeholder="Max Length"
-                                onChange={(e) =>
-                                  setFields((fields) =>
-                                    fields.map((field) =>
-                                      field.id === f.id
-                                        ? {
-                                            ...field,
-                                            maxLength: !isNaN(
-                                              e.target.valueAsNumber,
-                                            )
-                                              ? e.target.valueAsNumber
-                                              : null,
-                                          }
-                                        : field,
-                                    ),
-                                  )
-                                }
-                              />
-                            </div>
-
-                            <div>
-                              <div className="mt-2 flex flex-row space-x-5">
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    size="sm"
-                                    checked={f.isRequired}
-                                    id={mkId(f.id, 'isRequired')}
-                                    onCheckedChange={() =>
-                                      setFields((fields) =>
-                                        fields.map((field) =>
-                                          field.id === f.id &&
-                                          field.type !== 'boolean'
-                                            ? {
-                                                ...field,
-                                                isRequired: !field.isRequired,
-                                              }
-                                            : field,
-                                        ),
-                                      )
-                                    }
-                                  />
-                                  <Label htmlFor={mkId(f.id, 'isRequired')}>
-                                    Required
-                                  </Label>
-                                </div>
-
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    size="sm"
-                                    checked={f.isUnique}
-                                    id={mkId(f.id, 'isUnique')}
-                                    onCheckedChange={() =>
-                                      setFields((fields) =>
-                                        fields.map((field) =>
-                                          field.id === f.id &&
-                                          field.type !== 'boolean'
-                                            ? {
-                                                ...field,
-                                                isUnique: !field.isUnique,
-                                              }
-                                            : field,
-                                        ),
-                                      )
-                                    }
-                                  />
-                                  <Label htmlFor={mkId(f.id, 'isUnique')}>
-                                    Unique
-                                  </Label>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                        break;
-                      case 'number':
-                        field = (
-                          <div className="mt-2 grid grid-cols-2 gap-2">
-                            <div className="col-span-2">
-                              <Label htmlFor={mkId(f.id, 'name')}>Name</Label>
-                              <Input
-                                value={f.name}
-                                id={mkId(f.id, 'name')}
-                                placeholder="Name"
-                                onChange={(e) =>
-                                  setFields((fields) =>
-                                    fields.map((field) =>
-                                      field.id === f.id
-                                        ? {
-                                            ...field,
-                                            name: e.target.value,
-                                          }
-                                        : field,
-                                    ),
-                                  )
-                                }
-                              />
-                            </div>
-
-                            <div>
-                              <Label htmlFor={mkId(f.id, 'min')}>Min</Label>
-                              <Input
-                                type="number"
-                                id={mkId(f.id, 'min')}
-                                placeholder="Min"
-                                onChange={(e) =>
-                                  setFields((fields) =>
-                                    fields.map((field) =>
-                                      field.id === f.id
-                                        ? {
-                                            ...field,
-                                            min: !isNaN(e.target.valueAsNumber)
-                                              ? e.target.valueAsNumber
-                                              : null,
-                                          }
-                                        : field,
-                                    ),
-                                  )
-                                }
-                              />
-                            </div>
-
-                            <div>
-                              <Label htmlFor={mkId(f.id, 'max')}>Max</Label>
-                              <Input
-                                type="number"
-                                id={mkId(f.id, 'max')}
-                                placeholder="Max"
-                                onChange={(e) =>
-                                  setFields((fields) =>
-                                    fields.map((field) =>
-                                      field.id === f.id
-                                        ? {
-                                            ...field,
-                                            max: !isNaN(e.target.valueAsNumber)
-                                              ? e.target.valueAsNumber
-                                              : null,
-                                          }
-                                        : field,
-                                    ),
-                                  )
-                                }
-                              />
-                            </div>
-
-                            <div>
-                              <div className="mt-2 flex flex-row space-x-5">
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    size="sm"
-                                    checked={f.isRequired}
-                                    id={mkId(f.id, 'isRequired')}
-                                    onCheckedChange={() =>
-                                      setFields((fields) =>
-                                        fields.map((field) =>
-                                          field.id === f.id &&
-                                          field.type !== 'boolean'
-                                            ? {
-                                                ...field,
-                                                isRequired: !field.isRequired,
-                                              }
-                                            : field,
-                                        ),
-                                      )
-                                    }
-                                  />
-                                  <Label htmlFor={mkId(f.id, 'isRequired')}>
-                                    Required
-                                  </Label>
-                                </div>
-
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    size="sm"
-                                    checked={f.isUnique}
-                                    id={mkId(f.id, 'isUnique')}
-                                    onCheckedChange={() =>
-                                      setFields((fields) =>
-                                        fields.map((field) =>
-                                          field.id === f.id &&
-                                          field.type !== 'boolean'
-                                            ? {
-                                                ...field,
-                                                isUnique: !field.isUnique,
-                                              }
-                                            : field,
-                                        ),
-                                      )
-                                    }
-                                  />
-                                  <Label htmlFor={mkId(f.id, 'isUnique')}>
-                                    Unique
-                                  </Label>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                        break;
-                      default:
-                    }
-
-                    return (
-                      <div key={index} className="rounded-md border p-3 pt-2">
-                        <div className="flex flex-row items-center justify-between">
-                          <h3 className="text-base font-medium">
-                            {title(f.type)} Field
-                          </h3>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              setFields((fields) =>
-                                fields.filter((field) => field.id !== f.id),
-                              )
-                            }
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-
-                        {field}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              <Popover
-                open={isOpenPopover}
-                onOpenChange={() => setIsOpenPopover((o) => !o)}
-              >
-                <PopoverTrigger asChild>
-                  <Button className="w-full" variant="secondary">
-                    Add field
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-[451px] bg-background"
-                  sideOffset={8}
-                >
-                  <div className="grid grid-cols-6 gap-2 rounded-md border p-3">
-                    <div className="col-span-2 h-14">
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setIsOpenPopover(false);
-                          setFields([
-                            ...fields,
-                            {
-                              id: Math.random().toString(36).substring(2),
-                              name: `field${
-                                fields.length === 0 ? '' : fields.length
-                              }`,
-                              type: 'string',
-                              isRequired: false,
-                              isUnique: false,
-                              maxLength: null,
-                              minLength: null,
-                              pattern: null,
-                            },
-                          ]);
-                        }}
-                        sharedClasses="h-full w-full flex flex-col items-center justify-center"
-                      >
-                        <Type className="h-6 w-6" />
-                        String
-                      </Button>
-                    </div>
-                    <div className="col-span-2 h-14">
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setIsOpenPopover(false);
-                          setFields([
-                            ...fields,
-                            {
-                              id: Math.random().toString(36).substring(2),
-                              name: `field${
-                                fields.length === 0 ? '' : fields.length
-                              }`,
-                              type: 'number',
-                              isRequired: false,
-                              isUnique: false,
-                              max: null,
-                              min: null,
-                            },
-                          ]);
-                        }}
-                        sharedClasses="h-full w-full flex flex-col items-center justify-center"
-                      >
-                        <Hash className="h-6 w-6" />
-                        Number
-                      </Button>
-                    </div>
-                    <div className="col-span-2 h-14">
-                      <Button
-                        variant="secondary"
-                        sharedClasses="h-full w-full flex flex-col items-center justify-center"
-                      >
-                        <ToggleRight className="h-6 w-6" />
-                        Boolean
-                      </Button>
-                    </div>
-                    <div className="col-span-2 h-14">
-                      <Button
-                        variant="secondary"
-                        sharedClasses="h-full w-full flex flex-col items-center justify-center"
-                      >
-                        <Calendar className="h-6 w-6" />
-                        Date
-                      </Button>
-                    </div>
-                    <div className="col-span-2 h-14">
-                      <Button
-                        variant="secondary"
-                        sharedClasses="h-full w-full flex flex-col items-center justify-center"
-                      >
-                        <ToggleRight className="h-6 w-6" />
-                        Email
-                      </Button>
-                    </div>
-                    <div className="col-span-2 h-14">
-                      <Button
-                        variant="secondary"
-                        sharedClasses="h-full w-full flex flex-col items-center justify-center"
-                      >
-                        <Link2 className="h-6 w-6" />
-                        Url
-                      </Button>
-                    </div>
-                    <div className="col-span-3 h-14">
-                      <Button
-                        variant="secondary"
-                        sharedClasses="h-full w-full flex flex-col items-center justify-center"
-                      >
-                        <List className="h-6 w-6" />
-                        Select
-                      </Button>
-                    </div>
-                    <div className="col-span-3 h-14">
-                      <Button
-                        variant="secondary"
-                        sharedClasses="h-full w-full flex flex-col items-center justify-center"
-                      >
-                        <Database className="h-6 w-6" />
-                        Relation
-                      </Button>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </TabsContent>
-            <TabsContent value="permissions">
-              <Label htmlFor="view">View</Label>
-              <Input
-                id="view"
-                onlyDisableInput
-                disabled={permissions.view === null}
-                placeholder={
-                  permissions.view === null
-                    ? 'Admin only'
-                    : 'Leave empty for no restrictions'
-                }
-                value={permissions.view ?? ''}
-                onChange={(e) =>
-                  setPermissions((p) => ({ ...p, view: e.target.value }))
-                }
-                endAdornment={
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPermissions((p) => ({
-                              ...p,
-                              view: p.view === null ? '' : null,
-                            }))
-                          }
-                        >
-                          {permissions.view === null ? (
-                            <LockOpen className="h-4 w-4" />
-                          ) : (
-                            <Lock className="h-4 w-4" />
-                          )}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {permissions.view === null ? (
-                          <p>Use custom rule</p>
-                        ) : (
-                          <p>Restrict to admin only</p>
-                        )}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                }
-              />
-
-              <Label htmlFor="create">Create</Label>
-              <Input
-                id="create"
-                onlyDisableInput
-                disabled={permissions.create === null}
-                placeholder={
-                  permissions.create === null
-                    ? 'Admin only'
-                    : 'Leave empty for no restrictions'
-                }
-                value={permissions.create ?? ''}
-                onChange={(e) =>
-                  setPermissions((p) => ({ ...p, create: e.target.value }))
-                }
-                endAdornment={
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPermissions((p) => ({
-                              ...p,
-                              create: p.create === null ? '' : null,
-                            }))
-                          }
-                        >
-                          {permissions.create === null ? (
-                            <LockOpen className="h-4 w-4" />
-                          ) : (
-                            <Lock className="h-4 w-4" />
-                          )}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {permissions.create === null ? (
-                          <p>Use custom rule</p>
-                        ) : (
-                          <p>Restrict to admin only</p>
-                        )}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                }
-              />
-
-              <Label htmlFor="update">Update</Label>
-              <Input
-                id="update"
-                onlyDisableInput
-                disabled={permissions.update === null}
-                placeholder={
-                  permissions.update === null
-                    ? 'Admin only'
-                    : 'Leave empty for no restrictions'
-                }
-                value={permissions.update ?? ''}
-                onChange={(e) =>
-                  setPermissions((p) => ({ ...p, update: e.target.value }))
-                }
-                endAdornment={
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPermissions((p) => ({
-                              ...p,
-                              update: p.update === null ? '' : null,
-                            }))
-                          }
-                        >
-                          {permissions.update === null ? (
-                            <LockOpen className="h-4 w-4" />
-                          ) : (
-                            <Lock className="h-4 w-4" />
-                          )}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {permissions.update === null ? (
-                          <p>Use custom rule</p>
-                        ) : (
-                          <p>Restrict to admin only</p>
-                        )}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                }
-              />
-
-              <Label htmlFor="delete">Delete</Label>
-              <Input
-                id="delete"
-                onlyDisableInput
-                disabled={permissions.delete === null}
-                placeholder={
-                  permissions.delete === null
-                    ? 'Admin only'
-                    : 'Leave empty for no restrictions'
-                }
-                value={permissions.delete ?? ''}
-                onChange={(e) =>
-                  setPermissions((p) => ({ ...p, delete: e.target.value }))
-                }
-                endAdornment={
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPermissions((p) => ({
-                              ...p,
-                              delete: p.delete === null ? '' : null,
-                            }))
-                          }
-                        >
-                          {permissions.delete === null ? (
-                            <LockOpen className="h-4 w-4" />
-                          ) : (
-                            <Lock className="h-4 w-4" />
-                          )}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {permissions.delete === null ? (
-                          <p>Use custom rule</p>
-                        ) : (
-                          <p>Restrict to admin only</p>
-                        )}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                }
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        <SheetFooter className={cn(table && 'sm:justify-between')}>
-          {table && (
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() =>
-                void (async () => {
-                  await deleteMutateAsync(table.name);
-
-                  setIsOpen(false);
-                  setIsOpenPopover(false);
-                  setName('');
-                  setFields([]);
-
-                  const tables = await queryClient.fetchQuery(
-                    tablesQueryOptions(client),
-                  );
-
-                  if (tables.length === 0)
-                    await navigate({
-                      to: '/dashboard/projects/$projectId/tables',
-                      params: { projectId: params.projectId },
-                    });
-                  else
-                    await navigate({
-                      to: '/dashboard/projects/$projectId/tables/$tableId',
-                      params: {
-                        projectId: params.projectId,
-                        tableId: tables?.[0].name,
-                      },
-                    });
-                })()
-              }
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </Button>
-          )}
-
-          <div className="space-x-1">
-            <SheetClose asChild>
-              <Button variant="ghost">Cancel</Button>
-            </SheetClose>
-            <Button
-              onClick={() => {
-                void (async () => {
-                  const table = await createMutateAsync({
-                    name,
-                    fields,
-                    permissions,
-                  });
-
-                  setIsOpen(false);
-                  setIsOpenPopover(false);
-                  setName('');
-                  setFields([]);
-
-                  await navigate({
-                    to: '/dashboard/projects/$projectId/tables/$tableId',
-                    params: {
-                      projectId: params.projectId,
-                      tableId: table.name,
+                            return !isEqual(omittedField, previousField);
+                          })
+                          .map((field) => {
+                            const previousField = table.fields.find(
+                              (f) => f.name === field.originalName,
+                            );
+                            return {
+                              name: previousField
+                                ? previousField.name
+                                : field.name,
+                              action: previousField ? 'update' : 'create',
+                              field: field,
+                            };
+                          }) as FieldCrud[]
+                      ).concat(
+                        table.fields
+                          .filter(
+                            (field) =>
+                              !values.fields.some(
+                                (f) => f.originalName === field.name,
+                              ),
+                          )
+                          .map((field) => ({
+                            name: field.name,
+                            action: 'delete',
+                          })) as FieldCrud[],
+                      ),
                     },
                   });
-                })();
-              }}
-            >
-              Submit
-            </Button>
-          </div>
-        </SheetFooter>
+                  tableName = updatedTable.name;
+                } else {
+                  const table = await createMutateAsync(values);
+                  tableName = table.name;
+                }
+
+                setIsOpen(false);
+                await navigate({
+                  to: '/dashboard/projects/$projectId/tables/$tableId',
+                  params: {
+                    projectId: params.projectId,
+                    tableId: tableName,
+                  },
+                });
+              })(e)
+            }
+          >
+            <div className="h-full">
+              <SheetHeader className="mb-5">
+                <SheetTitle>Create A New Table</SheetTitle>
+              </SheetHeader>
+
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem className="mb-3">
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Tabs defaultValue="fields">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="fields">Fields</TabsTrigger>
+                  <TabsTrigger value="permissions">Permissions</TabsTrigger>
+                </TabsList>
+                <TabsContent value="fields">
+                  {fields.length > 0 && (
+                    <div className="mb-3 max-h-[calc(100vh-330px)] space-y-3 overflow-auto">
+                      {fields.map((f, index) => {
+                        let field: React.ReactNode = null;
+                        switch (f.type) {
+                          case 'string':
+                            field = (
+                              <FieldCard
+                                field={f}
+                                form={form}
+                                index={index}
+                                update={update}
+                              >
+                                <FormField
+                                  control={form.control}
+                                  name={`fields.${index}.pattern`}
+                                  render={({ field }) => (
+                                    <FormItem className="col-span-2">
+                                      <FormLabel>Pattern</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          value={field.value ?? ''}
+                                          placeholder="Pattern"
+                                          data-form-type="other"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <NumberInput<'string'>
+                                  form={form}
+                                  index={index}
+                                  property="minLength"
+                                />
+                                <NumberInput<'string'>
+                                  form={form}
+                                  index={index}
+                                  property="maxLength"
+                                />
+                              </FieldCard>
+                            );
+                            break;
+                          case 'number':
+                            field = (
+                              <FieldCard
+                                field={f}
+                                form={form}
+                                index={index}
+                                update={update}
+                              >
+                                <NumberInput<'number'>
+                                  form={form}
+                                  index={index}
+                                  property="min"
+                                />
+                                <NumberInput<'number'>
+                                  form={form}
+                                  index={index}
+                                  property="max"
+                                />
+                              </FieldCard>
+                            );
+                            break;
+                          case 'date':
+                            field = (
+                              <FieldCard
+                                field={f}
+                                form={form}
+                                index={index}
+                                update={update}
+                              />
+                            );
+                            break;
+                          case 'email':
+                            field = (
+                              <FieldCard
+                                field={f}
+                                form={form}
+                                index={index}
+                                update={update}
+                              >
+                                <FormField
+                                  control={form.control}
+                                  name={`fields.${index}.except`}
+                                  render={({ field }) => (
+                                    <FormItem className="col-span-2">
+                                      <FormLabel>Except</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          value={field.value?.join(', ') ?? ''}
+                                          placeholder="Except"
+                                          data-form-type="other"
+                                          onChange={(e) =>
+                                            form.setValue(
+                                              `fields.${index}.except`,
+                                              e.target.value
+                                                .replaceAll(' ', '')
+                                                .split(','),
+                                            )
+                                          }
+                                          disabled={fields.some(
+                                            (field) =>
+                                              field.originalName ===
+                                                f.originalName &&
+                                              field.type === 'email' &&
+                                              field.only.length > 0,
+                                          )}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name={`fields.${index}.only`}
+                                  render={({ field }) => (
+                                    <FormItem className="col-span-2">
+                                      <FormLabel>Only</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          value={field.value?.join(', ') ?? ''}
+                                          placeholder="Only"
+                                          data-form-type="other"
+                                          onChange={(e) =>
+                                            form.setValue(
+                                              `fields.${index}.only`,
+                                              e.target.value
+                                                .replaceAll(' ', '')
+                                                .split(','),
+                                            )
+                                          }
+                                          disabled={fields.some(
+                                            (field) =>
+                                              field.originalName ===
+                                                f.originalName &&
+                                              field.type === 'email' &&
+                                              field.except.length > 0,
+                                          )}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </FieldCard>
+                            );
+                            break;
+                          case 'url':
+                            field = (
+                              <FieldCard
+                                field={f}
+                                form={form}
+                                index={index}
+                                update={update}
+                              >
+                                <FormField
+                                  control={form.control}
+                                  name={`fields.${index}.except`}
+                                  render={({ field }) => (
+                                    <FormItem className="col-span-2">
+                                      <FormLabel>Except</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          value={field.value?.join(', ') ?? ''}
+                                          placeholder="Except"
+                                          data-form-type="other"
+                                          onChange={(e) =>
+                                            form.setValue(
+                                              `fields.${index}.except`,
+                                              e.target.value
+                                                .replaceAll(' ', '')
+                                                .split(','),
+                                            )
+                                          }
+                                          disabled={fields.some(
+                                            (field) =>
+                                              field.originalName ===
+                                                f.originalName &&
+                                              field.type === 'url' &&
+                                              field.only.length > 0,
+                                          )}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name={`fields.${index}.only`}
+                                  render={({ field }) => (
+                                    <FormItem className="col-span-2">
+                                      <FormLabel>Only</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          value={field.value?.join(', ') ?? ''}
+                                          placeholder="Only"
+                                          data-form-type="other"
+                                          onChange={(e) =>
+                                            form.setValue(
+                                              `fields.${index}.only`,
+                                              e.target.value
+                                                .replaceAll(' ', '')
+                                                .split(','),
+                                            )
+                                          }
+                                          disabled={fields.some(
+                                            (field) =>
+                                              field.originalName ===
+                                                f.originalName &&
+                                              field.type === 'url' &&
+                                              field.except.length > 0,
+                                          )}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </FieldCard>
+                            );
+                            break;
+                          case 'select':
+                            field = (
+                              <FieldCard
+                                field={f}
+                                form={form}
+                                index={index}
+                                update={update}
+                              >
+                                <FormField
+                                  control={form.control}
+                                  name={`fields.${index}.options`}
+                                  render={({ field }) => (
+                                    <FormItem className="col-span-2">
+                                      <FormLabel>Options</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          value={field.value.join(', ') ?? ''}
+                                          placeholder="Options"
+                                          data-form-type="other"
+                                          onChange={(e) =>
+                                            form.setValue(
+                                              `fields.${index}.options`,
+                                              e.target.value
+                                                .replaceAll(' ', '')
+                                                .split(','),
+                                            )
+                                          }
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <NumberInput<'select'>
+                                  form={form}
+                                  index={index}
+                                  property="minSelected"
+                                />
+                                <NumberInput<'select'>
+                                  form={form}
+                                  index={index}
+                                  property="maxSelected"
+                                />
+                              </FieldCard>
+                            );
+                            break;
+                          default: {
+                            field = (
+                              <FieldCard
+                                field={f}
+                                form={form}
+                                index={index}
+                                update={update}
+                              />
+                            );
+                          }
+                        }
+
+                        return (
+                          <div
+                            key={index}
+                            className="rounded-md border p-3 pt-2"
+                          >
+                            <div className="flex flex-row items-center justify-between">
+                              <h3 className="text-base font-medium">
+                                {title(f.type)} Field
+                              </h3>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => remove(index)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            {field}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <Popover
+                    open={isOpenPopover}
+                    onOpenChange={() => setIsOpenPopover((o) => !o)}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button className="w-full" variant="secondary">
+                        Add field
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[451px] bg-background"
+                      sideOffset={8}
+                    >
+                      <div className="grid grid-cols-6 gap-3 rounded-md">
+                        <div className="col-span-2 h-14">
+                          <Button
+                            variant="secondary"
+                            onClick={() => {
+                              setIsOpenPopover(false);
+                              append({
+                                name: lowestId(),
+                                type: 'string',
+                                isRequired: false,
+                                isUnique: false,
+                                maxLength: null,
+                                minLength: null,
+                                pattern: null,
+                              });
+                            }}
+                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                          >
+                            <Type className="h-6 w-6" />
+                            String
+                          </Button>
+                        </div>
+                        <div className="col-span-2 h-14">
+                          <Button
+                            variant="secondary"
+                            onClick={() => {
+                              setIsOpenPopover(false);
+                              append({
+                                name: lowestId(),
+                                type: 'number',
+                                isRequired: false,
+                                isUnique: false,
+                                max: null,
+                                min: null,
+                              });
+                            }}
+                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                          >
+                            <Hash className="h-6 w-6" />
+                            Number
+                          </Button>
+                        </div>
+                        <div className="col-span-2 h-14">
+                          <Button
+                            variant="secondary"
+                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                            onClick={() => {
+                              setIsOpenPopover(false);
+                              append({
+                                name: lowestId(),
+                                type: 'boolean',
+                              });
+                            }}
+                          >
+                            <ToggleRight className="h-6 w-6" />
+                            Boolean
+                          </Button>
+                        </div>
+                        <div className="col-span-2 h-14">
+                          <Button
+                            variant="secondary"
+                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                            onClick={() => {
+                              setIsOpenPopover(false);
+                              append({
+                                name: lowestId(),
+                                type: 'date',
+                                isRequired: false,
+                                isUnique: false,
+                              });
+                            }}
+                          >
+                            <Calendar className="h-6 w-6" />
+                            Date
+                          </Button>
+                        </div>
+                        <div className="col-span-2 h-14">
+                          <Button
+                            variant="secondary"
+                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                            onClick={() => {
+                              setIsOpenPopover(false);
+                              append({
+                                name: lowestId(),
+                                type: 'email',
+                                except: [],
+                                only: [],
+                                isRequired: false,
+                                isUnique: false,
+                              });
+                            }}
+                          >
+                            <ToggleRight className="h-6 w-6" />
+                            Email
+                          </Button>
+                        </div>
+                        <div className="col-span-2 h-14">
+                          <Button
+                            variant="secondary"
+                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                            onClick={() => {
+                              setIsOpenPopover(false);
+                              append({
+                                name: lowestId(),
+                                type: 'url',
+                                except: [],
+                                only: [],
+                                isRequired: false,
+                                isUnique: false,
+                              });
+                            }}
+                          >
+                            <Link2 className="h-6 w-6" />
+                            Url
+                          </Button>
+                        </div>
+                        <div className="col-span-3 h-14">
+                          <Button
+                            variant="secondary"
+                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                            onClick={() => {
+                              setIsOpenPopover(false);
+                              append({
+                                name: lowestId(),
+                                type: 'select',
+                                options: [],
+                                maxSelected: null,
+                                minSelected: null,
+                                isRequired: false,
+                                isUnique: false,
+                              });
+                            }}
+                          >
+                            <List className="h-6 w-6" />
+                            Select
+                          </Button>
+                        </div>
+                        <div className="col-span-3 h-14">
+                          <Button
+                            variant="secondary"
+                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                          >
+                            <Database className="h-6 w-6" />
+                            Relation
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </TabsContent>
+                <TabsContent value="permissions" className="space-y-2">
+                  {(['view', 'create', 'update', 'delete'] as const).map(
+                    (permission) => (
+                      <FormField
+                        key={permission}
+                        control={form.control}
+                        name={`permissions.${permission}`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{title(permission)}</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                onlyDisableInput
+                                data-form-type="other"
+                                value={field.value ?? ''}
+                                disabled={field.value === null}
+                                placeholder={
+                                  field.value === null
+                                    ? 'Admin only'
+                                    : 'Leave empty for no restrictions'
+                                }
+                                endAdornment={
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            form.setValue(
+                                              `permissions.${permission}`,
+                                              field.value === null ? '' : null,
+                                            )
+                                          }
+                                        >
+                                          {field.value === null ? (
+                                            <LockOpen className="h-4 w-4" />
+                                          ) : (
+                                            <Lock className="h-4 w-4" />
+                                          )}
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {field.value === null ? (
+                                          <p>Use custom rule</p>
+                                        ) : (
+                                          <p>Restrict to admin only</p>
+                                        )}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                }
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ),
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+
+            <SheetFooter className={cn(table && 'sm:justify-between')}>
+              {table && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() =>
+                    void (async () => {
+                      await deleteMutateAsync(table.name);
+
+                      setIsOpen(false);
+
+                      const tables = await queryClient.fetchQuery(
+                        tablesQueryOptions(client),
+                      );
+
+                      if (tables.length === 0)
+                        await navigate({
+                          to: '/dashboard/projects/$projectId/tables',
+                          params: { projectId: params.projectId },
+                        });
+                      else
+                        await navigate({
+                          to: '/dashboard/projects/$projectId/tables/$tableId',
+                          params: {
+                            projectId: params.projectId,
+                            tableId: tables?.[0].name,
+                          },
+                        });
+                    })()
+                  }
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              )}
+
+              <div className="space-x-1">
+                <SheetClose asChild>
+                  <Button type="button" variant="ghost">
+                    Cancel
+                  </Button>
+                </SheetClose>
+                <Button type="submit">Submit</Button>
+              </div>
+            </SheetFooter>
+          </form>
+        </Form>
       </SheetContent>
     </Sheet>
   );
