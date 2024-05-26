@@ -20,7 +20,7 @@ import { omit, title } from 'radash';
 import { useCallback, useState } from 'react';
 import isEqual from 'react-fast-compare';
 import {
-  FieldArrayWithId,
+  FieldArray,
   useFieldArray,
   UseFieldArrayUpdate,
   useForm,
@@ -40,6 +40,11 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Sheet,
   SheetClose,
   SheetContent,
@@ -141,7 +146,7 @@ const formSchema = z.object({
         originalName: z.string().optional(),
         name: z.string(),
         type: z.literal('relation'),
-        target: z.literal('many'),
+        target: z.union([z.literal('single'), z.literal('many')]),
         table: z.string(),
         cascadeDelete: z.boolean(),
         minSelected: z
@@ -152,16 +157,6 @@ const formSchema = z.object({
           .string()
           .transform((v) => (v ? parseInt(v, 10) : null))
           .nullable(),
-        isRequired: z.boolean(),
-        isUnique: z.boolean(),
-      }),
-      z.object({
-        originalName: z.string().optional(),
-        name: z.string(),
-        type: z.literal('relation'),
-        target: z.literal('single'),
-        table: z.string(),
-        cascadeDelete: z.boolean(),
         isRequired: z.boolean(),
         isUnique: z.boolean(),
       }),
@@ -180,9 +175,10 @@ const FieldCard: React.FC<
     index: number;
     form: UseFormReturn<z.infer<typeof formSchema>>;
     update: UseFieldArrayUpdate<z.infer<typeof formSchema>, 'fields'>;
-    field: FieldArrayWithId<z.infer<typeof formSchema>, 'fields', 'id'>;
+    field: FieldArray<z.infer<typeof formSchema>, 'fields'>;
+    toggles?: JSX.Element;
   }>
-> = ({ children, form, index, update, field: f }) => (
+> = ({ children, form, index, update, field: f, toggles }) => (
   <div className="mt-2 grid grid-cols-2 gap-2">
     <FormField
       control={form.control}
@@ -201,7 +197,7 @@ const FieldCard: React.FC<
     {children}
 
     {f.type !== 'boolean' && (
-      <div className="mt-2 flex flex-row space-x-5">
+      <div className="col-span-2 mt-2 flex flex-row space-x-5">
         <FormField
           control={form.control}
           name={`fields.${index}.isRequired`}
@@ -216,7 +212,7 @@ const FieldCard: React.FC<
                       onChange: undefined,
                     }}
                     size="sm"
-                    checked={f.isRequired}
+                    checked={field.value}
                     onCheckedChange={(checked) =>
                       update(index, {
                         ...f,
@@ -246,7 +242,7 @@ const FieldCard: React.FC<
                       onChange: undefined,
                     }}
                     size="sm"
-                    checked={f.isUnique}
+                    checked={field.value}
                     onCheckedChange={(checked) =>
                       update(index, {
                         ...f,
@@ -261,6 +257,8 @@ const FieldCard: React.FC<
             </FormItem>
           )}
         />
+
+        {toggles}
       </div>
     )}
   </div>
@@ -322,7 +320,8 @@ export const TableSheet: React.FC<{
   client: Client;
   table?: CustomTable;
   className?: string;
-}> = ({ client, table, className }) => {
+  tables: CustomTable[];
+}> = ({ client, table, className, tables }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const params = useParams({
@@ -368,8 +367,6 @@ export const TableSheet: React.FC<{
       )
       .map((suffix) => (suffix === '' ? 0 : parseInt(suffix, 10)))
       .sort();
-
-    console.log(usedSuffixes);
 
     const varianceSuffix = usedSuffixes.findIndex((s, i) => s !== i);
     const lastSuffix = usedSuffixes.pop();
@@ -500,7 +497,9 @@ export const TableSheet: React.FC<{
                 <TabsContent value="fields">
                   {fields.length > 0 && (
                     <div className="mb-3 max-h-[calc(100vh-330px)] space-y-3 overflow-auto">
-                      {fields.map((f, index) => {
+                      {fields.map((_, index) => {
+                        const f = form.watch(`fields.${index}`);
+
                         let field: React.ReactNode = null;
                         switch (f.type) {
                           case 'string':
@@ -776,7 +775,132 @@ export const TableSheet: React.FC<{
                               </FieldCard>
                             );
                             break;
-                          default: {
+                          case 'relation':
+                            field = (
+                              <FieldCard
+                                field={f}
+                                form={form}
+                                index={index}
+                                update={update}
+                                toggles={
+                                  <FormField
+                                    control={form.control}
+                                    name={`fields.${index}.cascadeDelete`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <div className="flex items-center space-x-2">
+                                          <FormControl>
+                                            <Switch
+                                              {...{
+                                                ...field,
+                                                value: undefined,
+                                                onChange: undefined,
+                                              }}
+                                              size="sm"
+                                              checked={f.cascadeDelete}
+                                              onCheckedChange={(checked) =>
+                                                update(index, {
+                                                  ...f,
+                                                  cascadeDelete: checked,
+                                                })
+                                              }
+                                            />
+                                          </FormControl>
+                                          <FormLabel>Cascade Delete</FormLabel>
+                                        </div>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                }
+                              >
+                                <FormField
+                                  control={form.control}
+                                  name={`fields.${index}.table`}
+                                  render={({ field }) => (
+                                    <FormItem className="col-span-2">
+                                      <FormLabel>Table</FormLabel>
+                                      <Select
+                                        disabled={!!table}
+                                        defaultValue={field.value}
+                                        onValueChange={field.onChange}
+                                        onOpenChange={(c) =>
+                                          !c && field.onBlur()
+                                        }
+                                      >
+                                        <FormControl>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Select table" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          {tables.map(
+                                            (t) =>
+                                              t.id !== table?.id && (
+                                                <SelectItem
+                                                  key={t.id}
+                                                  value={t.name}
+                                                >
+                                                  {title(t.name)}
+                                                </SelectItem>
+                                              ),
+                                          )}
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name={`fields.${index}.target`}
+                                  render={({ field }) => (
+                                    <FormItem className="col-span-2">
+                                      <FormLabel>Target</FormLabel>
+                                      <Select
+                                        defaultValue={field.value}
+                                        onValueChange={field.onChange}
+                                        onOpenChange={(c) =>
+                                          !c && field.onBlur()
+                                        }
+                                      >
+                                        <FormControl>
+                                          <SelectTrigger>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          <SelectItem value="single">
+                                            Single
+                                          </SelectItem>
+                                          <SelectItem value="many">
+                                            Many
+                                          </SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                {f.target === 'many' ? (
+                                  <>
+                                    <NumberInput<'relation'>
+                                      form={form}
+                                      index={index}
+                                      property="minSelected"
+                                    />
+                                    <NumberInput<'select'>
+                                      form={form}
+                                      index={index}
+                                      property="maxSelected"
+                                    />
+                                  </>
+                                ) : null}
+                              </FieldCard>
+                            );
+                            break;
+                          default:
                             field = (
                               <FieldCard
                                 field={f}
@@ -785,7 +909,6 @@ export const TableSheet: React.FC<{
                                 update={update}
                               />
                             );
-                          }
                         }
 
                         return (
@@ -967,7 +1090,25 @@ export const TableSheet: React.FC<{
                         <div className="col-span-3 h-14">
                           <Button
                             variant="secondary"
+                            disabled={
+                              tables.length === 0 ||
+                              (tables.length === 1 && !!table)
+                            }
                             sharedClasses="h-full w-full flex flex-col items-center justify-center"
+                            onClick={() => {
+                              setIsOpenPopover(false);
+                              append({
+                                name: lowestId(),
+                                type: 'relation',
+                                target: 'single',
+                                table: '',
+                                cascadeDelete: false,
+                                maxSelected: null,
+                                minSelected: null,
+                                isRequired: false,
+                                isUnique: false,
+                              });
+                            }}
                           >
                             <Database className="h-6 w-6" />
                             Relation

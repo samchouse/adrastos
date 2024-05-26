@@ -1,21 +1,29 @@
-import { CustomTable, Field } from '@adrastos/lib';
+import { Client, CustomTable, Field } from '@adrastos/lib';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueries } from '@tanstack/react-query';
 import { flexRender, Row as TableRowType } from '@tanstack/react-table';
 import { CommandList } from 'cmdk';
-import { Check, ChevronsUpDown, Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Info, Trash2 } from 'lucide-react';
 import { title } from 'radash';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import {
   Button,
+  Checkbox,
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   DateTimePicker,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
   Form,
   FormControl,
   FormField,
@@ -23,6 +31,7 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  Label,
   MultiSelect,
   Option,
   Popover,
@@ -38,8 +47,13 @@ import {
   Switch,
   TableCell,
   TableRow,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from '~/components';
 import {
+  tableDataQueryOptions,
   useCreateRowMutation,
   useDeleteRowMutation,
   useUpdateRowMutation,
@@ -107,6 +121,11 @@ const createFormSchema = (fields: Field[]) =>
             ).pipe(f.isRequired ? type : type.optional());
             break;
           }
+          case 'relation': {
+            const type = z.array(z.string());
+            finalType = type.pipe(f.isRequired ? type : type.optional());
+            break;
+          }
           default:
         }
 
@@ -119,6 +138,173 @@ const createFormSchema = (fields: Field[]) =>
           .transform((v) => (v ? v : undefined)),
       }),
   );
+
+const RelationPicker: React.FC<{
+  multiple: boolean;
+  table: string;
+  client: Client;
+  values: string[];
+  onSave: (values: string[]) => void;
+}> = ({ multiple, table, client, onSave, values }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>(values);
+
+  const [{ data: tableData }] = useQueries({
+    queries: [tableDataQueryOptions<Row, false>(client, table, false)],
+  });
+
+  const [hasReset, setHasReset] = useState(false);
+  useEffect(() => {
+    if (values.length !== 0) setHasReset(false);
+    if (values.length === 0 && !hasReset) {
+      setHasReset(true);
+      onSave([]);
+    }
+  }, [hasReset, onSave, values]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <div className="overflow-hidden rounded-md border text-sm">
+        {values.length === 0 ? (
+          <div className="flex justify-center p-2 text-muted-foreground">
+            No rows selected
+          </div>
+        ) : (
+          <div>
+            {values.map((value, index) => (
+              <div
+                key={index}
+                className={cn(
+                  'flex flex-row items-center justify-between py-1 pl-3 pr-1',
+                  index !== values.length - 1 && 'border-b',
+                )}
+              >
+                <div className="flex flex-row space-x-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-4 w-4" />
+                      </TooltipTrigger>
+                      <TooltipContent className="whitespace-pre-wrap">
+                        {JSON.stringify(
+                          tableData?.rows.find((r) => r.id === value),
+                          null,
+                          4,
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <p>{value}</p>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => {
+                    setSelected((values) => values.filter((v) => v !== value));
+                    onSave(selected.filter((v) => v !== value));
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <DialogTrigger asChild>
+          <Button variant="secondary" size="sm" className="w-full rounded-none">
+            Open selector
+          </Button>
+        </DialogTrigger>
+      </div>
+
+      <DialogContent className="w-full sm:max-w-[425px] md:max-w-[700px]">
+        <DialogHeader>
+          <DialogTitle>Select rows</DialogTitle>
+        </DialogHeader>
+
+        <div>
+          {tableData?.rows.map((row, index, arr) => (
+            <div
+              key={index}
+              className={cn(
+                'flex w-full cursor-pointer flex-row items-center justify-between border-x border-t p-4 hover:bg-secondary',
+                index === 0 && 'rounded-t-md',
+                index === arr.length - 1 && 'rounded-b-md border-b',
+              )}
+              onClick={() =>
+                multiple
+                  ? setSelected((values) =>
+                      values.includes(row.id)
+                        ? values.filter((val) => val !== row.id)
+                        : [...values, row.id],
+                    )
+                  : setSelected([row.id])
+              }
+            >
+              <div className="flex flex-row items-center space-x-3">
+                <Checkbox
+                  id={index.toString()}
+                  checked={selected.includes(row.id)}
+                />
+                <Label
+                  htmlFor={index.toString()}
+                  className="cursor-pointer"
+                  onClick={() =>
+                    multiple
+                      ? setSelected((values) =>
+                          values.includes(row.id)
+                            ? values.filter((val) => val !== row.id)
+                            : [...values, row.id],
+                        )
+                      : setSelected([row.id])
+                  }
+                >
+                  {row.id}
+                </Label>
+              </div>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-4 w-4" />
+                  </TooltipTrigger>
+                  <TooltipContent className="whitespace-pre-wrap">
+                    {JSON.stringify(row, null, 4)}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          ))}
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            onClick={() => {
+              setIsOpen(false);
+              onSave(selected);
+            }}
+          >
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const SingleSelect: React.FC<{
   options: Option[];
@@ -193,7 +379,8 @@ export const RowSheet: React.FC<{
   tableRow?: TableRowType<Row>;
   table: CustomTable;
   className?: string;
-}> = ({ tableRow, table, className }) => {
+  client: Client;
+}> = ({ tableRow, table, className, client }) => {
   const [isOpen, setIsOpen] = useState(false);
   const row = tableRow?.original;
 
@@ -489,6 +676,35 @@ export const RowSheet: React.FC<{
                               </FormItem>
                             );
                           }}
+                        />
+                      );
+                      break;
+                    case 'relation':
+                      field = (
+                        <FormField
+                          control={form.control}
+                          name={f.name}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{title(f.name)}</FormLabel>
+                              <FormControl>
+                                <RelationPicker
+                                  {...{ ...field, ref: undefined }}
+                                  table={f.table}
+                                  client={client}
+                                  values={
+                                    field.value === ''
+                                      ? []
+                                      : (field.value as string[])
+                                  }
+                                  onSave={(values) =>
+                                    form.setValue(f.name, values)
+                                  }
+                                  multiple={f.target === 'many'}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
                         />
                       );
                       break;

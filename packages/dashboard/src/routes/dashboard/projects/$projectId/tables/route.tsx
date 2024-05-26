@@ -49,7 +49,7 @@ function RouteComponent() {
           <h1 className="text-2xl text-muted-foreground">
             No tables have been created
           </h1>
-          <TableSheet client={client} className="w-72" />
+          <TableSheet client={client} className="w-72" tables={tables} />
         </div>
       ) : (
         <>
@@ -79,7 +79,7 @@ function RouteComponent() {
               </div>
             </div>
 
-            <TableSheet client={client} />
+            <TableSheet client={client} tables={tables} />
           </div>
 
           <div className="w-full">
