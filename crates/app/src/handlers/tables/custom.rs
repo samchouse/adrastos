@@ -26,6 +26,7 @@ use heck::{ToLowerCamelCase, ToSnakeCase};
 use regex::Regex;
 use sea_query::{Alias, Expr, PostgresQueryBuilder, SimpleExpr, Value};
 use serde_json::json;
+use tracing_unwrap::ResultExt;
 use validator::ValidationErrors;
 
 use crate::{
@@ -165,6 +166,12 @@ pub async fn create(
 
         match validation_results {
             Ok(value) => {
+                if let FieldInfo::Relation { target, .. } = &field.info {
+                    if matches!(target, RelationTarget::Many) {
+                        return;
+                    }
+                }
+
                 table_values.push((&field.name, value));
             }
             Err(validation_errors) => {
@@ -187,17 +194,6 @@ pub async fn create(
             };
 
             match target {
-                RelationTarget::Single => {
-                    let value = body
-                        .get(&field.name.clone().to_lower_camel_case())
-                        .unwrap()
-                        .as_str()
-                        .unwrap();
-
-                    table_values.push((&field.name, value.into()));
-
-                    None
-                }
                 RelationTarget::Many => {
                     let values = body
                         .get(&field.name.clone().to_lower_camel_case())
@@ -215,6 +211,7 @@ pub async fn create(
                         values,
                     ))
                 }
+                _ => None,
             }
         })
         .flatten()
@@ -287,7 +284,7 @@ pub async fn create(
             .unwrap()
             .execute(query.to_string(PostgresQueryBuilder).as_str(), &[])
             .await
-            .unwrap();
+            .unwrap_or_log();
     }
 
     let mut data = json!({});

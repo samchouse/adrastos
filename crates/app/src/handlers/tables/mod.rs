@@ -21,6 +21,7 @@ use regex::Regex;
 use sea_query::{Alias, PostgresQueryBuilder, Table, TableCreateStatement};
 use serde::Deserialize;
 use serde_json::Value;
+use tracing_unwrap::ResultExt;
 
 use crate::{
     middleware::extractors::{AnyUser, ProjectDatabase},
@@ -153,7 +154,7 @@ pub async fn create(
             .unwrap()
             .execute(query.to_string(PostgresQueryBuilder).as_str(), &[])
             .await
-            .unwrap();
+            .unwrap_or_log();
     }
 
     Ok(Json(custom_table))

@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronUp,
+  Info,
   MoreHorizontal,
 } from 'lucide-react';
 import { title } from 'radash';
@@ -26,6 +27,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   NotFound,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from '~/components';
 import { tableDataQueryOptions, tablesQueryOptions } from '~/hooks';
 import { cn } from '~/lib';
@@ -155,6 +160,42 @@ function TableIdComponent() {
             const value = getValue?.();
             return value === undefined ? (
               <Badge variant="secondary">N/A</Badge>
+            ) : f.type === 'relation' && value ? (
+              f.target === 'single' ? (
+                <Badge variant="secondary">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="mr-1 h-4 w-4" />
+                      </TooltipTrigger>
+                      <TooltipContent className="whitespace-pre-wrap font-normal">
+                        {JSON.stringify(value, null, 4)}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {(value as { id: string }).id}
+                </Badge>
+              ) : (
+                <div className="flex flex-row items-center space-x-2">
+                  {(value as { id: string }[]).map((value) => (
+                    <Badge variant="secondary">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="mr-1 h-4 w-4" />
+                          </TooltipTrigger>
+                          <TooltipContent className="whitespace-pre-wrap font-normal">
+                            {JSON.stringify(value, null, 4)}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      {value.id}
+                    </Badge>
+                  ))}
+                </div>
+              )
             ) : (
               <>
                 {typeof value === 'boolean'

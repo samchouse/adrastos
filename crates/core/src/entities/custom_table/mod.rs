@@ -309,9 +309,14 @@ impl From<&CustomTableSchema> for TableCreateStatement {
         schema.fields.iter().for_each(|field| match &field.info {
             FieldInfo::Relation {
                 table,
+                target,
                 cascade_delete,
                 ..
             } => {
+                if matches!(target, RelationTarget::Many) {
+                    return;
+                }
+
                 let mut foreign_key = ForeignKey::create();
 
                 if *cascade_delete {
