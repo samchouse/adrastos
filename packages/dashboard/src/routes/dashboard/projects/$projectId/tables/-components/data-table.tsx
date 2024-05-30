@@ -1,4 +1,4 @@
-import { CustomTable } from '@adrastos/lib';
+import { Client, CustomTable } from '@adrastos/lib';
 import {
   ColumnDef,
   flexRender,
@@ -35,11 +35,12 @@ import { Row, RowSheet } from '.';
 
 export const DataTable: React.FC<{
   data: Row[];
+  client: Client;
   customTable?: CustomTable;
   columns: ColumnDef<Row>[];
   sorting: SortingState;
   setSorting: React.Dispatch<React.SetStateAction<SortingState>>;
-}> = ({ columns, customTable, data, setSorting, sorting }) => {
+}> = ({ columns, customTable, data, setSorting, sorting, client }) => {
   const table = useReactTable({
     data,
     columns,
@@ -94,6 +95,7 @@ export const DataTable: React.FC<{
                   (row) =>
                     customTable && (
                       <RowSheet
+                        client={client}
                         key={row.id}
                         table={customTable}
                         tableRow={row}
@@ -109,7 +111,11 @@ export const DataTable: React.FC<{
                   No results
                   <br />
                   {customTable && (
-                    <RowSheet table={customTable} className="mt-3" />
+                    <RowSheet
+                      client={client}
+                      table={customTable}
+                      className="mt-3"
+                    />
                   )}
                 </TableCell>
               </TableRow>

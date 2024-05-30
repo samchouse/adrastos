@@ -327,13 +327,14 @@ function TableIdComponent() {
           <h2 className="text-2xl font-semibold leading-none">
             {title(tableId)}
           </h2>
-          <TableSheet client={client} table={table} />
+          <TableSheet client={client} table={table} tables={tables} />
         </div>
 
-        {table && <RowSheet table={table} />}
+        {table && <RowSheet table={table} client={client} />}
       </div>
 
       <DataTable
+        client={client}
         customTable={table}
         data={data?.rows ?? []}
         columns={columns}
