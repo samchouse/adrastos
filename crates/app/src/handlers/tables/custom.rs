@@ -39,8 +39,8 @@ pub fn routes() -> Router<AppState> {
         .route("/rows", get(rows))
         .route("/row", get(row))
         .route("/create", post(create))
-        .route("/update/:name", patch(update))
-        .route("/delete/:name", delete(remove))
+        .route("/update", patch(update))
+        .route("/delete", delete(remove))
 }
 
 pub async fn rows(

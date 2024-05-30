@@ -91,6 +91,7 @@ const FormLabel = React.forwardRef<
   return (
     <Label
       ref={ref}
+      id={`${formItemId}-label`}
       className={cn(error && 'text-destructive', className)}
       htmlFor={formItemId}
       {...props}
@@ -110,6 +111,7 @@ const FormControl = React.forwardRef<
     <Slot
       ref={ref}
       id={formItemId}
+      aria-labelledby={`${formItemId}-label`}
       aria-describedby={
         !error
           ? `${formDescriptionId}`

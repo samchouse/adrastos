@@ -77,8 +77,15 @@ export interface RelationManyField extends RelationFieldBase {
   maxSelected?: number;
 }
 
+export type FieldCrud = FieldUpdate | FieldDelete;
+
 export interface FieldUpdate {
   name: string;
-  action: 'create' | 'update' | 'delete';
+  action: 'create' | 'update';
   field: Field;
+}
+
+export interface FieldDelete {
+  name: string;
+  action: 'delete';
 }

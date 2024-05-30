@@ -184,6 +184,23 @@ export const useCreateTableMutation = () => {
   });
 };
 
+export const useUpdateTableMutation = () => {
+  const queryClient = useQueryClient();
+  const { client } = useRouteContext({ strict: false });
+
+  return useMutation({
+    mutationKey: ['customTable', 'update'],
+    mutationFn: async ({
+      name,
+      data,
+    }: {
+      name: Parameters<(typeof client)['tables']['update']>[0];
+      data: Parameters<(typeof client)['tables']['update']>[1];
+    }) => await client.tables.update(name, data),
+    onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.tables }),
+  });
+};
+
 export const useDeleteTableMutation = () => {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ strict: false });

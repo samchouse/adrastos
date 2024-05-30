@@ -153,10 +153,18 @@ function TableIdComponent() {
           ),
           cell: ({ getValue, renderValue }) => {
             const value = getValue?.();
-            return !value ? (
+            return value === undefined ? (
               <Badge variant="secondary">N/A</Badge>
             ) : (
-              <>{renderValue?.() ?? value}</>
+              <>
+                {typeof value === 'boolean'
+                  ? value
+                    ? 'True'
+                    : 'False'
+                  : Array.isArray(value)
+                    ? value.join(', ')
+                    : renderValue?.() ?? value}
+              </>
             );
           },
         }),
