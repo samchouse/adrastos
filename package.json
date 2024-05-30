@@ -8,7 +8,7 @@
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.2.1",
-    "@types/node": "^20.12.12",
+    "@types/node": "^20.12.13",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^7.11.0",
@@ -19,15 +19,10 @@
     "eslint-plugin-prettier": "^5.1.3",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.7",
-    "nodemon": "^3.1.1",
+    "nodemon": "^3.1.2",
     "prettier": "^3.2.5",
-    "prettier-plugin-tailwindcss": "^0.5.14",
+    "prettier-plugin-tailwindcss": "^0.6.0",
     "typescript": "^5.4.5"
   },
-  "packageManager": "pnpm@9.1.3",
-  "pnpm": {
-    "patchedDependencies": {
-      "@tanstack/react-router@1.34.3": "patches/@tanstack__react-router@1.34.3.patch"
-    }
-  }
+  "packageManager": "pnpm@9.1.4"
 }

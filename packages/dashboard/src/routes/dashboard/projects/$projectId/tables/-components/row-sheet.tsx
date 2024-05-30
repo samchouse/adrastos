@@ -703,14 +703,16 @@ export const RowSheet: React.FC<{
                                       ? field.value === ''
                                         ? []
                                         : [field.value]
-                                      : (
+                                      : [
                                           field.value as (
                                             | string
                                             | { id: string }
-                                          )[]
-                                        ).map((v) =>
-                                          typeof v === 'string' ? v : v.id,
-                                        )
+                                          )[],
+                                        ]
+                                          .flat()
+                                          .map((v) =>
+                                            typeof v === 'string' ? v : v.id,
+                                          )
                                   }
                                   onSave={(values) =>
                                     form.setValue(f.name, values)
