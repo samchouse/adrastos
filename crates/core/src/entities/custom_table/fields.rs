@@ -459,7 +459,54 @@ impl Field {
                     }
                 }
             },
-            _ => todo!(),
+            FieldInfo::Relation {
+                max_selected,
+                min_selected,
+                target,
+                is_required,
+                ..
+            } => match value {
+                Some(value) => {
+                    let return_val: Option<SimpleExpr> = if matches!(target, RelationTarget::Many) {
+                        let value = value
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .map(|v| v.as_str().unwrap().to_string())
+                            .collect::<Vec<_>>();
+
+                        let mut selections_error = ValidationError::new("selections");
+
+                        if let Some(min_selected) = min_selected {
+                            if value.len() < *min_selected as usize {
+                                selections_error.add_param(Cow::from("min"), &min_selected);
+                            }
+                        }
+                        if let Some(max_selected) = max_selected {
+                            if value.len() > *max_selected as usize {
+                                selections_error.add_param(Cow::from("max"), &max_selected);
+                            }
+                        }
+
+                        if !selections_error.params.is_empty() {
+                            errors.push(selections_error)
+                        }
+
+                        Some(value.into())
+                    } else {
+                        Some(value.as_str().unwrap().into())
+                    };
+
+                    if errors.is_empty() {
+                        return Ok(return_val.unwrap());
+                    }
+                }
+                None => {
+                    if *is_required {
+                        errors.push(ValidationError::new("required"));
+                    }
+                }
+            },
         }
 
         Err(errors)

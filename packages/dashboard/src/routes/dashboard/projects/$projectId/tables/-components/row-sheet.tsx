@@ -122,7 +122,13 @@ const createFormSchema = (fields: Field[]) =>
             break;
           }
           case 'relation': {
-            const type = z.array(z.string());
+            let type: z.ZodTypeAny;
+            if (f.target === 'many') {
+              type = z.array(z.string());
+            } else {
+              type = z.string().transform((v) => (v ? v : undefined));
+            }
+
             finalType = type.pipe(f.isRequired ? type : type.optional());
             break;
           }
@@ -144,7 +150,7 @@ const RelationPicker: React.FC<{
   table: string;
   client: Client;
   values: string[];
-  onSave: (values: string[]) => void;
+  onSave: (values: string | string[]) => void;
 }> = ({ multiple, table, client, onSave, values }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>(values);
@@ -158,9 +164,9 @@ const RelationPicker: React.FC<{
     if (values.length !== 0) setHasReset(false);
     if (values.length === 0 && !hasReset) {
       setHasReset(true);
-      onSave([]);
+      onSave(multiple ? [] : '');
     }
-  }, [hasReset, onSave, values]);
+  }, [hasReset, multiple, onSave, values]);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -204,7 +210,7 @@ const RelationPicker: React.FC<{
                   className="h-8 w-8"
                   onClick={() => {
                     setSelected((values) => values.filter((v) => v !== value));
-                    onSave(selected.filter((v) => v !== value));
+                    onSave(multiple ? selected.filter((v) => v !== value) : '');
                   }}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -295,7 +301,7 @@ const RelationPicker: React.FC<{
             type="submit"
             onClick={() => {
               setIsOpen(false);
-              onSave(selected);
+              onSave(multiple ? selected : selected[0]);
             }}
           >
             Save
@@ -693,9 +699,18 @@ export const RowSheet: React.FC<{
                                   table={f.table}
                                   client={client}
                                   values={
-                                    field.value === ''
-                                      ? []
-                                      : (field.value as string[])
+                                    typeof field.value === 'string'
+                                      ? field.value === ''
+                                        ? []
+                                        : [field.value]
+                                      : (
+                                          field.value as (
+                                            | string
+                                            | { id: string }
+                                          )[]
+                                        ).map((v) =>
+                                          typeof v === 'string' ? v : v.id,
+                                        )
                                   }
                                   onSave={(values) =>
                                     form.setValue(f.name, values)

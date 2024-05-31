@@ -11,18 +11,23 @@
     "@types/node": "^20.12.12",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@typescript-eslint/eslint-plugin": "^7.10.0",
-    "@typescript-eslint/parser": "^7.10.0",
+    "@typescript-eslint/eslint-plugin": "^7.11.0",
+    "@typescript-eslint/parser": "^7.11.0",
     "concurrently": "^8.2.2",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.7",
-    "nodemon": "^3.1.0",
+    "nodemon": "^3.1.1",
     "prettier": "^3.2.5",
     "prettier-plugin-tailwindcss": "^0.5.14",
     "typescript": "^5.4.5"
   },
-  "packageManager": "pnpm@9.1.2"
+  "packageManager": "pnpm@9.1.3",
+  "pnpm": {
+    "patchedDependencies": {
+      "@tanstack/react-router@1.34.3": "patches/@tanstack__react-router@1.34.3.patch"
+    }
+  }
 }
