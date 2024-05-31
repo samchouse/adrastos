@@ -187,7 +187,9 @@ pub async fn register_finish(
         id: Id::new().to_string(),
         name: body.name.clone(),
         user_id: user.id.clone(),
-        cred_id: serde_json::to_string(passkey.cred_id()).unwrap(),
+        cred_id: serde_json::to_string(passkey.cred_id())
+            .unwrap()
+            .replace('"', ""),
         last_used: None,
         data: passkey,
         created_at: Utc::now(),
