@@ -7,7 +7,7 @@ import { queryKeys } from './queries';
 
 export const useRegisterMutation = () => {
   const { mutateAsync } = useLoginMutation();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['auth', 'register'],
@@ -20,7 +20,7 @@ export const useRegisterMutation = () => {
 
 export const useLoginMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['auth', 'login'],
@@ -34,7 +34,7 @@ export const useLoginMutation = () => {
 
 export const useLogoutMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['auth', 'logout'],
@@ -50,7 +50,7 @@ export const useLogoutMutation = () => {
 
 export const useUpdatePasskeyMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['auth', 'passkeys', 'update'],
@@ -68,7 +68,7 @@ export const useUpdatePasskeyMutation = () => {
 
 export const useDeletePasskeyMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['auth', 'passkeys', 'delete'],
@@ -81,7 +81,7 @@ export const useDeletePasskeyMutation = () => {
 };
 
 export const useStartRegisterPasskeyMutation = () => {
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['auth', 'passkeys', 'register', 'start'],
@@ -91,7 +91,7 @@ export const useStartRegisterPasskeyMutation = () => {
 
 export const useFinishRegisterPasskeyMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['auth', 'passkeys', 'register', 'finish'],
@@ -106,7 +106,7 @@ export const useFinishRegisterPasskeyMutation = () => {
 };
 
 export const useStartLoginPasskeyMutation = () => {
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['auth', 'passkeys', 'login', 'start'],
@@ -120,7 +120,7 @@ export const useStartLoginPasskeyMutation = () => {
 
 export const useFinishLoginPasskeyMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['auth', 'passkeys', 'login', 'finish'],
@@ -134,7 +134,7 @@ export const useFinishLoginPasskeyMutation = () => {
 
 export const useConfigSmtpMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['config', 'smtp'],
@@ -148,7 +148,7 @@ export const useConfigSmtpMutation = () => {
 
 export const useConfigOAuth2Mutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['config', 'oauth2'],
@@ -162,7 +162,7 @@ export const useConfigOAuth2Mutation = () => {
 
 export const useResendVerificationMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['auth', 'resendVerification'],
@@ -173,7 +173,7 @@ export const useResendVerificationMutation = () => {
 
 export const useCreateTableMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['customTable', 'create'],
@@ -186,7 +186,7 @@ export const useCreateTableMutation = () => {
 
 export const useUpdateTableMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['customTable', 'update'],
@@ -197,13 +197,16 @@ export const useUpdateTableMutation = () => {
       name: Parameters<(typeof client)['tables']['update']>[0];
       data: Parameters<(typeof client)['tables']['update']>[1];
     }) => await client.tables.update(name, data),
-    onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.tables }),
+    onSuccess: async (_, { name }) => {
+      await queryClient.refetchQueries({ queryKey: queryKeys.tables });
+      await queryClient.refetchQueries({ queryKey: queryKeys.tableData(name) });
+    },
   });
 };
 
 export const useDeleteTableMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['customTable', 'delete'],
@@ -217,7 +220,7 @@ export const useDeleteTableMutation = () => {
 
 export const useCreateRowMutation = (table: string) => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['customRow', 'create'],
@@ -236,7 +239,7 @@ export const useCreateRowMutation = (table: string) => {
 
 export const useUpdateRowMutation = (table: string) => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['customRow', 'update'],
@@ -254,7 +257,7 @@ export const useUpdateRowMutation = (table: string) => {
 
 export const useDeleteRowMutation = (table: string) => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['customRow', 'delete'],
@@ -268,7 +271,7 @@ export const useDeleteRowMutation = (table: string) => {
 
 export const useCreateProjectMutation = (teamId: string) => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['project', 'create'],
@@ -285,7 +288,7 @@ export const useCreateProjectMutation = (teamId: string) => {
 
 export const useCreateTeamMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['team', 'create'],
@@ -301,7 +304,7 @@ export const useCreateTeamMutation = () => {
 
 export const useDeleteUploadMutation = () => {
   const queryClient = useQueryClient();
-  const { client } = useRouteContext({ strict: false });
+  const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['storage', 'delete'],

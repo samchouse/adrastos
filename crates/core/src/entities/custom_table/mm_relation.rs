@@ -21,57 +21,62 @@ impl ManyToManyRelationTable {
         format!("{}_{}_to_{}", schema.name, field.name, table)
     }
 
+    pub fn create_query(schema: &CustomTableSchema, field: &Field) -> Option<TableCreateStatement> {
+        let FieldInfo::Relation { table, target, .. } = &field.info else {
+            return None;
+        };
+
+        if target == &RelationTarget::Many {
+            let name = Self::table_name(schema, field);
+
+            return Some(
+                Table::create()
+                    .table(Alias::new(&name))
+                    .col(ColumnDef::new(Alias::new("id")).string().primary_key())
+                    .col(
+                        ColumnDef::new(Alias::new(format!("{}_id", schema.name)))
+                            .string()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(Alias::new(format!("{}_id", table)))
+                            .string()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(Alias::new("created_at"))
+                            .timestamp_with_time_zone()
+                            .not_null()
+                            .default(sea_query::Keyword::CurrentTimestamp),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name(format!("FK_{}_{}_id", &name, schema.name))
+                            .from(Alias::new(&name), Alias::new(format!("{}_id", schema.name)))
+                            .to(Alias::new(&schema.name), Alias::new("id"))
+                            .on_update(ForeignKeyAction::Cascade)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name(format!("FK_{}_{}_id", &name, table))
+                            .from(Alias::new(&name), Alias::new(format!("{}_id", table)))
+                            .to(Alias::new(table), Alias::new("id"))
+                            .on_update(ForeignKeyAction::Cascade)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            );
+        }
+
+        None
+    }
+
     pub fn create_queries(schema: &CustomTableSchema) -> Vec<TableCreateStatement> {
         schema
             .fields
             .iter()
-            .filter_map(|f| {
-                let FieldInfo::Relation { table, target, .. } = &f.info else {
-                    return None;
-                };
-
-                if target == &RelationTarget::Many {
-                    let name = Self::table_name(schema, f);
-
-                    return Some(
-                        Table::create()
-                            .table(Alias::new(&name))
-                            .col(ColumnDef::new(Alias::new("id")).string().primary_key())
-                            .col(
-                                ColumnDef::new(Alias::new(format!("{}_id", schema.name)))
-                                    .string()
-                                    .not_null(),
-                            )
-                            .col(
-                                ColumnDef::new(Alias::new(format!("{}_id", table)))
-                                    .string()
-                                    .not_null(),
-                            )
-                            .foreign_key(
-                                ForeignKey::create()
-                                    .name(format!("FK_{}_{}_id", &name, schema.name))
-                                    .from(
-                                        Alias::new(&name),
-                                        Alias::new(format!("{}_id", schema.name)),
-                                    )
-                                    .to(Alias::new(&schema.name), Alias::new("id"))
-                                    .on_update(ForeignKeyAction::Cascade)
-                                    .on_delete(ForeignKeyAction::Cascade),
-                            )
-                            .foreign_key(
-                                ForeignKey::create()
-                                    .name(format!("FK_{}_{}_id", &name, table))
-                                    .from(Alias::new(&name), Alias::new(format!("{}_id", table)))
-                                    .to(Alias::new(table), Alias::new("id"))
-                                    .on_update(ForeignKeyAction::Cascade)
-                                    .on_delete(ForeignKeyAction::Cascade),
-                            )
-                            .to_owned(),
-                    );
-                }
-
-                None
-            })
+            .filter_map(|f| Self::create_query(schema, f))
             .collect::<Vec<_>>()
     }
 
