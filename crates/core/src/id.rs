@@ -3,7 +3,7 @@ use std::fmt;
 use nanoid::{alphabet, nanoid};
 use regex::Regex;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq, Clone)]
 pub struct Id(String);
 
 impl Id {

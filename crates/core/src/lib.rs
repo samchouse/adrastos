@@ -9,5 +9,6 @@ pub mod expiring_map;
 pub mod id;
 pub mod migrations;
 pub mod s3;
+pub mod task_queue;
 pub mod url;
 pub mod util;

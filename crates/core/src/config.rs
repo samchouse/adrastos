@@ -2,10 +2,10 @@
 
 use std::{env, fmt};
 
-use secrecy::Secret;
+use secrecy::{Secret, SecretString};
 use tracing_unwrap::ResultExt;
 
-use crate::entities::{SizeUnit, System};
+use crate::entities::{SizeUnit, System, WebhookConfig};
 
 #[derive(Clone, Debug)]
 enum ConfigKey {
@@ -65,17 +65,19 @@ pub struct Config {
     pub redis_url: String,
     pub redis_prefix: Option<String>,
 
-    pub secret_key: Secret<String>,
+    pub secret_key: SecretString,
 
     pub s3_bucket: String,
     pub s3_region: String,
     pub s3_endpoint: String,
     pub s3_access_key: String,
-    pub s3_secret_key: Secret<String>,
+    pub s3_secret_key: SecretString,
 
     // System
     pub current_version: String,
     pub previous_version: String,
+
+    pub webhook_config: Option<WebhookConfig>,
 
     pub max_files: Option<i64>,
     pub max_file_size: Option<i64>,
@@ -85,24 +87,24 @@ pub struct Config {
     pub smtp_host: Option<String>,
     pub smtp_port: Option<u16>,
     pub smtp_username: Option<String>,
-    pub smtp_password: Option<Secret<String>>,
+    pub smtp_password: Option<SecretString>,
     pub smtp_sender_name: Option<String>,
     pub smtp_sender_email: Option<String>,
 
     pub google_client_id: Option<String>,
-    pub google_client_secret: Option<Secret<String>>,
+    pub google_client_secret: Option<SecretString>,
 
     pub facebook_client_id: Option<String>,
-    pub facebook_client_secret: Option<Secret<String>>,
+    pub facebook_client_secret: Option<SecretString>,
 
     pub github_client_id: Option<String>,
-    pub github_client_secret: Option<Secret<String>>,
+    pub github_client_secret: Option<SecretString>,
 
     pub twitter_client_id: Option<String>,
-    pub twitter_client_secret: Option<Secret<String>>,
+    pub twitter_client_secret: Option<SecretString>,
 
     pub discord_client_id: Option<String>,
-    pub discord_client_secret: Option<Secret<String>>,
+    pub discord_client_secret: Option<SecretString>,
 }
 
 impl Config {
@@ -135,6 +137,7 @@ impl Config {
 
             current_version: env!("CARGO_PKG_VERSION").into(),
             previous_version: env!("CARGO_PKG_VERSION").into(),
+            webhook_config: None,
             max_files: None,
             max_file_size: None,
             size_unit: None,
@@ -171,6 +174,8 @@ impl Config {
         if let Some(v) = system.previous_version.as_ref() {
             self.previous_version.clone_from(v)
         }
+
+        self.webhook_config = system.webhook_config.clone();
 
         self.max_files = system.max_files;
         self.max_file_size = system.max_file_size;
