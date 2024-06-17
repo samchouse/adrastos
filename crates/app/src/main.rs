@@ -10,7 +10,7 @@ use adrastos_core::{
     },
     entities::System,
     migrations::Migrations,
-    s3::S3,
+    s3::S3, task_queue::TaskQueue,
 };
 use axum::{routing::get, Router};
 use axum_server::tls_rustls::RustlsConfig;
@@ -22,6 +22,7 @@ use sea_query::PostgresQueryBuilder;
 use secrecy::ExposeSecret;
 use sentry_tower::NewSentryLayer;
 use state::{AppState, Flag};
+use tokio::sync::RwLock;
 use tower::ServiceBuilder;
 use tower_http::{
     normalize_path::NormalizePath, request_id::MakeRequestUuid, trace::TraceLayer,
@@ -100,6 +101,7 @@ async fn main() {
         config: config.clone(),
         redis_pool: redis_pool.clone(),
         s3: Arc::new(S3::new(&config).await),
+        task_queue: Arc::new(RwLock::new(TaskQueue::new())),
         flags: vec![("/api/storage/get".into(), vec![Flag::AllowProjectIdParam])],
     };
 

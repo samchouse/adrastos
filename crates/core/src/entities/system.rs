@@ -1,8 +1,58 @@
 use std::fmt;
 
 use adrastos_macros::DbCommon;
+use chrono::{DateTime, Utc};
 use sea_query::{enum_def, Expr, PostgresQueryBuilder, Query};
 use serde::{Deserialize, Serialize};
+
+#[enum_def]
+#[derive(Debug, Serialize, Deserialize, Clone, DbCommon)]
+#[adrastos(rename = "system")]
+pub struct System {
+    pub id: String,
+    pub current_version: Option<String>,
+    pub previous_version: Option<String>,
+
+    pub webhook_config: Option<WebhookConfig>,
+
+    pub max_files: Option<i64>,
+    pub max_file_size: Option<i64>,
+    pub size_unit: Option<SizeUnit>,
+    pub accepted_file_extensions: Option<Vec<String>>,
+
+    pub smtp_config: Option<SmtpConfig>,
+
+    pub google_config: Option<OAuth2Config>,
+    pub facebook_config: Option<OAuth2Config>,
+    pub github_config: Option<OAuth2Config>,
+    pub twitter_config: Option<OAuth2Config>,
+    pub discord_config: Option<OAuth2Config>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebhookConfig {
+    pub key: String,
+    pub permissions_url: String,
+    #[serde(flatten)]
+    pub provider: WebhookProvider,
+    pub historical: Option<Historical>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Historical {
+    pub hash: u64,
+    pub build_timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "provider")]
+pub enum WebhookProvider {
+    GitHub {
+        branch: String,
+        secret: Option<String>,
+    },
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -20,28 +70,6 @@ impl fmt::Display for SizeUnit {
 
         write!(f, "{name}")
     }
-}
-
-#[enum_def]
-#[derive(Debug, Serialize, Deserialize, Clone, DbCommon)]
-#[adrastos(rename = "system")]
-pub struct System {
-    pub id: String,
-    pub current_version: Option<String>,
-    pub previous_version: Option<String>,
-
-    pub max_files: Option<i64>,
-    pub max_file_size: Option<i64>,
-    pub size_unit: Option<SizeUnit>,
-    pub accepted_file_extensions: Option<Vec<String>>,
-
-    pub smtp_config: Option<SmtpConfig>,
-
-    pub google_config: Option<OAuth2Config>,
-    pub facebook_config: Option<OAuth2Config>,
-    pub github_config: Option<OAuth2Config>,
-    pub twitter_config: Option<OAuth2Config>,
-    pub discord_config: Option<OAuth2Config>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -70,6 +98,7 @@ impl System {
                 SystemIden::Id,
                 SystemIden::CurrentVersion,
                 SystemIden::PreviousVersion,
+                SystemIden::WebhookConfig,
                 SystemIden::MaxFiles,
                 SystemIden::MaxFileSize,
                 SystemIden::SizeUnit,
@@ -96,6 +125,13 @@ impl System {
                 (
                     SystemIden::PreviousVersion,
                     self.previous_version.clone().into(),
+                ),
+                (
+                    SystemIden::WebhookConfig,
+                    self.webhook_config
+                        .as_ref()
+                        .and_then(|v| serde_json::to_string(v).ok())
+                        .into(),
                 ),
                 (SystemIden::MaxFiles, self.max_files.into()),
                 (SystemIden::MaxFileSize, self.max_file_size.into()),

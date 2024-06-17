@@ -10,6 +10,8 @@ use super::schema::CustomTableSchema;
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Permissions {
+    #[serde(default)]
+    pub strict: bool,
     pub view: Option<String>,
     pub create: Option<String>,
     pub update: Option<String>,
