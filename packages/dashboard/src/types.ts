@@ -1,5 +1,5 @@
-import { Client } from '@adrastos/lib';
-import { QueryClient } from '@tanstack/react-query';
+import type { Client } from '@adrastos/lib';
+import type { QueryClient } from '@tanstack/react-query';
 
 export interface RouterContext {
   client: Client;

@@ -1,4 +1,4 @@
-import { User } from '../types';
+import type { User } from '../types';
 import { merge } from '../util';
 import { BaseModule } from './util';
 
@@ -17,7 +17,10 @@ export class AccountsModule extends BaseModule {
     });
   }
 
-  public async login(body: { email: string; password: string }) {
+  public async login(body: {
+    email: string;
+    password: string;
+  }) {
     return this.client.json<User>({
       path: '/auth/login',
       method: 'POST',
@@ -30,7 +33,13 @@ export class AccountsModule extends BaseModule {
 
   public loginUsingOAuth2(
     provider: 'google' | 'facebook' | 'github' | 'twitter' | 'discord',
-    { auth, to }: { auth?: string; to?: string } = {},
+    {
+      auth,
+      to,
+    }: {
+      auth?: string;
+      to?: string;
+    } = {},
   ) {
     return this.client
       .buildUrl(
@@ -61,7 +70,10 @@ export class AccountsModule extends BaseModule {
   }
 
   public async enableMfa() {
-    return this.client.json<{ secret: string; qrCode: string }>({
+    return this.client.json<{
+      secret: string;
+      qrCode: string;
+    }>({
       path: '/auth/mfa/enable',
       method: 'GET',
     });

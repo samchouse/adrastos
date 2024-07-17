@@ -1,7 +1,7 @@
-import { Client, Table } from '@adrastos/lib';
+import type { Client, Table } from '@adrastos/lib';
 import { queryOptions } from '@tanstack/react-query';
 
-import { Project, Team, Upload } from '~/types';
+import type { Project, Team, Upload } from '~/types';
 
 const baseQueryKey = {
   tables: ['tables'] as const,
@@ -24,22 +24,24 @@ export const queryKeys = {
   storage: [...baseQueryKey.storage, 'list'] as const,
 };
 
-export const tokenRefreshQueryOptions = (client: Client) =>
-  queryOptions({
+export function tokenRefreshQueryOptions(client: Client) {
+  return queryOptions({
     queryKey: queryKeys.tokenRefresh,
     queryFn: async () => await client.accounts.refreshToken(),
     refetchInterval: 1000 * 60 * 10,
     retry: false,
   });
+}
 
-export const meQueryOptions = (client: Client) =>
-  queryOptions({
+export function meQueryOptions(client: Client) {
+  return queryOptions({
     queryKey: queryKeys.me,
     queryFn: () => client.accounts.currentUser(),
   });
+}
 
-export const configDetailsQueryOptions = (client: Client) =>
-  queryOptions({
+export function configDetailsQueryOptions(client: Client) {
+  return queryOptions({
     queryKey: queryKeys.configDetails,
     queryFn: async () =>
       await client.json<ReturnType<(typeof client)['config']['details']>>({
@@ -48,31 +50,35 @@ export const configDetailsQueryOptions = (client: Client) =>
         projectIdNeeded: true,
       }),
   });
+}
 
-export const tablesQueryOptions = (client: Client) =>
-  queryOptions({
+export function tablesQueryOptions(client: Client) {
+  return queryOptions({
     queryKey: queryKeys.tables,
     queryFn: () => client.tables.list(),
   });
+}
 
-export const tableDataQueryOptions = <T, U extends boolean>(
+export function tableDataQueryOptions<T, U extends boolean>(
   client: Client,
   table: T extends Table<infer _, infer U> ? U : string,
   one: U = true as U,
-) =>
-  queryOptions({
+) {
+  return queryOptions({
     queryKey: queryKeys.tableData(table),
     queryFn: () => client.tables.get<T, U>(table, one),
   });
+}
 
-export const passkeysQueryOptions = (client: Client) =>
-  queryOptions({
+export function passkeysQueryOptions(client: Client) {
+  return queryOptions({
     queryKey: queryKeys.passkeys,
     queryFn: () => client.accounts.listPasskeys(),
   });
+}
 
-export const teamsQueryOptions = (client: Client) =>
-  queryOptions({
+export function teamsQueryOptions(client: Client) {
+  return queryOptions({
     queryKey: queryKeys.teams,
     queryFn: async () =>
       await client.json<Team[]>({
@@ -80,9 +86,10 @@ export const teamsQueryOptions = (client: Client) =>
         path: '/teams/list',
       }),
   });
+}
 
-export const projectsQueryOptions = (client: Client, teamId: string) =>
-  queryOptions({
+export function projectsQueryOptions(client: Client, teamId: string) {
+  return queryOptions({
     queryKey: queryKeys.projects(teamId),
     queryFn: async () =>
       await client.json<Project[]>({
@@ -90,9 +97,10 @@ export const projectsQueryOptions = (client: Client, teamId: string) =>
         path: `/teams/${teamId}/projects/list`,
       }),
   });
+}
 
-export const projectQueryOptions = (client: Client, projectId: string) =>
-  queryOptions({
+export function projectQueryOptions(client: Client, projectId: string) {
+  return queryOptions({
     queryKey: queryKeys.project(projectId),
     queryFn: async () =>
       await client.json<Project>({
@@ -100,9 +108,10 @@ export const projectQueryOptions = (client: Client, projectId: string) =>
         path: `/teams/projects/${projectId}`,
       }),
   });
+}
 
-export const storageQueryOptions = (client: Client) =>
-  queryOptions({
+export function storageQueryOptions(client: Client) {
+  return queryOptions({
     queryKey: queryKeys.storage,
     queryFn: async () =>
       await client.json<Upload[]>({
@@ -111,3 +120,4 @@ export const storageQueryOptions = (client: Client) =>
         projectIdNeeded: true,
       }),
   });
+}

@@ -1,4 +1,4 @@
-import { type Config } from 'tailwindcss';
+import type { Config } from 'tailwindcss';
 
 export default {
   content: ['./src/**/*.{js,ts,jsx,tsx}'],
@@ -68,5 +68,6 @@ export default {
       },
     },
   },
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;

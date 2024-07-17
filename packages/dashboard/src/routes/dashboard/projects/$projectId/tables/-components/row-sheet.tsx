@@ -1,7 +1,7 @@
-import { Client, CustomTable, Field } from '@adrastos/lib';
+import type { Client, CustomTable, Field } from '@adrastos/lib';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueries } from '@tanstack/react-query';
-import { flexRender, Row as TableRowType } from '@tanstack/react-table';
+import { type Row as TableRowType, flexRender } from '@tanstack/react-table';
 import { CommandList } from 'cmdk';
 import { Check, ChevronsUpDown, Info, Trash2 } from 'lucide-react';
 import { title } from 'radash';
@@ -33,7 +33,7 @@ import {
   Input,
   Label,
   MultiSelect,
-  Option,
+  type Option,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -60,10 +60,10 @@ import {
 } from '~/hooks';
 import { cn } from '~/lib';
 
-import { Row } from '.';
+import type { Row } from '.';
 
-const createFormSchema = (fields: Field[]) =>
-  z.object(
+function createFormSchema(fields: Field[]) {
+  return z.object(
     fields
       .map((f) => {
         let finalType: z.ZodTypeAny = z.any();
@@ -86,7 +86,7 @@ const createFormSchema = (fields: Field[]) =>
 
             finalType = z
               .string()
-              .transform((v) => (v ? parseFloat(v) : undefined))
+              .transform((v) => (v ? Number.parseFloat(v) : undefined))
               .pipe(f.isRequired ? type : type.optional());
             break;
           }
@@ -137,13 +137,20 @@ const createFormSchema = (fields: Field[]) =>
 
         return { [f.name]: finalType };
       })
-      .reduce((a, b) => ({ ...a, ...b }), {
-        id: z
-          .string()
-          .optional()
-          .transform((v) => (v ? v : undefined)),
-      }),
+      .reduce(
+        (a, b) => ({
+          ...a,
+          ...b,
+        }),
+        {
+          id: z
+            .string()
+            .optional()
+            .transform((v) => (v ? v : undefined)),
+        },
+      ),
   );
+}
 
 const RelationPicker: React.FC<{
   multiple: boolean;
@@ -181,7 +188,7 @@ const RelationPicker: React.FC<{
               <div
                 key={index}
                 className={cn(
-                  'flex flex-row items-center justify-between py-1 pl-3 pr-1',
+                  'flex flex-row items-center justify-between py-1 pr-1 pl-3',
                   index !== values.length - 1 && 'border-b',
                 )}
               >
@@ -189,7 +196,7 @@ const RelationPicker: React.FC<{
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="h-4 w-4" />
+                        <Info className="size-4" />
                       </TooltipTrigger>
                       <TooltipContent className="whitespace-pre-wrap">
                         {JSON.stringify(
@@ -204,16 +211,16 @@ const RelationPicker: React.FC<{
                 </div>
 
                 <Button
+                  size="icon"
                   type="button"
                   variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
+                  className="size-8"
                   onClick={() => {
                     setSelected((values) => values.filter((v) => v !== value));
                     onSave(multiple ? selected.filter((v) => v !== value) : '');
                   }}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="size-4" />
                 </Button>
               </div>
             ))}
@@ -221,7 +228,7 @@ const RelationPicker: React.FC<{
         )}
 
         <DialogTrigger asChild>
-          <Button variant="secondary" size="sm" className="w-full rounded-none">
+          <Button size="sm" variant="secondary" className="w-full rounded-none">
             Open selector
           </Button>
         </DialogTrigger>
@@ -241,15 +248,15 @@ const RelationPicker: React.FC<{
                 index === 0 && 'rounded-t-md',
                 index === arr.length - 1 && 'rounded-b-md border-b',
               )}
-              onClick={() =>
+              onClick={() => {
                 multiple
                   ? setSelected((values) =>
                       values.includes(row.id)
                         ? values.filter((val) => val !== row.id)
                         : [...values, row.id],
                     )
-                  : setSelected([row.id])
-              }
+                  : setSelected([row.id]);
+              }}
             >
               <div className="flex flex-row items-center space-x-3">
                 <Checkbox
@@ -259,15 +266,15 @@ const RelationPicker: React.FC<{
                 <Label
                   htmlFor={index.toString()}
                   className="cursor-pointer"
-                  onClick={() =>
+                  onClick={() => {
                     multiple
                       ? setSelected((values) =>
                           values.includes(row.id)
                             ? values.filter((val) => val !== row.id)
                             : [...values, row.id],
                         )
-                      : setSelected([row.id])
-                  }
+                      : setSelected([row.id]);
+                  }}
                 >
                   {row.id}
                 </Label>
@@ -276,7 +283,7 @@ const RelationPicker: React.FC<{
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <Info className="h-4 w-4" />
+                    <Info className="size-4" />
                   </TooltipTrigger>
                   <TooltipContent className="whitespace-pre-wrap">
                     {JSON.stringify(row, null, 4)}
@@ -289,8 +296,8 @@ const RelationPicker: React.FC<{
 
         <DialogFooter>
           <Button
-            variant="outline"
             type="button"
+            variant="outline"
             onClick={() => {
               setIsOpen(false);
             }}
@@ -328,22 +335,22 @@ const SingleSelect: React.FC<{
       open={open}
       onOpenChange={(o) => {
         setOpen(o);
-        if (o === false) onBlur?.();
+        if (!o) onBlur?.();
       }}
     >
       <PopoverTrigger asChild>
         <Button
           name={name}
-          disabled={disabled}
-          variant="outline"
           role="combobox"
+          variant="outline"
+          disabled={disabled}
           aria-expanded={open}
           className="w-full justify-between"
         >
           {value
             ? options.find((option) => option.value === value)?.label
             : 'Select option...'}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[451px] p-0">
@@ -366,7 +373,7 @@ const SingleSelect: React.FC<{
                 >
                   <Check
                     className={cn(
-                      'mr-2 h-4 w-4',
+                      'mr-2 size-4',
                       value === option.value ? 'opacity-100' : 'opacity-0',
                     )}
                   />
@@ -410,7 +417,10 @@ export const RowSheet: React.FC<{
         setIsOpen((o) => !o);
         form.reset(
           table.fields.reduce(
-            (a, b) => ({ ...a, [b.name]: row?.[b.name] ?? '' }),
+            (a, b) => ({
+              ...a,
+              [b.name]: row?.[b.name] ?? '',
+            }),
             {
               id: row?.id ?? '',
             },
@@ -422,8 +432,8 @@ export const RowSheet: React.FC<{
         {row ? (
           <TableRow
             key={tableRow.id}
-            data-state={tableRow.getIsSelected() && 'selected'}
             className="cursor-pointer"
+            data-state={tableRow.getIsSelected() && 'selected'}
           >
             {tableRow.getVisibleCells().map((cell) => (
               <TableCell
@@ -471,9 +481,9 @@ export const RowSheet: React.FC<{
 
               <div className="mt-2 flex flex-col space-y-2">
                 <FormField
+                  name="id"
                   disabled={!!row}
                   control={form.control}
-                  name="id"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{title('id')}</FormLabel>
@@ -494,8 +504,8 @@ export const RowSheet: React.FC<{
                     case 'string':
                       field = (
                         <FormField
-                          control={form.control}
                           name={f.name}
+                          control={form.control}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>{title(f.name)}</FormLabel>
@@ -511,8 +521,8 @@ export const RowSheet: React.FC<{
                     case 'number':
                       field = (
                         <FormField
-                          control={form.control}
                           name={f.name}
+                          control={form.control}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>{title(f.name)}</FormLabel>
@@ -528,8 +538,8 @@ export const RowSheet: React.FC<{
                     case 'boolean':
                       field = (
                         <FormField
-                          control={form.control}
                           name={f.name}
+                          control={form.control}
                           render={({ field }) => (
                             <FormItem className="mt-1 flex items-center space-x-2">
                               <FormControl>
@@ -553,8 +563,8 @@ export const RowSheet: React.FC<{
                     case 'date':
                       field = (
                         <FormField
-                          control={form.control}
                           name={f.name}
+                          control={form.control}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel htmlFor={undefined}>
@@ -567,14 +577,14 @@ export const RowSheet: React.FC<{
                                     value: undefined,
                                     onChange: undefined,
                                   }}
+                                  granularity="second"
+                                  onJsDateChange={field.onChange}
                                   jsDate={
                                     typeof field.value === 'string' &&
                                     field.value !== ''
                                       ? new Date(field.value)
                                       : (field.value as Date)
                                   }
-                                  onJsDateChange={field.onChange}
-                                  granularity="second"
                                 />
                               </FormControl>
                             </FormItem>
@@ -585,8 +595,8 @@ export const RowSheet: React.FC<{
                     case 'email':
                       field = (
                         <FormField
-                          control={form.control}
                           name={f.name}
+                          control={form.control}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>{title(f.name)}</FormLabel>
@@ -601,8 +611,8 @@ export const RowSheet: React.FC<{
                     case 'url':
                       field = (
                         <FormField
-                          control={form.control}
                           name={f.name}
+                          control={form.control}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>{title(f.name)}</FormLabel>
@@ -617,15 +627,18 @@ export const RowSheet: React.FC<{
                     case 'select':
                       field = (
                         <FormField
-                          control={form.control}
                           name={f.name}
+                          control={form.control}
                           render={({ field }) => {
-                            const options = f.options.reduce(
+                            const options = f.options.reduce<Option[]>(
                               (acc, curr) => [
                                 ...acc,
-                                { label: title(curr), value: curr },
+                                {
+                                  label: title(curr),
+                                  value: curr,
+                                },
                               ],
-                              [] as Option[],
+                              [],
                             );
 
                             return (
@@ -642,13 +655,13 @@ export const RowSheet: React.FC<{
                                         onChange: undefined,
                                       }}
                                       options={options}
+                                      onSelect={(value) => {
+                                        form.setValue(field.name, value);
+                                      }}
                                       value={
                                         Array.isArray(field.value)
                                           ? (field.value[0] as string)
                                           : (field.value as string)
-                                      }
-                                      onSelect={(value) =>
-                                        form.setValue(field.name, value)
                                       }
                                     />
                                   ) : (
@@ -660,6 +673,12 @@ export const RowSheet: React.FC<{
                                       }}
                                       options={options}
                                       placeholder="Select options..."
+                                      onSelectedChange={(values) => {
+                                        form.setValue(
+                                          field.name,
+                                          values.map((v) => v.value),
+                                        );
+                                      }}
                                       selected={
                                         field.value === ''
                                           ? []
@@ -669,12 +688,6 @@ export const RowSheet: React.FC<{
                                                 value: v,
                                               }),
                                             ) satisfies Option[])
-                                      }
-                                      onSelectedChange={(values) =>
-                                        form.setValue(
-                                          field.name,
-                                          values.map((v) => v.value),
-                                        )
                                       }
                                     />
                                   )}
@@ -688,16 +701,23 @@ export const RowSheet: React.FC<{
                     case 'relation':
                       field = (
                         <FormField
-                          control={form.control}
                           name={f.name}
+                          control={form.control}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>{title(f.name)}</FormLabel>
                               <FormControl>
                                 <RelationPicker
-                                  {...{ ...field, ref: undefined }}
+                                  {...{
+                                    ...field,
+                                    ref: undefined,
+                                  }}
                                   table={f.table}
                                   client={client}
+                                  multiple={f.target === 'many'}
+                                  onSave={(values) => {
+                                    form.setValue(f.name, values);
+                                  }}
                                   values={
                                     typeof field.value === 'string'
                                       ? field.value === ''
@@ -714,10 +734,6 @@ export const RowSheet: React.FC<{
                                             typeof v === 'string' ? v : v.id,
                                           )
                                   }
-                                  onSave={(values) =>
-                                    form.setValue(f.name, values)
-                                  }
-                                  multiple={f.target === 'many'}
                                 />
                               </FormControl>
                             </FormItem>
@@ -745,7 +761,7 @@ export const RowSheet: React.FC<{
                     })()
                   }
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="mr-2 size-4" />
                   Delete
                 </Button>
               )}

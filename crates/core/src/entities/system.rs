@@ -78,7 +78,7 @@ pub struct SmtpConfig {
     pub host: String,
     pub port: u16,
     pub username: String,
-    pub password: String, // TODO(@Xenfo): Encrypt this
+    pub password: String, // TODO(@samchouse): Encrypt this
     pub sender_name: String,
     pub sender_email: String,
 }

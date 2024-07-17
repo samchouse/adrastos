@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import {
-  createRootRouteWithContext,
   Outlet,
+  createRootRouteWithContext,
   redirect,
 } from '@tanstack/react-router';
 import React, { Suspense, useEffect } from 'react';
 
 import { meQueryOptions, tokenRefreshQueryOptions } from '~/hooks';
-import { RouterContext } from '~/types';
+import type { RouterContext } from '~/types';
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent,

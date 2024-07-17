@@ -1,8 +1,12 @@
-import { FontProps as EmailFontProps } from '@react-email/components';
-import * as React from 'react';
+import type { FontProps as EmailFontProps } from '@react-email/components';
+import type * as React from 'react';
 
 type FontProps = Pick<EmailFontProps, 'fallbackFontFamily'> & {
-  fonts: { url: string; family: string; weight: number }[];
+  fonts: {
+    url: string;
+    family: string;
+    weight: number;
+  }[];
   format: NonNullable<EmailFontProps['webFont']>['format'];
 };
 

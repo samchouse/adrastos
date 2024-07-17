@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Dialog } from '@radix-ui/react-dialog';
 import { useSuspenseQueries } from '@tanstack/react-query';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { Link, createFileRoute } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -61,11 +61,11 @@ function TeamIdRoute() {
   return (
     <div className="flex w-full flex-col items-center pt-14">
       <div className="flex w-2/4 flex-row justify-between pb-8">
-        <h3 className="text-3xl font-semibold">Projects</h3>
+        <h3 className="font-semibold text-3xl">Projects</h3>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="mr-2 h-4 w-4" /> Create new
+              <Plus className="mr-2 size-4" /> Create new
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
@@ -91,8 +91,8 @@ function TeamIdRoute() {
                 <div className="space-y-5">
                   <div className="space-y-1">
                     <FormField
-                      control={form.control}
                       name="name"
+                      control={form.control}
                       render={({ field }) => (
                         <FormItem className="w-full">
                           <FormLabel>Name</FormLabel>
@@ -104,8 +104,8 @@ function TeamIdRoute() {
                       )}
                     />
                     <FormField
-                      control={form.control}
                       name="hostnames"
+                      control={form.control}
                       render={({ field }) => (
                         <FormItem className="w-full">
                           <FormLabel>Hostnames</FormLabel>
@@ -120,8 +120,8 @@ function TeamIdRoute() {
 
                   <DialogFooter>
                     <Button
-                      variant="outline"
                       type="button"
+                      variant="outline"
                       onClick={() => {
                         setIsOpen(false);
                         form.reset();
@@ -142,8 +142,8 @@ function TeamIdRoute() {
         {projects.map((project) => (
           <Link
             key={project.id}
-            to="/dashboard/projects/$projectId"
             params={{ projectId: project.id }}
+            to="/dashboard/projects/$projectId"
           >
             <Card className="flex h-48 flex-col justify-between">
               <CardHeader>

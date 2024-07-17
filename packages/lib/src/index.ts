@@ -1,3 +1,3 @@
 export * from './client';
 export * from './errors';
-export { User, Field, FieldCrud } from './types';
+export { Field, FieldCrud, User } from './types';

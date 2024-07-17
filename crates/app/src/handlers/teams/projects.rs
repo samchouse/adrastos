@@ -15,11 +15,6 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize)]
-struct DeletePath {
-    id: String,
-}
-
-#[derive(Serialize, Deserialize)]
 pub struct CreateBody {
     name: String,
     hostnames: Vec<String>,

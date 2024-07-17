@@ -76,11 +76,14 @@ export const SmtpCard: React.FC = () => {
   });
 
   useEffect(() => {
-    if (data?.smtpConfig) setEnabled(true);
+    if (data.smtpConfig) setEnabled(true);
 
     form.reset(
-      data?.smtpConfig
-        ? { ...data.smtpConfig, password: null }
+      data.smtpConfig
+        ? {
+            ...data.smtpConfig,
+            password: null,
+          }
         : {
             host: 'smtp.example.com',
             port: 587,
@@ -90,7 +93,7 @@ export const SmtpCard: React.FC = () => {
             senderEmail: 'no-reply@example.com',
           },
     );
-  }, [data?.smtpConfig, form]);
+  }, [data.smtpConfig, form]);
 
   return (
     <Card>
@@ -104,24 +107,26 @@ export const SmtpCard: React.FC = () => {
 
         <Switch
           checked={enabled}
-          onCheckedChange={() => setEnabled((v) => !v)}
+          onCheckedChange={() => {
+            setEnabled((v) => !v);
+          }}
         />
       </div>
 
       <Form {...form}>
         <form
           onSubmit={(e) =>
-            void form.handleSubmit((values) => mutate(enabled ? values : null))(
-              e,
-            )
+            void form.handleSubmit((values) => {
+              mutate(enabled ? values : null);
+            })(e)
           }
         >
           {enabled && (
             <CardContent>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                 <FormField
-                  control={form.control}
                   name="senderName"
+                  control={form.control}
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Sender Name</FormLabel>
@@ -133,8 +138,8 @@ export const SmtpCard: React.FC = () => {
                   )}
                 />
                 <FormField
-                  control={form.control}
                   name="senderEmail"
+                  control={form.control}
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Sender Email</FormLabel>
@@ -150,8 +155,8 @@ export const SmtpCard: React.FC = () => {
                   )}
                 />
                 <FormField
-                  control={form.control}
                   name="host"
+                  control={form.control}
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Host</FormLabel>
@@ -163,8 +168,8 @@ export const SmtpCard: React.FC = () => {
                   )}
                 />
                 <FormField
-                  control={form.control}
                   name="port"
+                  control={form.control}
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Port</FormLabel>
@@ -176,8 +181,8 @@ export const SmtpCard: React.FC = () => {
                   )}
                 />
                 <FormField
-                  control={form.control}
                   name="username"
+                  control={form.control}
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Username</FormLabel>
@@ -189,8 +194,8 @@ export const SmtpCard: React.FC = () => {
                   )}
                 />
                 <FormField
-                  control={form.control}
                   name="password"
+                  control={form.control}
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Password</FormLabel>
@@ -200,11 +205,12 @@ export const SmtpCard: React.FC = () => {
                           type="password"
                           placeholder="Password"
                           value={field.value ?? '********'}
-                          disabled={!!data?.smtpConfig && field.value === null}
+                          disabled={!!data.smtpConfig && field.value === null}
                           {...(field.value === null && {
                             endAdornment: (
                               <button
                                 type="button"
+                                className="-translate-y-1/2 absolute top-1/2 right-3 disabled:cursor-not-allowed disabled:opacity-50"
                                 onClick={() => {
                                   form.setValue('password', '');
 
@@ -212,9 +218,8 @@ export const SmtpCard: React.FC = () => {
                                     form.setFocus('password');
                                   }, 0);
                                 }}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 disabled:cursor-not-allowed disabled:opacity-50"
                               >
-                                <Edit2 className="h-4 w-4 text-primary" />
+                                <Edit2 className="size-4 text-primary" />
                               </button>
                             ),
                           })}
@@ -234,12 +239,12 @@ export const SmtpCard: React.FC = () => {
               variant="ghost"
               disabled={
                 (!form.formState.isDirty &&
-                  enabled === !!data?.smtpConfig &&
+                  enabled === !!data.smtpConfig &&
                   form.watch('password') === null) ||
                 mutationIsPending
               }
               onClick={() => {
-                if (data?.smtpConfig) {
+                if (data.smtpConfig) {
                   setEnabled(true);
                   form.setValue('password', null);
                 } else setEnabled(false);
@@ -252,12 +257,12 @@ export const SmtpCard: React.FC = () => {
             <Button
               type="submit"
               disabled={
-                (!form.formState.isDirty && enabled === !!data?.smtpConfig) ||
+                (!form.formState.isDirty && enabled === !!data.smtpConfig) ||
                 mutationIsPending
               }
             >
               {mutationIsPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 size-4 animate-spin" />
               )}
               Save
             </Button>
@@ -338,23 +343,29 @@ const OAuth2Card: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!data?.oauth2Config) return;
+    if (!data.oauth2Config) return;
 
     form.reset(data.oauth2Config);
-    providers.forEach((provider) => {
+    for (const provider of providers) {
       if (data.oauth2Config[provider])
-        setEnabled((v) => ({ ...v, [provider]: true }));
-    });
-  }, [data?.oauth2Config, form]);
+        setEnabled((v) => ({
+          ...v,
+          [provider]: true,
+        }));
+    }
+  }, [data.oauth2Config, form]);
 
   useEffect(() => {
-    providers.forEach((provider) => {
+    for (const provider of providers) {
       const values = form.getValues(provider);
       if (enabled[provider] && !values)
-        form.setValue(provider, { clientId: '', clientSecret: '' });
+        form.setValue(provider, {
+          clientId: '',
+          clientSecret: '',
+        });
       else if (!enabled[provider] && !values?.clientId && !values?.clientSecret)
         form.setValue(provider, null);
-    });
+    }
   }, [form, enabled]);
 
   return (
@@ -371,20 +382,33 @@ const OAuth2Card: React.FC = () => {
       <Form {...form}>
         <form
           onSubmit={(e) =>
-            void form.handleSubmit((values) =>
+            void form.handleSubmit((values) => {
               mutate(
-                providers.reduce(
+                providers.reduce<
+                  Record<
+                    (typeof providers)[number],
+                    {
+                      clientId: string;
+                      clientSecret: string;
+                    } | null
+                  >
+                >(
                   (acc, provider) => ({
                     ...acc,
                     [provider]: enabled[provider] ? values[provider] : null,
                   }),
+                  // eslint-disable-next-line @stylistic/max-len
+                  // eslint-disable-next-line @typescript-eslint/prefer-reduce-type-parameter
                   {} as Record<
                     (typeof providers)[number],
-                    { clientId: string; clientSecret: string } | null
+                    {
+                      clientId: string;
+                      clientSecret: string;
+                    } | null
                   >,
                 ),
-              ),
-            )(e)
+              );
+            })(e)
           }
         >
           <CardContent>
@@ -392,15 +416,18 @@ const OAuth2Card: React.FC = () => {
               {providers.map((provider) => (
                 <div key={provider}>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-base font-medium">
+                    <h3 className="font-medium text-base">
                       {providerNames[provider]}
                     </h3>
 
                     <Switch
                       checked={enabled[provider]}
-                      onCheckedChange={() =>
-                        setEnabled((v) => ({ ...v, [provider]: !v[provider] }))
-                      }
+                      onCheckedChange={() => {
+                        setEnabled((v) => ({
+                          ...v,
+                          [provider]: !v[provider],
+                        }));
+                      }}
                     />
                   </div>
 
@@ -455,17 +482,17 @@ const OAuth2Card: React.FC = () => {
                 (!form.formState.isDirty &&
                   providers.every(
                     (provider) =>
-                      enabled[provider] === !!data?.oauth2Config[provider],
+                      enabled[provider] === !!data.oauth2Config[provider],
                   )) ||
                 mutationIsPending
               }
               onClick={() => {
-                providers.forEach((provider) => {
+                for (const provider of providers) {
                   setEnabled((v) => ({
                     ...v,
-                    [provider]: !!data?.oauth2Config[provider],
+                    [provider]: !!data.oauth2Config[provider],
                   }));
-                });
+                }
 
                 form.reset();
               }}
@@ -479,13 +506,13 @@ const OAuth2Card: React.FC = () => {
                 (!form.formState.isDirty &&
                   providers.every(
                     (provider) =>
-                      enabled[provider] === !!data?.oauth2Config[provider],
+                      enabled[provider] === !!data.oauth2Config[provider],
                   )) ||
                 mutationIsPending
               }
             >
               {mutationIsPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 size-4 animate-spin" />
               )}
               Save
             </Button>

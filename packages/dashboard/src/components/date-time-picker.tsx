@@ -1,6 +1,6 @@
 import {
-  isToday as _isToday,
   CalendarDate,
+  isToday as _isToday,
   createCalendar,
   fromDate,
   getLocalTimeZone,
@@ -9,7 +9,7 @@ import {
   toCalendarDate,
   toCalendarDateTime,
 } from '@internationalized/date';
-import { DateSegment as IDateSegment } from '@react-stately/datepicker';
+import type { DateSegment as IDateSegment } from '@react-stately/datepicker';
 import {
   CalendarIcon,
   ChevronDown,
@@ -26,12 +26,12 @@ import React, {
   useState,
 } from 'react';
 import {
-  AriaDatePickerProps,
-  AriaDialogProps,
-  AriaTimeFieldProps,
-  CalendarProps,
-  DateValue,
-  TimeValue,
+  type AriaDatePickerProps,
+  type AriaDialogProps,
+  type AriaTimeFieldProps,
+  type CalendarProps,
+  type DateValue,
+  type TimeValue,
   useButton,
   useCalendar,
   useCalendarCell,
@@ -43,11 +43,11 @@ import {
   useTimeField,
 } from 'react-aria';
 import {
-  CalendarState,
-  DateFieldState,
-  DatePickerState,
-  DatePickerStateOptions,
-  TimeFieldStateOptions,
+  type CalendarState,
+  type DateFieldState,
+  type DatePickerState,
+  type DatePickerStateOptions,
+  type TimeFieldStateOptions,
   useCalendarState,
   useDateFieldState,
   useDatePickerState,
@@ -142,35 +142,38 @@ function Calendar({
       <div className="relative flex w-full items-center justify-center">
         <Button
           {...prevButtonProps}
-          ref={prevButtonRef}
           withSpan={false}
           variant="outline"
+          ref={prevButtonRef}
           className={cn(
-            'absolute left-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100',
+            'absolute left-1 size-7 bg-transparent p-0 opacity-50 hover:opacity-100',
           )}
         >
-          <ChevronLeftIcon className="h-4 w-4" />
+          <ChevronLeftIcon className="size-4" />
         </Button>
         <div className="flex w-full flex-row px-9 font-medium">
           <div
             className={cn(
-              buttonVariants({ variant: 'ghost', size: 'xs' }),
-              'relative inline-flex flex-1 items-center text-base font-normal',
+              buttonVariants({
+                variant: 'ghost',
+                size: 'xs',
+              }),
+              'relative inline-flex flex-1 items-center font-normal text-base',
             )}
           >
             <select
               name="months"
               aria-label="Month: "
               className="absolute inset-0 z-10 w-full cursor-pointer appearance-none opacity-0"
-              onChange={(e) =>
+              onChange={(e) => {
                 state.setFocusedDate(
                   new CalendarDate(
-                    parseInt(year, 10),
-                    parseInt(e.target.value, 10) + 1,
+                    Number.parseInt(year, 10),
+                    Number.parseInt(e.target.value, 10) + 1,
                     1,
                   ),
-                )
-              }
+                );
+              }}
             >
               {months.map((month, i) => (
                 <option key={i} value={i}>
@@ -180,30 +183,33 @@ function Calendar({
             </select>
             <div aria-hidden="true" className="flex items-center text-sm">
               {month}
-              <ChevronDown className="ml-1 mt-[2px] h-4 w-4" />
+              <ChevronDown className="mt-[2px] ml-1 size-4" />
             </div>
           </div>
           <div
             className={cn(
-              buttonVariants({ variant: 'ghost', size: 'xs' }),
-              'relative inline-flex items-center text-base font-normal',
+              buttonVariants({
+                variant: 'ghost',
+                size: 'xs',
+              }),
+              'relative inline-flex items-center font-normal text-base',
             )}
           >
             <select
               name="years"
               aria-label="Year: "
               className="absolute inset-0 z-10 w-full cursor-pointer appearance-none opacity-0"
-              onChange={(e) =>
+              onChange={(e) => {
                 state.setFocusedDate(
                   new CalendarDate(
-                    parseInt(e.target.value, 10),
+                    Number.parseInt(e.target.value, 10),
                     months.findIndex(
                       (m) => m.toLowerCase() === month.toLowerCase(),
                     ) + 1,
                     1,
                   ),
-                )
-              }
+                );
+              }}
             >
               {years.map((year) => (
                 <option key={year} value={year}>
@@ -213,20 +219,20 @@ function Calendar({
             </select>
             <div aria-hidden="true" className="flex items-center text-sm">
               {year}
-              <ChevronDown className="ml-1 mt-[2px] h-4 w-4" />
+              <ChevronDown className="mt-[2px] ml-1 size-4" />
             </div>
           </div>
         </div>
         <Button
           withSpan={false}
           {...nextButtonProps}
-          ref={nextButtonRef}
           variant="outline"
+          ref={nextButtonRef}
           className={cn(
-            'absolute right-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100',
+            'absolute right-1 size-7 bg-transparent p-0 opacity-50 hover:opacity-100',
           )}
         >
-          <ChevronRightIcon className="h-4 w-4" />
+          <ChevronRightIcon className="size-4" />
         </Button>
       </div>
       <CalendarGrid state={state} />
@@ -242,7 +248,10 @@ interface CalendarGridProps {
 function CalendarGrid({ state, ...props }: CalendarGridProps) {
   const { locale } = useLocale();
   const { gridProps, headerProps, weekDays } = useCalendarGrid(
-    { ...props, weekdayStyle: 'short' },
+    {
+      ...props,
+      weekdayStyle: 'short',
+    },
     state,
   );
 
@@ -258,8 +267,8 @@ function CalendarGrid({ state, ...props }: CalendarGridProps) {
         <tr className="flex">
           {weekDays.map((day, index) => (
             <th
-              className="w-9 rounded-md text-[0.8rem] font-normal text-muted-foreground"
               key={index}
+              className="w-9 rounded-md font-normal text-[0.8rem] text-muted-foreground"
             >
               {day}
             </th>
@@ -268,12 +277,12 @@ function CalendarGrid({ state, ...props }: CalendarGridProps) {
       </thead>
       <tbody>
         {[...new Array(weeksInMonth).keys()].map((weekIndex) => (
-          <tr className="mt-2 flex w-full" key={weekIndex}>
+          <tr key={weekIndex} className="mt-2 flex w-full">
             {state
               .getDatesInWeek(weekIndex)
               .map((date, i) =>
                 date ? (
-                  <CalendarCell key={i} state={state} date={date} />
+                  <CalendarCell key={i} date={date} state={state} />
                 ) : (
                   <td key={i} />
                 ),
@@ -286,8 +295,8 @@ function CalendarGrid({ state, ...props }: CalendarGridProps) {
 }
 
 interface CalendarCellProps {
-  state: CalendarState;
   date: CalendarDate;
+  state: CalendarState;
 }
 
 // million-ignore
@@ -317,12 +326,12 @@ function CalendarCell({ state, date }: CalendarCellProps) {
     >
       <Button
         {...buttonProps}
+        ref={ref}
         type="button"
         variant="ghost"
-        ref={ref}
         className={cn(
           buttonProps.className,
-          'h-9 w-9',
+          'size-9',
           isToday && 'bg-accent text-accent-foreground',
           isSelected &&
             'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
@@ -356,7 +365,7 @@ function DateSegment({ segment, state }: DateSegmentProps) {
       data-form-type="other"
       className={cn(
         'focus:rounded-[2px] focus:bg-accent focus:text-accent-foreground focus:outline-none',
-        segment.type !== 'literal' && 'px-[1px]',
+        segment.type !== 'literal' && 'px-px',
         segment.isPlaceholder && 'text-muted-foreground',
       )}
     >
@@ -407,15 +416,15 @@ function DateField({
           <PopoverTrigger asChild>
             <Button
               {...buttonProps}
-              variant="ghost"
               size="sm"
-              className="h-full rounded-r-none"
+              variant="ghost"
               disabled={props.isDisabled}
+              className="h-full rounded-r-none"
               onClick={() => {
                 mutState.setOpen(true);
               }}
             >
-              <CalendarIcon className="h-5 w-5" />
+              <CalendarIcon className="size-5" />
             </Button>
           </PopoverTrigger>
           <PopoverContent ref={contentRef} className="w-[300px]">
@@ -423,13 +432,15 @@ function DateField({
               <Calendar
                 {...calendarProps}
                 hasReset={hasReset}
-                setHasReset={setHasReset}
                 jsDatetime={jsDatetime}
+                setHasReset={setHasReset}
               />
               {mutState.hasTime && (
                 <TimeField
                   value={mutState.timeValue}
-                  onChange={(v) => mutState.setTimeValue(v)}
+                  onChange={(v) => {
+                    mutState.setTimeValue(v);
+                  }}
                 />
               )}
             </div>
@@ -448,7 +459,7 @@ function DateField({
         )}
       >
         {state.segments.map((segment, i) => (
-          <DateSegment key={i} segment={segment} state={state} />
+          <DateSegment key={i} state={state} segment={segment} />
         ))}
         {state.isInvalid && <span aria-hidden="true">🚫</span>}
       </div>
@@ -477,7 +488,7 @@ function TimeField(props: AriaTimeFieldProps<TimeValue>) {
       )}
     >
       {state.segments.map((segment, i) => (
-        <DateSegment key={i} segment={segment} state={state} />
+        <DateSegment key={i} state={state} segment={segment} />
       ))}
     </div>
   );
@@ -486,17 +497,17 @@ function TimeField(props: AriaTimeFieldProps<TimeValue>) {
 // million-ignore
 const TimePicker = React.forwardRef<
   HTMLDivElement,
-  Omit<TimeFieldStateOptions<TimeValue>, 'locale'>
+  Omit<TimeFieldStateOptions, 'locale'>
 >((props, _) => <TimeField {...props} />);
 
 TimePicker.displayName = 'TimePicker';
 
 export interface DateTimePickerRef {
-  divRef: HTMLDivElement | null;
-  buttonRef: HTMLButtonElement | null;
-  contentRef: HTMLDivElement | null;
   jsDate: Date | null;
   state: DatePickerState;
+  divRef: HTMLDivElement | null;
+  contentRef: HTMLDivElement | null;
+  buttonRef: HTMLButtonElement | null;
 }
 
 // million-ignore
@@ -569,21 +580,23 @@ const DateTimePicker = React.forwardRef<
     >
       <DateField
         {...fieldProps}
+        mutState={state}
         value={currentValue()}
         contentRef={contentRef}
-        mutState={state}
-        dialogProps={dialogProps}
-        calendarProps={calendarProps}
-        buttonProps={buttonProps}
         jsDatetime={jsDatetime}
+        dialogProps={dialogProps}
+        buttonProps={buttonProps}
+        calendarProps={calendarProps}
       />
-      <div className={cn('mr-2 h-5 w-5', !showClearButton && 'hidden')}>
+      <div className={cn('mr-2 size-5', !showClearButton && 'hidden')}>
         <X
+          onClick={() => {
+            setJsDatetime(null);
+          }}
           className={cn(
-            'h-5 w-5 cursor-pointer text-muted-foreground',
+            'size-5 cursor-pointer text-muted-foreground',
             !jsDatetime && 'hidden',
           )}
-          onClick={() => setJsDatetime(null)}
         />
       </div>
     </div>

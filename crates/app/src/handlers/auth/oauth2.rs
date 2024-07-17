@@ -185,7 +185,7 @@ pub async fn callback(
                 Error::InternalServerError("An error occurred while setting the session".into())
             })?;
 
-        return Ok([(header::LOCATION, client_url)].into_response()); // TODO(@Xenfo): Change this to the MFA page
+        return Ok([(header::LOCATION, client_url)].into_response()); // TODO(@samchouse): Change this to the MFA page
     }
 
     let redirect_url = session

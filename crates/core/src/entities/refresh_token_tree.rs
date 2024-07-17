@@ -1,4 +1,4 @@
-// TODO(@Xenfo): support many browser tabs being open at the same time, currently it'll invalidate the other tabs
+// TODO(@samchouse): support many browser tabs being open at the same time, currently it'll invalidate the other tabs
 
 use adrastos_macros::{DbCommon, DbQuery, DbSelect};
 use chrono::{DateTime, Duration, Utc};

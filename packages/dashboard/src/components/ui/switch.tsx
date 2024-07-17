@@ -1,5 +1,5 @@
 import * as SwitchPrimitives from '@radix-ui/react-switch';
-import { cva, VariantProps } from 'class-variance-authority';
+import { type VariantProps, cva } from 'class-variance-authority';
 import * as React from 'react';
 
 import { cn } from '~/lib/utils';
@@ -23,9 +23,9 @@ const switchThumbVariants = cva(
   {
     variants: {
       size: {
-        sm: 'h-4 w-4',
-        base: 'h-5 w-5',
-        lg: 'h-6 w-6',
+        sm: 'size-4',
+        base: 'size-5',
+        lg: 'size-6',
       },
     },
     defaultVariants: { size: 'base' },
@@ -41,7 +41,12 @@ const Switch = React.forwardRef<
   SwitchProps
 >(({ className, size, ...props }, ref) => (
   <SwitchPrimitives.Root
-    className={cn(switchVariants({ size, className }))}
+    className={cn(
+      switchVariants({
+        size,
+        className,
+      }),
+    )}
     {...props}
     ref={ref}
   >

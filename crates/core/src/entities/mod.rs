@@ -1,4 +1,4 @@
-// TODO(@Xenfo): use `*Iden::Table` instead of Alias::new() once https://github.com/SeaQL/sea-query/issues/533 is fixed
+// TODO(@samchouse): use `*Iden::Table` instead of Alias::new() once https://github.com/SeaQL/sea-query/issues/533 is fixed
 
 use chrono::Utc;
 use sea_query::{IntoIden, PostgresQueryBuilder, SimpleExpr};

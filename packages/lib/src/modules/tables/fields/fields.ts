@@ -33,10 +33,18 @@ export class TFString extends TFExtended<{
   }
 }
 
-export class TFNumber extends TFExtended<{ max?: number; min?: number }> {
+export class TFNumber extends TFExtended<{
+  max?: number;
+  min?: number;
+}> {
   public type = 'number' as const;
 
-  constructor(public values: { max?: number; min?: number } = {}) {
+  constructor(
+    public values: {
+      max?: number;
+      min?: number;
+    } = {},
+  ) {
     super('number' satisfies TFNumber['type'], values);
   }
 
@@ -67,11 +75,17 @@ export class TFDate extends TFExtended<Record<string, never>> {
   }
 }
 
-export class TFEmail extends TFExtended<{ except: string[]; only: string[] }> {
+export class TFEmail extends TFExtended<{
+  except: string[];
+  only: string[];
+}> {
   public type = 'email' as const;
 
   constructor(
-    public values: { except: string[]; only: string[] } = {
+    public values: {
+      except: string[];
+      only: string[];
+    } = {
       except: [],
       only: [],
     },
@@ -90,11 +104,17 @@ export class TFEmail extends TFExtended<{ except: string[]; only: string[] }> {
   }
 }
 
-export class TFUrl extends TFExtended<{ except: string[]; only: string[] }> {
+export class TFUrl extends TFExtended<{
+  except: string[];
+  only: string[];
+}> {
   public type = 'url' as const;
 
   constructor(
-    public values: { except: string[]; only: string[] } = {
+    public values: {
+      except: string[];
+      only: string[];
+    } = {
       except: [],
       only: [],
     },

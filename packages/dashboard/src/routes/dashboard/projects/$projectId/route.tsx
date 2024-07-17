@@ -1,5 +1,5 @@
 import { useSuspenseQueries } from '@tanstack/react-query';
-import { createFileRoute, notFound, Outlet } from '@tanstack/react-router';
+import { Outlet, createFileRoute, notFound } from '@tanstack/react-router';
 
 import { Navbar, NotFound } from '~/components';
 import {
@@ -41,9 +41,9 @@ function RouteComponent() {
     <>
       <Navbar
         user={user}
-        teamId={project.teamId}
         teams={teams}
         project={project}
+        teamId={project.teamId}
       />
 
       <main className="h-full overflow-y-auto bg-background">

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -98,8 +98,8 @@ function RegisterComponent() {
               <div className="flex flex-col gap-1">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                   <FormField
-                    control={form.control}
                     name="firstName"
+                    control={form.control}
                     render={({ field }) => (
                       <FormItem className="w-full">
                         <FormLabel>First Name</FormLabel>
@@ -111,8 +111,8 @@ function RegisterComponent() {
                     )}
                   />
                   <FormField
-                    control={form.control}
                     name="lastName"
+                    control={form.control}
                     render={({ field }) => (
                       <FormItem className="w-full">
                         <FormLabel>Last Name</FormLabel>
@@ -124,8 +124,8 @@ function RegisterComponent() {
                     )}
                   />
                   <FormField
-                    control={form.control}
                     name="username"
+                    control={form.control}
                     render={({ field }) => (
                       <FormItem className="w-full">
                         <FormLabel>Username</FormLabel>
@@ -141,8 +141,8 @@ function RegisterComponent() {
                     )}
                   />
                   <FormField
-                    control={form.control}
                     name="email"
+                    control={form.control}
                     render={({ field }) => (
                       <FormItem className="w-full">
                         <FormLabel>Email</FormLabel>
@@ -161,8 +161,8 @@ function RegisterComponent() {
                 </div>
 
                 <FormField
-                  control={form.control}
                   name="password"
+                  control={form.control}
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Password</FormLabel>
@@ -188,8 +188,8 @@ function RegisterComponent() {
                         <Input
                           {...field}
                           type="password"
-                          data-form-type="password,confirmation"
                           placeholder="Confirm Password"
+                          data-form-type="password,confirmation"
                         />
                       </FormControl>
                       <FormMessage />
@@ -198,8 +198,8 @@ function RegisterComponent() {
                 />
 
                 <FormField
-                  control={form.control}
                   name="tac"
+                  control={form.control}
                   render={({ field }) => (
                     <FormItem className="mt-3 w-full">
                       <div className="flex items-center space-x-2">
@@ -211,7 +211,9 @@ function RegisterComponent() {
                               onChange: undefined,
                             }}
                             checked={field.value}
-                            onCheckedChange={(state) => field.onChange(!!state)}
+                            onCheckedChange={(state) => {
+                              field.onChange(!!state);
+                            }}
                           />
                         </FormControl>
                         <FormLabel className="cursor-pointer">
@@ -229,14 +231,14 @@ function RegisterComponent() {
               <div className="w-full">
                 <Button type="submit" className="w-full" disabled={isPending}>
                   {isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 size-4 animate-spin" />
                   )}
                   Register
                 </Button>
 
                 <Link
                   to="/login"
-                  className="mt-5 block text-center text-sm text-muted-foreground underline underline-offset-4"
+                  className="mt-5 block text-center text-muted-foreground text-sm underline underline-offset-4"
                 >
                   Already have an account? Login
                 </Link>

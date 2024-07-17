@@ -1,4 +1,4 @@
-import { Client, CustomTable, FieldCrud } from '@adrastos/lib';
+import type { Client, CustomTable, FieldCrud } from '@adrastos/lib';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from '@tanstack/react-router';
@@ -20,11 +20,11 @@ import { omit, title } from 'radash';
 import { useCallback, useState } from 'react';
 import isEqual from 'react-fast-compare';
 import {
-  FieldArray,
+  type FieldArray,
+  type UseFieldArrayUpdate,
+  type UseFormReturn,
   useFieldArray,
-  UseFieldArrayUpdate,
   useForm,
-  UseFormReturn,
 } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -80,11 +80,11 @@ const formSchema = z.object({
         type: z.literal('string'),
         minLength: z
           .string()
-          .transform((v) => (v ? parseInt(v, 10) : null))
+          .transform((v) => (v ? Number.parseInt(v, 10) : null))
           .nullable(),
         maxLength: z
           .string()
-          .transform((v) => (v ? parseInt(v, 10) : null))
+          .transform((v) => (v ? Number.parseInt(v, 10) : null))
           .nullable(),
         pattern: z.string().nullable(),
         isRequired: z.boolean(),
@@ -96,11 +96,11 @@ const formSchema = z.object({
         type: z.literal('number'),
         min: z
           .string()
-          .transform((v) => (v ? parseInt(v, 10) : null))
+          .transform((v) => (v ? Number.parseInt(v, 10) : null))
           .nullable(),
         max: z
           .string()
-          .transform((v) => (v ? parseInt(v, 10) : null))
+          .transform((v) => (v ? Number.parseInt(v, 10) : null))
           .nullable(),
         isRequired: z.boolean(),
         isUnique: z.boolean(),
@@ -133,11 +133,11 @@ const formSchema = z.object({
         options: z.array(z.string()),
         minSelected: z
           .string()
-          .transform((v) => (v ? parseInt(v, 10) : null))
+          .transform((v) => (v ? Number.parseInt(v, 10) : null))
           .nullable(),
         maxSelected: z
           .string()
-          .transform((v) => (v ? parseInt(v, 10) : null))
+          .transform((v) => (v ? Number.parseInt(v, 10) : null))
           .nullable(),
         isRequired: z.boolean(),
         isUnique: z.boolean(),
@@ -151,11 +151,11 @@ const formSchema = z.object({
         cascadeDelete: z.boolean(),
         minSelected: z
           .string()
-          .transform((v) => (v ? parseInt(v, 10) : null))
+          .transform((v) => (v ? Number.parseInt(v, 10) : null))
           .nullable(),
         maxSelected: z
           .string()
-          .transform((v) => (v ? parseInt(v, 10) : null))
+          .transform((v) => (v ? Number.parseInt(v, 10) : null))
           .nullable(),
         isRequired: z.boolean(),
         isUnique: z.boolean(),
@@ -213,12 +213,12 @@ const FieldCard: React.FC<
                     }}
                     size="sm"
                     checked={field.value}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={(checked) => {
                       update(index, {
                         ...f,
                         isRequired: checked,
-                      })
-                    }
+                      });
+                    }}
                   />
                 </FormControl>
                 <FormLabel>Required</FormLabel>
@@ -243,12 +243,12 @@ const FieldCard: React.FC<
                     }}
                     size="sm"
                     checked={field.value}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={(checked) => {
                       update(index, {
                         ...f,
                         isUnique: checked,
-                      })
-                    }
+                      });
+                    }}
                   />
                 </FormControl>
                 <FormLabel>Unique</FormLabel>
@@ -286,7 +286,7 @@ type Properties<
     : never
   : never;
 
-const NumberInput = <T extends Types>({
+function NumberInput<T extends Types>({
   form,
   index,
   property,
@@ -294,27 +294,29 @@ const NumberInput = <T extends Types>({
   index: number;
   property: Properties<T>;
   form: UseFormReturn<z.infer<typeof formSchema>>;
-}) => (
-  <FormField
-    control={form.control}
-    name={`fields.${index}.${property}`}
-    render={({ field }) => (
-      <FormItem>
-        <FormLabel>{title(property)}</FormLabel>
-        <FormControl>
-          <Input
-            {...field}
-            type="number"
-            value={field.value ?? ''}
-            placeholder={title(property)}
-            data-form-type="other"
-          />
-        </FormControl>
-        <FormMessage />
-      </FormItem>
-    )}
-  />
-);
+}) {
+  return (
+    <FormField
+      control={form.control}
+      name={`fields.${index}.${property}`}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>{title(property)}</FormLabel>
+          <FormControl>
+            <Input
+              {...field}
+              type="number"
+              data-form-type="other"
+              value={field.value ?? ''}
+              placeholder={title(property)}
+            />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
 
 export const TableSheet: React.FC<{
   client: Client;
@@ -361,11 +363,11 @@ export const TableSheet: React.FC<{
           )
           .map((field) => field.name.replace('field', '')) ?? [],
       )
-      .reduce(
+      .reduce<string[]>(
         (acc, curr) => (acc.includes(curr) ? acc : [...acc, curr]),
-        [] as string[],
+        [],
       )
-      .map((suffix) => (suffix === '' ? 0 : parseInt(suffix, 10)))
+      .map((suffix) => (suffix === '' ? 0 : Number.parseInt(suffix, 10)))
       .sort();
 
     const varianceSuffix = usedSuffixes.findIndex((s, i) => s !== i);
@@ -383,7 +385,10 @@ export const TableSheet: React.FC<{
         form.reset({
           name: table?.name ?? '',
           fields:
-            table?.fields.map((f) => ({ ...f, originalName: f.name })) ?? [],
+            table?.fields.map((f) => ({
+              ...f,
+              originalName: f.name,
+            })) ?? [],
           permissions: table?.permissions ?? {
             view: null,
             create: null,
@@ -396,11 +401,11 @@ export const TableSheet: React.FC<{
       <SheetTrigger asChild>
         {table ? (
           <Button size="icon" variant="ghost">
-            <Settings2 className="h-4 w-4" />
+            <Settings2 className="size-4" />
           </Button>
         ) : (
           <Button className={cn('mb-3 w-full', className)}>
-            <Plus className="mr-2 h-4 w-4" /> Create New
+            <Plus className="mr-2 size-4" /> Create New
           </Button>
         )}
       </SheetTrigger>
@@ -476,8 +481,8 @@ export const TableSheet: React.FC<{
               </SheetHeader>
 
               <FormField
-                control={form.control}
                 name="name"
+                control={form.control}
                 render={({ field }) => (
                   <FormItem className="mb-3">
                     <FormLabel>Name</FormLabel>
@@ -519,9 +524,9 @@ export const TableSheet: React.FC<{
                                       <FormControl>
                                         <Input
                                           {...field}
-                                          value={field.value ?? ''}
                                           placeholder="Pattern"
                                           data-form-type="other"
+                                          value={field.value ?? ''}
                                         />
                                       </FormControl>
                                       <FormMessage />
@@ -590,17 +595,9 @@ export const TableSheet: React.FC<{
                                       <FormControl>
                                         <Input
                                           {...field}
-                                          value={field.value?.join(', ') ?? ''}
                                           placeholder="Except"
                                           data-form-type="other"
-                                          onChange={(e) =>
-                                            form.setValue(
-                                              `fields.${index}.except`,
-                                              e.target.value
-                                                .replaceAll(' ', '')
-                                                .split(','),
-                                            )
-                                          }
+                                          value={field.value.join(', ') ?? ''}
                                           disabled={fields.some(
                                             (field) =>
                                               field.originalName ===
@@ -608,6 +605,14 @@ export const TableSheet: React.FC<{
                                               field.type === 'email' &&
                                               field.only.length > 0,
                                           )}
+                                          onChange={(e) => {
+                                            form.setValue(
+                                              `fields.${index}.except`,
+                                              e.target.value
+                                                .replaceAll(' ', '')
+                                                .split(','),
+                                            );
+                                          }}
                                         />
                                       </FormControl>
                                       <FormMessage />
@@ -623,17 +628,9 @@ export const TableSheet: React.FC<{
                                       <FormControl>
                                         <Input
                                           {...field}
-                                          value={field.value?.join(', ') ?? ''}
                                           placeholder="Only"
                                           data-form-type="other"
-                                          onChange={(e) =>
-                                            form.setValue(
-                                              `fields.${index}.only`,
-                                              e.target.value
-                                                .replaceAll(' ', '')
-                                                .split(','),
-                                            )
-                                          }
+                                          value={field.value.join(', ') ?? ''}
                                           disabled={fields.some(
                                             (field) =>
                                               field.originalName ===
@@ -641,6 +638,14 @@ export const TableSheet: React.FC<{
                                               field.type === 'email' &&
                                               field.except.length > 0,
                                           )}
+                                          onChange={(e) => {
+                                            form.setValue(
+                                              `fields.${index}.only`,
+                                              e.target.value
+                                                .replaceAll(' ', '')
+                                                .split(','),
+                                            );
+                                          }}
                                         />
                                       </FormControl>
                                       <FormMessage />
@@ -667,17 +672,9 @@ export const TableSheet: React.FC<{
                                       <FormControl>
                                         <Input
                                           {...field}
-                                          value={field.value?.join(', ') ?? ''}
                                           placeholder="Except"
                                           data-form-type="other"
-                                          onChange={(e) =>
-                                            form.setValue(
-                                              `fields.${index}.except`,
-                                              e.target.value
-                                                .replaceAll(' ', '')
-                                                .split(','),
-                                            )
-                                          }
+                                          value={field.value.join(', ') ?? ''}
                                           disabled={fields.some(
                                             (field) =>
                                               field.originalName ===
@@ -685,6 +682,14 @@ export const TableSheet: React.FC<{
                                               field.type === 'url' &&
                                               field.only.length > 0,
                                           )}
+                                          onChange={(e) => {
+                                            form.setValue(
+                                              `fields.${index}.except`,
+                                              e.target.value
+                                                .replaceAll(' ', '')
+                                                .split(','),
+                                            );
+                                          }}
                                         />
                                       </FormControl>
                                       <FormMessage />
@@ -700,17 +705,9 @@ export const TableSheet: React.FC<{
                                       <FormControl>
                                         <Input
                                           {...field}
-                                          value={field.value?.join(', ') ?? ''}
                                           placeholder="Only"
                                           data-form-type="other"
-                                          onChange={(e) =>
-                                            form.setValue(
-                                              `fields.${index}.only`,
-                                              e.target.value
-                                                .replaceAll(' ', '')
-                                                .split(','),
-                                            )
-                                          }
+                                          value={field.value.join(', ') ?? ''}
                                           disabled={fields.some(
                                             (field) =>
                                               field.originalName ===
@@ -718,6 +715,14 @@ export const TableSheet: React.FC<{
                                               field.type === 'url' &&
                                               field.except.length > 0,
                                           )}
+                                          onChange={(e) => {
+                                            form.setValue(
+                                              `fields.${index}.only`,
+                                              e.target.value
+                                                .replaceAll(' ', '')
+                                                .split(','),
+                                            );
+                                          }}
                                         />
                                       </FormControl>
                                       <FormMessage />
@@ -744,17 +749,17 @@ export const TableSheet: React.FC<{
                                       <FormControl>
                                         <Input
                                           {...field}
-                                          value={field.value.join(', ') ?? ''}
                                           placeholder="Options"
                                           data-form-type="other"
-                                          onChange={(e) =>
+                                          value={field.value.join(', ') ?? ''}
+                                          onChange={(e) => {
                                             form.setValue(
                                               `fields.${index}.options`,
                                               e.target.value
                                                 .replaceAll(' ', '')
                                                 .split(','),
-                                            )
-                                          }
+                                            );
+                                          }}
                                         />
                                       </FormControl>
                                       <FormMessage />
@@ -798,12 +803,12 @@ export const TableSheet: React.FC<{
                                               }}
                                               size="sm"
                                               checked={f.cascadeDelete}
-                                              onCheckedChange={(checked) =>
+                                              onCheckedChange={(checked) => {
                                                 update(index, {
                                                   ...f,
                                                   cascadeDelete: checked,
-                                                })
-                                              }
+                                                });
+                                              }}
                                             />
                                           </FormControl>
                                           <FormLabel>Cascade Delete</FormLabel>
@@ -917,16 +922,18 @@ export const TableSheet: React.FC<{
                             className="rounded-md border p-3 pt-2"
                           >
                             <div className="flex flex-row items-center justify-between">
-                              <h3 className="text-base font-medium">
+                              <h3 className="font-medium text-base">
                                 {title(f.type)} Field
                               </h3>
                               <Button
+                                size="icon"
                                 type="button"
                                 variant="ghost"
-                                size="icon"
-                                onClick={() => remove(index)}
+                                onClick={() => {
+                                  remove(index);
+                                }}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="size-4" />
                               </Button>
                             </div>
 
@@ -939,7 +946,9 @@ export const TableSheet: React.FC<{
 
                   <Popover
                     open={isOpenPopover}
-                    onOpenChange={() => setIsOpenPopover((o) => !o)}
+                    onOpenChange={() => {
+                      setIsOpenPopover((o) => !o);
+                    }}
                   >
                     <PopoverTrigger asChild>
                       <Button className="w-full" variant="secondary">
@@ -947,13 +956,14 @@ export const TableSheet: React.FC<{
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                      className="w-[451px] bg-background"
                       sideOffset={8}
+                      className="w-[451px] bg-background"
                     >
                       <div className="grid grid-cols-6 gap-3 rounded-md">
                         <div className="col-span-2 h-14">
                           <Button
                             variant="secondary"
+                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
                             onClick={() => {
                               setIsOpenPopover(false);
                               append({
@@ -966,15 +976,15 @@ export const TableSheet: React.FC<{
                                 pattern: null,
                               });
                             }}
-                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
                           >
-                            <Type className="h-6 w-6" />
+                            <Type className="size-6" />
                             String
                           </Button>
                         </div>
                         <div className="col-span-2 h-14">
                           <Button
                             variant="secondary"
+                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
                             onClick={() => {
                               setIsOpenPopover(false);
                               append({
@@ -986,9 +996,8 @@ export const TableSheet: React.FC<{
                                 min: null,
                               });
                             }}
-                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
                           >
-                            <Hash className="h-6 w-6" />
+                            <Hash className="size-6" />
                             Number
                           </Button>
                         </div>
@@ -1004,7 +1013,7 @@ export const TableSheet: React.FC<{
                               });
                             }}
                           >
-                            <ToggleRight className="h-6 w-6" />
+                            <ToggleRight className="size-6" />
                             Boolean
                           </Button>
                         </div>
@@ -1022,7 +1031,7 @@ export const TableSheet: React.FC<{
                               });
                             }}
                           >
-                            <Calendar className="h-6 w-6" />
+                            <Calendar className="size-6" />
                             Date
                           </Button>
                         </div>
@@ -1042,7 +1051,7 @@ export const TableSheet: React.FC<{
                               });
                             }}
                           >
-                            <ToggleRight className="h-6 w-6" />
+                            <ToggleRight className="size-6" />
                             Email
                           </Button>
                         </div>
@@ -1062,7 +1071,7 @@ export const TableSheet: React.FC<{
                               });
                             }}
                           >
-                            <Link2 className="h-6 w-6" />
+                            <Link2 className="size-6" />
                             Url
                           </Button>
                         </div>
@@ -1083,18 +1092,18 @@ export const TableSheet: React.FC<{
                               });
                             }}
                           >
-                            <List className="h-6 w-6" />
+                            <List className="size-6" />
                             Select
                           </Button>
                         </div>
                         <div className="col-span-3 h-14">
                           <Button
                             variant="secondary"
+                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
                             disabled={
                               tables.length === 0 ||
                               (tables.length === 1 && !!table)
                             }
-                            sharedClasses="h-full w-full flex flex-col items-center justify-center"
                             onClick={() => {
                               setIsOpenPopover(false);
                               append({
@@ -1110,7 +1119,7 @@ export const TableSheet: React.FC<{
                               });
                             }}
                           >
-                            <Database className="h-6 w-6" />
+                            <Database className="size-6" />
                             Relation
                           </Button>
                         </div>
@@ -1146,17 +1155,17 @@ export const TableSheet: React.FC<{
                                       <TooltipTrigger asChild>
                                         <button
                                           type="button"
-                                          onClick={() =>
+                                          onClick={() => {
                                             form.setValue(
                                               `permissions.${permission}`,
                                               field.value === null ? '' : null,
-                                            )
-                                          }
+                                            );
+                                          }}
                                         >
                                           {field.value === null ? (
-                                            <LockOpen className="h-4 w-4" />
+                                            <LockOpen className="size-4" />
                                           ) : (
-                                            <Lock className="h-4 w-4" />
+                                            <Lock className="size-4" />
                                           )}
                                         </button>
                                       </TooltipTrigger>
@@ -1207,13 +1216,13 @@ export const TableSheet: React.FC<{
                           to: '/dashboard/projects/$projectId/tables/$tableId',
                           params: {
                             projectId: params.projectId,
-                            tableId: tables?.[0].name,
+                            tableId: tables[0].name,
                           },
                         });
                     })()
                   }
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="mr-2 size-4" />
                   Delete
                 </Button>
               )}

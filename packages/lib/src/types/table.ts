@@ -1,4 +1,4 @@
-import { AndNullable } from '../types';
+import type { AndNullable } from '../types';
 
 export type Field = AndNullable<
   | StringField
@@ -17,21 +17,21 @@ interface BaseField {
 }
 
 interface ExtendedField extends BaseField {
-  isRequired: boolean;
   isUnique: boolean;
+  isRequired: boolean;
 }
 
 export interface StringField extends ExtendedField {
   type: 'string';
+  pattern?: string;
   minLength?: number;
   maxLength?: number;
-  pattern?: string;
 }
 
 export interface NumberField extends ExtendedField {
-  type: 'number';
   min?: number;
   max?: number;
+  type: 'number';
 }
 
 export interface BooleanField extends BaseField {
@@ -44,14 +44,14 @@ export interface DateField extends ExtendedField {
 
 export interface EmailField extends ExtendedField {
   type: 'email';
-  except: string[];
   only: string[];
+  except: string[];
 }
 
 export interface UrlField extends ExtendedField {
   type: 'url';
-  except: string[];
   only: string[];
+  except: string[];
 }
 
 export interface SelectField extends ExtendedField {
@@ -62,8 +62,8 @@ export interface SelectField extends ExtendedField {
 }
 
 interface RelationFieldBase extends ExtendedField {
-  type: 'relation';
   table: string;
+  type: 'relation';
   cascadeDelete: boolean;
 }
 
@@ -81,8 +81,8 @@ export type FieldCrud = FieldUpdate | FieldDelete;
 
 export interface FieldUpdate {
   name: string;
-  action: 'create' | 'update';
   field: Field;
+  action: 'create' | 'update';
 }
 
 export interface FieldDelete {

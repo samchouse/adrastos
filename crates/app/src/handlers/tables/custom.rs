@@ -38,7 +38,7 @@ use crate::{
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/rows", get(rows))
-        .route("/row", get(row))
+        .route("/rows/:id", get(row))
         .route("/create", post(create))
         .route("/update", patch(update))
         .route("/delete", delete(remove))
@@ -57,8 +57,7 @@ pub async fn rows(
 
     let page = query.get("page").map(|s| s.parse::<u64>().unwrap());
     let limit = query.get("limit").map(|s| s.parse::<u64>().unwrap());
-    query.remove("page");
-    query.remove("limit");
+    let matches = query.get("match").map(|s| s.parse::<String>().unwrap());
 
     let mut builder = CustomTableSelectBuilder::from(&custom_table);
     builder
@@ -68,13 +67,16 @@ pub async fn rows(
                 .map(|(field, equals)| Expr::col(Alias::new(field)).eq(equals))
                 .collect(),
         )
-        .paginate(page, limit)
         .join();
 
     if matches!(user_type, AlternateUserType::Normal) {
         if let Some(permission) = custom_table.permissions.view.clone() {
             builder.cond_where(Permission::parse(&custom_table, permission)?.to_sql_cond(&user));
         }
+    }
+
+    if limit != Some(1) {
+        builder.paginate(page, limit);
     }
 
     let rows = builder.finish(&db).await?;
@@ -91,29 +93,25 @@ pub async fn rows(
         );
     }
 
-    Ok(Json(response))
+    Ok(Json(if limit == Some(1) {
+        serde_json::to_value(rows.as_array().unwrap().first().cloned()).unwrap()
+    } else {
+        response
+    }))
 }
 
 pub async fn row(
-    AnyUser(user, user_type): AnyUser,
-    Path(path): Path<String>,
     ProjectDatabase(db): ProjectDatabase,
-    Query(query): Query<HashMap<String, String>>,
+    AnyUser(user, user_type): AnyUser,
+    Path((name, id)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, Error> {
     let custom_table = CustomTableSchema::find()
-        .by_name(path.clone())
+        .by_name(name.clone())
         .one(&db)
         .await?;
 
     let mut builder = CustomTableSelectBuilder::from(&custom_table);
-    builder
-        .and_where(
-            query
-                .iter()
-                .map(|(field, equals)| Expr::col(Alias::new(field)).eq(equals))
-                .collect(),
-        )
-        .join();
+    builder.by_id(&id).join();
 
     if matches!(user_type, AlternateUserType::Normal) {
         if let Some(permission) = custom_table.permissions.view.clone() {
@@ -335,7 +333,7 @@ pub async fn update(
         .await?;
 
     let mut db_query = sea_query::Query::update();
-    // TODO(@Xenfo): Add support for multiple rows
+    // TODO(@samchouse): Add support for multiple rows
     db_query.limit(1);
 
     query.iter().for_each(|(field, equals)| {
@@ -436,7 +434,7 @@ pub async fn remove(
         .await?;
 
     let mut db_query = sea_query::Query::delete();
-    // TODO(@Xenfo): Add support for multiple rows
+    // TODO(@samchouse): Add support for multiple rows
     db_query.limit(1);
 
     query.iter().for_each(|(field, equals)| {

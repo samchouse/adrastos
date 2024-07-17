@@ -24,7 +24,7 @@ services:
       - dragonfly:/data
 
   emails:
-    image: ghcr.io/xenfo/adrastos-emails:git
+    image: ghcr.io/samchouse/adrastos-emails:git
     pull_policy: always
     restart: unless-stopped
     profiles:
@@ -35,7 +35,7 @@ services:
       - deployments_default
 
   app:
-    image: ghcr.io/xenfo/adrastos-app:git
+    image: ghcr.io/samchouse/adrastos-app:git
     pull_policy: always
     restart: unless-stopped
     profiles:

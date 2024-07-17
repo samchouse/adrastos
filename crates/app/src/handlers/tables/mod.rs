@@ -371,7 +371,7 @@ pub async fn update(
                                                     ]).to_string(PostgresQueryBuilder),
                                                 sea_query::Query::select()
                                                     .from(Alias::new(&custom_table.name))
-                                                    .expr(Expr::cust(&format!("'{}'", Id::new())))
+                                                    .expr(Expr::cust(format!("'{}'", Id::new())))
                                                     .expr(Expr::col(Alias::new("id")))
                                                     .expr(Expr::col(Alias::new(&field.name)))
                                                     .to_string(PostgresQueryBuilder),
