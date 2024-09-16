@@ -20,7 +20,7 @@ name: adrastos-staging-pr-$PR
 
 services:
   emails:
-    image: ghcr.io/xenfo/adrastos-emails:staging-pr-$PR
+    image: ghcr.io/samchouse/adrastos-emails:staging-pr-$PR
     pull_policy: always
     restart: unless-stopped
     environment:
@@ -29,7 +29,7 @@ services:
       - ../staging.env
 
   app:
-    image: ghcr.io/xenfo/adrastos-app:staging-pr-$PR
+    image: ghcr.io/samchouse/adrastos-app:staging-pr-$PR
     pull_policy: always
     restart: unless-stopped
     depends_on:
@@ -78,7 +78,7 @@ destroy)
   docker compose -f "staging/docker-compose.pr-$PR.yml" down -v
   rm -rf "staging/docker-compose.pr-$PR.yml"
 
-  docker rmi $(docker images -q --filter "reference=ghcr.io/xenfo/adrastos-*:staging-pr-*")
+  docker rmi $(docker images -q --filter "reference=ghcr.io/samchouse/adrastos-*:staging-pr-*")
 
   exit 0
   ;;

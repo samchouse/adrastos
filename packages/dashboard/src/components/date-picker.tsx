@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
-import { SelectSingleEventHandler } from 'react-day-picker';
+import type { SelectSingleEventHandler } from 'react-day-picker';
 
 import { cn } from '~/lib';
 
@@ -25,19 +25,19 @@ export const DatePicker: React.FC<{
           !value && 'text-muted-foreground',
         )}
       >
-        <CalendarIcon className="mr-2 h-4 w-4" />
+        <CalendarIcon className="mr-2 size-4" />
         {value ? format(value, 'PPP') : <span>Pick a date</span>}
       </Button>
     </PopoverTrigger>
     <PopoverContent className="w-[290px] p-0">
       <Calendar
+        initialFocus
         mode="single"
-        fromYear={new Date().getFullYear() - 50}
-        toYear={new Date().getFullYear() + 20}
         selected={value}
         onSelect={onChange}
-        initialFocus
         captionLayout="dropdown-buttons"
+        toYear={new Date().getFullYear() + 20}
+        fromYear={new Date().getFullYear() - 50}
       />
     </PopoverContent>
   </Popover>

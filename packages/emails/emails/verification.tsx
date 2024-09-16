@@ -11,13 +11,14 @@ import {
   Tailwind,
   Text,
 } from '@react-email/components';
-import * as React from 'react';
+import type * as React from 'react';
 
 import { Font } from '../components/index.js';
 
 const supportEmail = 'support@adrastos.xenfo.dev';
-const verificationUrl = (baseUrl: string, token: string) =>
-  `${baseUrl}/auth/verify?token=${token}`;
+function verificationUrl(baseUrl: string, token: string) {
+  return `${baseUrl}/auth/verify?token=${token}`;
+}
 
 interface VerificationProps {
   token: string;
@@ -55,10 +56,10 @@ export const VerificationEmail: React.FC<VerificationProps> = ({
         <Preview>Verify your email for Adrastos</Preview>
 
         <Body>
-          <Container className="rounded-xl border-2 border-solid border-gray-200 bg-gray-50 px-5 pb-2 text-center">
+          <Container className="rounded-xl border-2 border-gray-200 border-solid bg-gray-50 px-5 pb-2 text-center">
             <Heading
               as="h2"
-              className="text-2xl font-bold"
+              className="font-bold text-2xl"
               style={{
                 fontFamily: 'Roboto-Bold, Roboto',
               }}

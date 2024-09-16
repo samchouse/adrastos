@@ -1,9 +1,9 @@
 import { useSuspenseQueries } from '@tanstack/react-query';
 import { createFileRoute, notFound } from '@tanstack/react-router';
 import {
-  ColumnDef,
+  type ColumnDef,
+  type SortingState,
   createColumnHelper,
-  SortingState,
 } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import {
@@ -35,7 +35,7 @@ import {
 import { tableDataQueryOptions, tablesQueryOptions } from '~/hooks';
 import { cn } from '~/lib';
 
-import { DataTable, Row, RowSheet, TableSheet } from './-components';
+import { DataTable, type Row, RowSheet, TableSheet } from './-components';
 
 export const Route = createFileRoute(
   '/dashboard/projects/$projectId/tables/$tableId',
@@ -52,6 +52,7 @@ export const Route = createFileRoute(
         tableDataQueryOptions<Row, false>(client, tableId, false),
       )
       .catch(() => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
         throw notFound();
       }),
   }),
@@ -63,14 +64,22 @@ function TableIdComponent() {
   const { client } = Route.useRouteContext();
   const { tableId } = Route.useParams();
   const [sorting, setSorting] = useState<SortingState>([
-    { id: 'createdAt', desc: true },
+    {
+      id: 'createdAt',
+      desc: true,
+    },
   ]);
 
   const [lastTableId, setLastTableId] = useState(tableId);
 
   useEffect(() => {
     if (lastTableId !== tableId) {
-      setSorting([{ id: 'createdAt', desc: true }]);
+      setSorting([
+        {
+          id: 'createdAt',
+          desc: true,
+        },
+      ]);
       setLastTableId(tableId);
     }
   }, [tableId, lastTableId]);
@@ -83,7 +92,7 @@ function TableIdComponent() {
   });
 
   const table = useMemo(
-    () => tables?.find((t) => t.name === tableId),
+    () => tables.find((t) => t.name === tableId),
     [tables, tableId],
   );
 
@@ -98,22 +107,26 @@ function TableIdComponent() {
         },
         header: ({ table }) => (
           <Checkbox
+            aria-label="Select all"
+            onCheckedChange={(value) => {
+              table.toggleAllPageRowsSelected(!!value);
+            }}
             checked={
               table.getIsAllPageRowsSelected() ||
               (table.getIsSomePageRowsSelected() && 'indeterminate')
             }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
           />
         ),
         cell: ({ row }) => (
           <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            onClick={(e) => e.stopPropagation()}
             aria-label="Select row"
+            checked={row.getIsSelected()}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            onCheckedChange={(value) => {
+              row.toggleSelected(!!value);
+            }}
           />
         ),
       }),
@@ -132,24 +145,24 @@ function TableIdComponent() {
             <Button
               variant="ghost"
               className="group"
-              onClick={() =>
+              onClick={() => {
                 column.toggleSorting(
                   column.getIsSorted() ? column.getIsSorted() === 'asc' : true,
-                )
-              }
+                );
+              }}
             >
               {title(f.name)}
               {column.getIsSorted() === 'asc' ? (
                 <ChevronUp
                   className={cn(
-                    'invisible ml-2 h-4 w-4 group-hover:visible',
+                    'invisible ml-2 size-4 group-hover:visible',
                     column.getIsSorted() && 'visible',
                   )}
                 />
               ) : (
                 <ChevronDown
                   className={cn(
-                    'invisible ml-2 h-4 w-4 group-hover:visible',
+                    'invisible ml-2 size-4 group-hover:visible',
                     column.getIsSorted() && 'visible',
                   )}
                 />
@@ -157,7 +170,7 @@ function TableIdComponent() {
             </Button>
           ),
           cell: ({ getValue, renderValue }) => {
-            const value = getValue?.();
+            const value = getValue();
             return value === undefined ? (
               <Badge variant="secondary">N/A</Badge>
             ) : f.type === 'relation' && value ? (
@@ -166,7 +179,7 @@ function TableIdComponent() {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="mr-1 h-4 w-4" />
+                        <Info className="mr-1 size-4" />
                       </TooltipTrigger>
                       <TooltipContent className="whitespace-pre-wrap font-normal">
                         {JSON.stringify(value, null, 4)}
@@ -184,7 +197,7 @@ function TableIdComponent() {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger>
-                              <Info className="mr-1 h-4 w-4" />
+                              <Info className="mr-1 size-4" />
                             </TooltipTrigger>
                             <TooltipContent className="whitespace-pre-wrap font-normal">
                               {JSON.stringify(value, null, 4)}
@@ -205,7 +218,7 @@ function TableIdComponent() {
                     : 'False'
                   : Array.isArray(value)
                     ? value.join(', ')
-                    : renderValue?.() ?? value}
+                    : (renderValue() ?? value)}
               </>
             );
           },
@@ -223,24 +236,24 @@ function TableIdComponent() {
           <Button
             variant="ghost"
             className="group"
-            onClick={() =>
+            onClick={() => {
               column.toggleSorting(
                 column.getIsSorted() ? column.getIsSorted() === 'asc' : true,
-              )
-            }
+              );
+            }}
           >
             Created At
             {column.getIsSorted() === 'asc' ? (
               <ChevronUp
                 className={cn(
-                  'invisible ml-2 h-4 w-4 group-hover:visible',
+                  'invisible ml-2 size-4 group-hover:visible',
                   column.getIsSorted() && 'visible',
                 )}
               />
             ) : (
               <ChevronDown
                 className={cn(
-                  'invisible ml-2 h-4 w-4 group-hover:visible',
+                  'invisible ml-2 size-4 group-hover:visible',
                   column.getIsSorted() && 'visible',
                 )}
               />
@@ -248,13 +261,13 @@ function TableIdComponent() {
           </Button>
         ),
         cell: ({ getValue }) => {
-          const value = getValue?.() as Date;
+          const value = getValue() as Date;
           return (
             <>
               <p className="mb-[3px] leading-none">
                 {format(value, 'MM-dd-yyyy')}
               </p>
-              <p className="leading-none text-muted-foreground">
+              <p className="text-muted-foreground leading-none">
                 {format(value, 'h:mm:ss a')}
               </p>
             </>
@@ -272,24 +285,24 @@ function TableIdComponent() {
           <Button
             variant="ghost"
             className="group"
-            onClick={() =>
+            onClick={() => {
               column.toggleSorting(
                 column.getIsSorted() ? column.getIsSorted() === 'asc' : true,
-              )
-            }
+              );
+            }}
           >
             Updated At
             {column.getIsSorted() === 'asc' ? (
               <ChevronUp
                 className={cn(
-                  'invisible ml-2 h-4 w-4 group-hover:visible',
+                  'invisible ml-2 size-4 group-hover:visible',
                   column.getIsSorted() && 'visible',
                 )}
               />
             ) : (
               <ChevronDown
                 className={cn(
-                  'invisible ml-2 h-4 w-4 group-hover:visible',
+                  'invisible ml-2 size-4 group-hover:visible',
                   column.getIsSorted() && 'visible',
                 )}
               />
@@ -297,7 +310,7 @@ function TableIdComponent() {
           </Button>
         ),
         cell: ({ getValue }) => {
-          const value = getValue?.() as Date;
+          const value = getValue() as Date;
           return !value ? (
             <Badge variant="secondary">Never</Badge>
           ) : (
@@ -305,7 +318,7 @@ function TableIdComponent() {
               <p className="mb-[3px] leading-none">
                 {format(value, 'MM-dd-yyyy')}
               </p>
-              <p className="leading-none text-muted-foreground">
+              <p className="text-muted-foreground leading-none">
                 {format(value, 'h:mm:ss a')}
               </p>
             </>
@@ -323,8 +336,8 @@ function TableIdComponent() {
         header: ({ table }) => (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4 text-white" />
+              <Button variant="ghost" className="size-8 p-0">
+                <MoreHorizontal className="size-4 text-white" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[150px]">
@@ -341,10 +354,12 @@ function TableIdComponent() {
                   <DropdownMenuCheckboxItem
                     key={column.id}
                     checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                    onSelect={(e) => e.preventDefault()}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                    }}
+                    onCheckedChange={(value) => {
+                      column.toggleVisibility(!!value);
+                    }}
                   >
                     {title(column.id)}
                   </DropdownMenuCheckboxItem>
@@ -353,8 +368,8 @@ function TableIdComponent() {
           </DropdownMenu>
         ),
         cell: () => (
-          <Button variant="ghost" className="h-8 w-8 p-0">
-            <ChevronRight className="h-4 w-4" />
+          <Button variant="ghost" className="size-8 p-0">
+            <ChevronRight className="size-4" />
           </Button>
         ),
       }),
@@ -366,10 +381,10 @@ function TableIdComponent() {
     <div className="h-full overflow-y-auto p-5">
       <div className="flex w-full flex-row justify-between pb-4">
         <div className="flex flex-row items-center space-x-3">
-          <h2 className="text-2xl font-semibold leading-none">
+          <h2 className="font-semibold text-2xl leading-none">
             {title(tableId)}
           </h2>
-          <TableSheet client={client} table={table} tables={tables} />
+          <TableSheet table={table} client={client} tables={tables} />
         </div>
 
         {table && <RowSheet table={table} client={client} />}
@@ -377,13 +392,20 @@ function TableIdComponent() {
 
       <DataTable
         client={client}
-        customTable={table}
-        data={data?.rows ?? []}
         columns={columns}
-        sorting={
-          lastTableId === tableId ? sorting : [{ id: 'createdAt', desc: true }]
-        }
+        customTable={table}
+        data={data.rows ?? []}
         setSorting={setSorting}
+        sorting={
+          lastTableId === tableId
+            ? sorting
+            : [
+                {
+                  id: 'createdAt',
+                  desc: true,
+                },
+              ]
+        }
       />
     </div>
   );

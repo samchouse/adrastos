@@ -1,11 +1,11 @@
-import { Client, CustomTable } from '@adrastos/lib';
+import type { Client, CustomTable } from '@adrastos/lib';
 import {
-  ColumnDef,
+  type ColumnDef,
+  type SortingState,
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  SortingState,
   useReactTable,
 } from '@tanstack/react-table';
 import {
@@ -31,7 +31,7 @@ import {
 } from '~/components';
 import { cn } from '~/lib';
 
-import { Row, RowSheet } from '.';
+import { type Row, RowSheet } from '.';
 
 export const DataTable: React.FC<{
   data: Row[];
@@ -88,17 +88,17 @@ export const DataTable: React.FC<{
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {table.getRowModel().rows.length ? (
               table
                 .getRowModel()
                 .rows.map(
                   (row) =>
                     customTable && (
                       <RowSheet
-                        client={client}
                         key={row.id}
-                        table={customTable}
                         tableRow={row}
+                        client={client}
+                        table={customTable}
                       />
                     ),
                 )
@@ -113,8 +113,8 @@ export const DataTable: React.FC<{
                   {customTable && (
                     <RowSheet
                       client={client}
-                      table={customTable}
                       className="mt-3"
+                      table={customTable}
                     />
                   )}
                 </TableCell>
@@ -125,7 +125,7 @@ export const DataTable: React.FC<{
       </div>
 
       <div className="mt-3 flex items-center justify-between px-1">
-        <div className="text-sm text-muted-foreground">
+        <div className="text-muted-foreground text-sm">
           {table.getFilteredSelectedRowModel().rows.length.toString()} of{' '}
           {table.getFilteredRowModel().rows.length}{' '}
           {table.getFilteredRowModel().rows.length === 1 ? 'row' : 'rows'}{' '}
@@ -133,7 +133,7 @@ export const DataTable: React.FC<{
         </div>
 
         <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium">Rows per page</p>
+          <p className="font-medium text-sm">Rows per page</p>
           <Select
             value={`${table.getState().pagination.pageSize}`}
             onValueChange={(value) => {
@@ -157,43 +157,51 @@ export const DataTable: React.FC<{
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => table.setPageIndex(0)}
+              className="hidden size-8 p-0 lg:flex"
               disabled={!table.getCanPreviousPage()}
+              onClick={() => {
+                table.setPageIndex(0);
+              }}
             >
               <span className="sr-only">Go to first page</span>
-              <ChevronsLeft className="h-4 w-4" />
+              <ChevronsLeft className="size-4" />
             </Button>
             <Button
               variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => table.previousPage()}
+              className="size-8 p-0"
               disabled={!table.getCanPreviousPage()}
+              onClick={() => {
+                table.previousPage();
+              }}
             >
               <span className="sr-only">Go to previous page</span>
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="size-4" />
             </Button>
             <Button
               variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => table.nextPage()}
+              className="size-8 p-0"
               disabled={!table.getCanNextPage()}
+              onClick={() => {
+                table.nextPage();
+              }}
             >
               <span className="sr-only">Go to next page</span>
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="size-4" />
             </Button>
             <Button
               variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
+              className="hidden size-8 p-0 lg:flex"
+              onClick={() => {
+                table.setPageIndex(table.getPageCount() - 1);
+              }}
             >
               <span className="sr-only">Go to last page</span>
-              <ChevronsRight className="h-4 w-4" />
+              <ChevronsRight className="size-4" />
             </Button>
           </div>
 
-          <div className="flex items-center text-sm font-medium">
+          <div className="flex items-center font-medium text-sm">
             Page {table.getState().pagination.pageIndex + 1} of{' '}
             {table.getPageCount() > 0 ? table.getPageCount() : 1}
           </div>

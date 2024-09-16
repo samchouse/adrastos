@@ -16,7 +16,7 @@ footer = """
 """
 postprocessors = [
   { pattern = '[-\w\[\]\+\.]+@([\w-]+\.)+[\w-]{2,4}', replace_command = "changelog-gh-usernames" },
-  { pattern = "([a-f0-9]{7})", replace = "[${0}](https://github.com/Xenfo/adrastos/commit/${0})" },
+  { pattern = "([a-f0-9]{7})", replace = "[${0}](https://github.com/samchouse/adrastos/commit/${0})" },
 ]
 
 [git]

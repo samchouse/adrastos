@@ -1,4 +1,4 @@
-// TODO(@Xenfo): implement relations
+// TODO(@samchouse): implement relations
 
 use chrono::{DateTime, Utc};
 use sea_query::{
@@ -80,6 +80,13 @@ pub struct CustomTableSelectBuilder {
 }
 
 impl CustomTableSelectBuilder {
+    pub fn by_id(&mut self, id: &str) -> &mut Self {
+        self.query_builder
+            .and_where(Expr::col(Alias::new("id")).eq(id));
+
+        self
+    }
+
     pub fn count(&mut self) -> Self {
         let mut builder = CustomTableSelectBuilder {
             is_count: true,

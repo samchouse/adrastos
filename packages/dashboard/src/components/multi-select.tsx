@@ -28,6 +28,7 @@ export const MultiSelect = React.forwardRef<
     );
     const [inputValue, setInputValue] = React.useState('');
 
+    // biome-ignore lint/style/noNonNullAssertion: library code, not sure why
     React.useImperativeHandle(ref, () => inputRef.current!);
 
     const handleUnselect = React.useCallback((option: Option) => {
@@ -86,19 +87,22 @@ export const MultiSelect = React.forwardRef<
               <Badge key={option.value} variant="secondary">
                 {option.label}
                 <button
+                  type="button"
+                  onClick={() => {
+                    handleUnselect(option);
+                  }}
                   className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleUnselect(option);
                     }
                   }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onClick={() => handleUnselect(option)}
                 >
-                  <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                  <X className="size-3 text-muted-foreground hover:text-foreground" />
                 </button>
               </Badge>
             ))}
@@ -122,12 +126,13 @@ export const MultiSelect = React.forwardRef<
         </div>
         {open && selectable.length > 0 ? (
           <div className="relative mt-2">
-            <div className="absolute top-0 z-10 w-full rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in">
+            <div className="absolute top-0 z-10 w-full animate-in rounded-md border bg-popover text-popover-foreground shadow-md outline-none">
               <CommandList>
                 <CommandGroup className="h-full overflow-auto">
                   {selectable.map((option) => (
                     <CommandItem
                       key={option.value}
+                      className="cursor-pointer"
                       onMouseDown={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -136,7 +141,6 @@ export const MultiSelect = React.forwardRef<
                         setInputValue('');
                         setSelected((prev) => [...prev, option]);
                       }}
-                      className={'cursor-pointer'}
                     >
                       {option.label}
                     </CommandItem>

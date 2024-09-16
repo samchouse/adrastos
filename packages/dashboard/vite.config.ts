@@ -12,7 +12,7 @@ export default defineConfig({
     TanStackRouterVite(),
   ],
   server: {
-    host: 'arch',
+    host: '0.0.0.0',
     https: {
       cert: '../../certs/cert.pem',
       key: '../../certs/key.pem',

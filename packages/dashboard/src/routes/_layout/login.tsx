@@ -4,10 +4,10 @@ import {
   SiFacebook,
   SiGithub,
   SiGoogle,
-  SiTwitter,
+  SiX,
 } from '@icons-pack/react-simple-icons';
 import { startAuthentication } from '@simplewebauthn/browser';
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
+import { Link, createFileRoute, useRouter } from '@tanstack/react-router';
 import { KeyRound, Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
@@ -48,11 +48,11 @@ export const Route = createFileRoute('/_layout/login')({
 });
 
 const providerIcons = {
-  google: <SiGoogle className="h-4 w-4" />,
-  facebook: <SiFacebook className="h-4 w-4" />,
-  github: <SiGithub className="h-4 w-4" />,
-  twitter: <SiTwitter className="h-4 w-4" />,
-  discord: <SiDiscord className="h-4 w-4" />,
+  google: <SiGoogle className="size-4" />,
+  facebook: <SiFacebook className="size-4" />,
+  github: <SiGithub className="size-4" />,
+  twitter: <SiX className="size-4" />,
+  discord: <SiDiscord className="size-4" />,
 };
 
 const formSchema = z.object({
@@ -119,17 +119,17 @@ function LoginComponent() {
             <CardContent>
               <div className="flex flex-col gap-1">
                 <FormField
-                  control={form.control}
                   name="email"
+                  control={form.control}
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Email</FormLabel>
                       <FormControl>
                         <Input
                           type="email"
-                          autoComplete="webauthn"
                           placeholder="Email"
                           data-form-type="email"
+                          autoComplete="webauthn"
                           {...field}
                         />
                       </FormControl>
@@ -138,8 +138,8 @@ function LoginComponent() {
                   )}
                 />
                 <FormField
-                  control={form.control}
                   name="password"
+                  control={form.control}
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Password</FormLabel>
@@ -162,14 +162,14 @@ function LoginComponent() {
               <div className="w-full">
                 <Button type="submit" className="w-full" disabled={isPending}>
                   {isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 size-4 animate-spin" />
                   )}
                   Login
                 </Button>
 
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t"></span>
+                    <span className="w-full border-t" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-background px-2 text-muted-foreground">
@@ -180,9 +180,9 @@ function LoginComponent() {
 
                 <div className="space-y-4">
                   <Button
-                    variant="secondary"
-                    className="w-full"
                     type="button"
+                    className="w-full"
+                    variant="secondary"
                     onClick={() => {
                       void (async () => {
                         const options = await loginStartPasskeyMutateAsync();
@@ -196,15 +196,15 @@ function LoginComponent() {
                       })();
                     }}
                   >
-                    {/* TODO(@Xenfo): https://github.com/lucide-icons/lucide/pull/1848 */}
-                    <KeyRound className="mr-2 h-4 w-4" /> Passkey
+                    {/* TODO(@samchouse): https://github.com/lucide-icons/lucide/pull/1848 */}
+                    <KeyRound className="mr-2 size-4" /> Passkey
                   </Button>
 
                   <div className="grid w-full grid-cols-5 gap-2">
                     {providers.map((provider) => (
                       <Button
-                        key={provider}
                         asChild
+                        key={provider}
                         variant="outline"
                         className="w-full"
                       >
@@ -222,7 +222,7 @@ function LoginComponent() {
 
                 <Link
                   to="/register"
-                  className="mt-4 block text-center text-sm text-muted-foreground underline underline-offset-4"
+                  className="mt-4 block text-center text-muted-foreground text-sm underline underline-offset-4"
                 >
                   Don&apos;t have an account? Register
                 </Link>

@@ -47,13 +47,13 @@ jobs:
           edit-mode: replace
           body: |
             ## Backend Staging
-            Status: **[DEPLOYING](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) :hourglass:**
+            Status: **[DEPLOYING](https://github.com/samchouse/adrastos/actions/runs/${{ github.run_id }}) :hourglass:**
             - [ ] Deploy this PR
 
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: Xenfo
+          username: samchouse
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v3
 
@@ -79,7 +79,7 @@ jobs:
           push: true
           context: .
           file: .github/deploy/Dockerfile.app
-          tags: ghcr.io/xenfo/adrastos-app:staging-pr-${{ github.event.issue.number }}
+          tags: ghcr.io/samchouse/adrastos-app:staging-pr-${{ github.event.issue.number }}
 
       - name: Build and push the worker image
         uses: docker/build-push-action@v5
@@ -87,7 +87,7 @@ jobs:
         with:
           push: true
           file: .github/deploy/Dockerfile.emails
-          tags: ghcr.io/xenfo/adrastos-emails:staging-pr-${{ github.event.issue.number }}
+          tags: ghcr.io/samchouse/adrastos-emails:staging-pr-${{ github.event.issue.number }}
 
       - name: Tailscale
         uses: tailscale/github-action@v2
@@ -115,7 +115,7 @@ jobs:
           edit-mode: replace
           body: |
             ## Staging
-            **Status:** [${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && 'SUCCEEDED' || !contains(steps.*.conclusion, 'cancelled') && 'FAILED' || 'CANCELLED' }}](https://github.com/Xenfo/adrastos/actions/runs/${{ github.run_id }}) ${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && ':white_check_mark:' || !contains(steps.*.conclusion, 'cancelled') && ':x:' || ':grey_question:' }}
+            **Status:** [${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && 'SUCCEEDED' || !contains(steps.*.conclusion, 'cancelled') && 'FAILED' || 'CANCELLED' }}](https://github.com/samchouse/adrastos/actions/runs/${{ github.run_id }}) ${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && ':white_check_mark:' || !contains(steps.*.conclusion, 'cancelled') && ':x:' || ':grey_question:' }}
             ${{ (!contains(steps.*.conclusion, 'failure') && !contains(steps.*.conclusion, 'cancelled')) && format('**Deployment:** https://adi-pr-{0}.xenfo.dev', github.event.issue.number) }}
             - [ ] Deploy this PR
 
@@ -164,7 +164,7 @@ jobs:
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: Xenfo
+          username: samchouse
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v3
 
@@ -188,14 +188,14 @@ jobs:
           push: true
           context: .
           file: .github/deploy/Dockerfile.app
-          tags: ghcr.io/xenfo/adrastos-app:git
+          tags: ghcr.io/samchouse/adrastos-app:git
 
       - name: Build and push the worker image
         uses: docker/build-push-action@v5
         with:
           push: true
           file: .github/deploy/Dockerfile.emails
-          tags: ghcr.io/xenfo/adrastos-emails:git
+          tags: ghcr.io/samchouse/adrastos-emails:git
 
       - name: Tailscale
         uses: tailscale/github-action@v2
@@ -211,7 +211,7 @@ jobs:
             cd /home/sam/Documents/deployments/personal/adrastos
             git pull
             docker compose --profile deploy up -d
-            docker rmi \$(docker images -q --filter \"reference=ghcr.io/xenfo/adrastos-*:*\") || true
+            docker rmi \$(docker images -q --filter \"reference=ghcr.io/samchouse/adrastos-*:*\") || true
           "
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -236,7 +236,7 @@ jobs:
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: Xenfo
+          username: samchouse
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v3
 
@@ -261,14 +261,14 @@ jobs:
           push: true
           context: .
           file: .github/deploy/Dockerfile.app
-          tags: ghcr.io/xenfo/adrastos-app:latest,ghcr.io/xenfo/adrastos-app:${{ steps.version.outputs.data }}
+          tags: ghcr.io/samchouse/adrastos-app:latest,ghcr.io/samchouse/adrastos-app:${{ steps.version.outputs.data }}
 
       - name: Build and push the worker image
         uses: docker/build-push-action@v5
         with:
           push: true
           file: .github/deploy/Dockerfile.emails
-          tags: ghcr.io/xenfo/adrastos-emails:latest,ghcr.io/xenfo/adrastos-emails:${{ steps.version.outputs.data }}
+          tags: ghcr.io/samchouse/adrastos-emails:latest,ghcr.io/samchouse/adrastos-emails:${{ steps.version.outputs.data }}
 
       - name: Generate changelog
         uses: orhun/git-cliff-action@v3

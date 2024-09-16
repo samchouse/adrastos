@@ -1,4 +1,4 @@
-import { Slot, SlotProps } from '@radix-ui/react-slot';
+import { Slot, type SlotProps } from '@radix-ui/react-slot';
 import {
   createContext,
   useCallback,
@@ -35,7 +35,9 @@ export function useMultiDialog<T = unknown>(v?: T) {
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const onOpenChange = useCallback(
-    (o: boolean) => (o ? setDialog(v) : setDialog(null)),
+    (o: boolean) => {
+      o ? setDialog(v) : setDialog(null);
+    },
     [setDialog, v],
   );
 
@@ -61,7 +63,7 @@ export function MultiDialogTrigger<T = unknown>({
   const oc = useCallback<React.MouseEventHandler<HTMLElement>>(
     (e) => {
       open(true);
-      onClick && onClick(e);
+      onClick?.(e);
     },
     [open, onClick],
   );
@@ -81,7 +83,13 @@ export function MultiDialogContainer<T = unknown>({
   const [open, onOpenChange] = useMultiDialog(value);
 
   return useMemo(
-    () => (children ? children({ open, onOpenChange }) : null),
+    () =>
+      children
+        ? children({
+            open,
+            onOpenChange,
+          })
+        : null,
     [children, onOpenChange, open],
   );
 }

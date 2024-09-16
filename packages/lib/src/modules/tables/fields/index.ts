@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { Field } from '../../../types';
+import type { Field } from '../../../types';
 import {
   TFBoolean,
   TFDate,
@@ -12,32 +12,47 @@ import {
   TFString,
   TFUrl,
 } from './fields';
-import { TFOptional, TFUnique } from './shared';
+import type { TFOptional, TFUnique } from './shared';
 
-type ZExtend<T> =
-  T extends TFOptional<infer U>
-    ? z.ZodOptional<ZExtend<U>>
-    : T extends TFUnique<infer U>
-      ? ZExtend<U>
-      : T extends TFString
-        ? z.ZodString
-        : T extends TFNumber
-          ? z.ZodNumber
-          : T extends TFBoolean
-            ? z.ZodBoolean
-            : T extends TFDate
-              ? z.ZodDate
-              : T extends TFEmail
+export interface BaseData {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+type Data = Record<
+  string,
+  string | number | boolean | string[] | Date | undefined
+>;
+export type Row<T extends Data = Data> = T & {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type ZExtend<T> = T extends TFOptional<infer U>
+  ? z.ZodOptional<ZExtend<U>>
+  : T extends TFUnique<infer U>
+    ? ZExtend<U>
+    : T extends TFString
+      ? z.ZodString
+      : T extends TFNumber
+        ? z.ZodNumber
+        : T extends TFBoolean
+          ? z.ZodBoolean
+          : T extends TFDate
+            ? z.ZodDate
+            : T extends TFEmail
+              ? z.ZodString
+              : T extends TFUrl
                 ? z.ZodString
-                : T extends TFUrl
-                  ? z.ZodString
-                  : T extends TFSelect
-                    ? z.ZodArray<z.ZodString, 'many'>
-                    : T extends TFRelationSingle
-                      ? z.ZodString
-                      : T extends TFRelationMany
-                        ? z.ZodArray<z.ZodString, 'many'>
-                        : never;
+                : T extends TFSelect
+                  ? z.ZodArray<z.ZodString>
+                  : T extends TFRelationSingle
+                    ? z.ZodString
+                    : T extends TFRelationMany
+                      ? z.ZodArray<z.ZodString>
+                      : never;
 
 export type TField =
   | TFString
@@ -71,22 +86,17 @@ export type TFWithModifiers =
       Exclude<TField, TFBoolean> | TFOptionalWrapper<Exclude<TField, TFBoolean>>
     >;
 
-export type TInfer<T> =
-  T extends Table<infer _, string>
-    ? z.infer<ReturnType<T['schema']>> & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-      }
-    : never;
+export type TInfer<T> = T extends Table
+  ? Row<z.infer<ReturnType<T['schema']>>>
+  : never;
 
 export class Table<
-  T extends Record<string, TFWithModifiers>,
-  U extends string,
+  T extends string = string,
+  U extends Record<string, TFWithModifiers> = Record<string, TFWithModifiers>,
 > {
   constructor(
-    public name: U,
-    private shape: T,
+    public name: T,
+    private shape: U,
   ) {}
 
   requestBody() {
@@ -207,10 +217,10 @@ export class Table<
   }
 
   schema(): z.ZodObject<{
-    [Key in keyof T]: ZExtend<T[Key]>;
+    [Key in keyof U]: ZExtend<U[Key]>;
   }> {
     return z.object(
-      Object.keys(this.shape).reduce(
+      Object.keys(this.shape).reduce<Record<string, z.ZodTypeAny>>(
         (acc, key) => {
           const field = this.shape[key];
           switch (field.type) {
@@ -244,10 +254,10 @@ export class Table<
 
           return acc;
         },
-        {} as Record<string, z.ZodTypeAny>,
+        {},
       ),
     ) as z.ZodObject<{
-      [Key in keyof T]: ZExtend<T[Key]>;
+      [Key in keyof U]: ZExtend<U[Key]>;
     }>;
   }
 }
@@ -256,24 +266,31 @@ class TBuilder {
   string() {
     return new TFString();
   }
+
   number() {
     return new TFNumber();
   }
+
   boolean() {
     return new TFBoolean();
   }
+
   date() {
     return new TFDate();
   }
+
   email() {
     return new TFEmail();
   }
+
   url() {
     return new TFUrl();
   }
+
   select({ options }: { options: string[] }) {
     return new TFSelect({ options });
   }
+
   relation<T extends { target: 'single' | 'many' }>({
     table,
     target,
@@ -282,16 +299,21 @@ class TBuilder {
   } & T) {
     return (
       target === 'single'
-        ? new TFRelationSingle({ table, cascadeDelete: false })
-        : new TFRelationMany({ table, cascadeDelete: false })
+        ? new TFRelationSingle({
+            table,
+            cascadeDelete: false,
+          })
+        : new TFRelationMany({
+            table,
+            cascadeDelete: false,
+          })
     ) as T['target'] extends 'single' ? TFRelationSingle : TFRelationMany;
   }
 }
 
-export const table = <
-  T extends Record<string, TFWithModifiers>,
-  U extends string,
->(
-  name: U,
-  shape: (builder: TBuilder) => T,
-): Table<T, U> => new Table(name, shape(new TBuilder()));
+export function table<
+  T extends string,
+  U extends Record<string, TFWithModifiers>,
+>(name: T, shape: (builder: TBuilder) => U): Table<T, U> {
+  return new Table(name, shape(new TBuilder()));
+}

@@ -1,5 +1,5 @@
 import { useSuspenseQueries } from '@tanstack/react-query';
-import { createFileRoute, notFound, Outlet } from '@tanstack/react-router';
+import { Outlet, createFileRoute, notFound } from '@tanstack/react-router';
 
 import { Navbar } from '~/components';
 import {
@@ -17,6 +17,7 @@ export const Route = createFileRoute('/dashboard/teams/$teamId')({
     params: { teamId },
   }) => {
     const teams = await queryClient.ensureQueryData(teamsQueryOptions(client));
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
     if (!teams.find((team) => team.id === teamId)) throw notFound();
   },
 });
@@ -31,7 +32,7 @@ function RouteComponent() {
 
   return (
     <>
-      <Navbar user={user} teamId={teamId} teams={teams} />
+      <Navbar user={user} teams={teams} teamId={teamId} />
 
       <main className="h-full overflow-y-auto bg-background">
         <Outlet />

@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Xenfo/adrastos.git",
+    "url": "git+https://github.com/samchouse/adrastos.git",
     "directory": "packages/lib"
   },
   "scripts": {
@@ -29,6 +29,6 @@
     "zod": ">=3.22"
   },
   "devDependencies": {
-    "tsup": "^8.1.0"
+    "tsup": "^8.2.4"
   }
 }

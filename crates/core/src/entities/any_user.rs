@@ -322,7 +322,7 @@ impl AnyUserSelectBuilder<'_> {
     pub async fn all(&mut self) -> Result<Vec<AnyUser>, crate::error::Error> {
         self.query_builder.reset_limit();
 
-        // TODO(@Xenfo): add pagination, etc.
+        // TODO(@samchouse): add pagination, etc.
         Ok(self
             .finish(self.db)
             .await?

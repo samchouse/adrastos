@@ -13,10 +13,6 @@ interface OAuth2Config {
     clientId: string;
     clientSecret: string;
   } | null;
-  facebook: {
-    clientId: string;
-    clientSecret: string;
-  } | null;
   github: {
     clientId: string;
     clientSecret: string;
@@ -26,6 +22,10 @@ interface OAuth2Config {
     clientSecret: string;
   } | null;
   discord: {
+    clientId: string;
+    clientSecret: string;
+  } | null;
+  facebook: {
     clientId: string;
     clientSecret: string;
   } | null;

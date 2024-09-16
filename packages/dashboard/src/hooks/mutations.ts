@@ -1,11 +1,11 @@
-import { ResponseError } from '@adrastos/lib';
+import type { ResponseError } from '@adrastos/lib';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouteContext } from '@tanstack/react-router';
 import { toast } from 'sonner';
 
 import { queryKeys } from './queries';
 
-export const useRegisterMutation = () => {
+export function useRegisterMutation() {
   const { mutateAsync } = useLoginMutation();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -16,9 +16,9 @@ export const useRegisterMutation = () => {
     ) => await client.accounts.register(data),
     onSuccess: async (_, vars) => mutateAsync(vars),
   });
-};
+}
 
-export const useLoginMutation = () => {
+export function useLoginMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -30,9 +30,9 @@ export const useLoginMutation = () => {
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.tokenRefresh }),
   });
-};
+}
 
-export const useLogoutMutation = () => {
+export function useLogoutMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -46,9 +46,9 @@ export const useLogoutMutation = () => {
       await queryClient.setQueryData(queryKeys.me, null);
     },
   });
-};
+}
 
-export const useUpdatePasskeyMutation = () => {
+export function useUpdatePasskeyMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -64,9 +64,9 @@ export const useUpdatePasskeyMutation = () => {
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.passkeys }),
   });
-};
+}
 
-export const useDeletePasskeyMutation = () => {
+export function useDeletePasskeyMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -78,18 +78,18 @@ export const useDeletePasskeyMutation = () => {
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.passkeys }),
   });
-};
+}
 
-export const useStartRegisterPasskeyMutation = () => {
+export function useStartRegisterPasskeyMutation() {
   const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['auth', 'passkeys', 'register', 'start'],
     mutationFn: async () => await client.accounts.startPasskeyRegistration(),
   });
-};
+}
 
-export const useFinishRegisterPasskeyMutation = () => {
+export function useFinishRegisterPasskeyMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -103,9 +103,9 @@ export const useFinishRegisterPasskeyMutation = () => {
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.passkeys }),
   });
-};
+}
 
-export const useStartLoginPasskeyMutation = () => {
+export function useStartLoginPasskeyMutation() {
   const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
@@ -113,12 +113,12 @@ export const useStartLoginPasskeyMutation = () => {
     mutationFn: async (
       data:
         | Parameters<(typeof client)['accounts']['startPasskeyLogin']>[0]
-        | void,
+        | undefined,
     ) => await client.accounts.startPasskeyLogin(data ?? undefined),
   });
-};
+}
 
-export const useFinishLoginPasskeyMutation = () => {
+export function useFinishLoginPasskeyMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -130,9 +130,9 @@ export const useFinishLoginPasskeyMutation = () => {
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.tokenRefresh }),
   });
-};
+}
 
-export const useConfigSmtpMutation = () => {
+export function useConfigSmtpMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -144,9 +144,9 @@ export const useConfigSmtpMutation = () => {
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.configDetails }),
   });
-};
+}
 
-export const useConfigOAuth2Mutation = () => {
+export function useConfigOAuth2Mutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -158,9 +158,9 @@ export const useConfigOAuth2Mutation = () => {
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.configDetails }),
   });
-};
+}
 
-export const useResendVerificationMutation = () => {
+export function useResendVerificationMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -169,9 +169,9 @@ export const useResendVerificationMutation = () => {
     mutationFn: async () => await client.accounts.resendVerification(),
     onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.me }),
   });
-};
+}
 
-export const useCreateTableMutation = () => {
+export function useCreateTableMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -182,9 +182,9 @@ export const useCreateTableMutation = () => {
     ) => await client.tables.create(table),
     onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.tables }),
   });
-};
+}
 
-export const useUpdateTableMutation = () => {
+export function useUpdateTableMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -202,9 +202,9 @@ export const useUpdateTableMutation = () => {
       await queryClient.refetchQueries({ queryKey: queryKeys.tableData(name) });
     },
   });
-};
+}
 
-export const useDeleteTableMutation = () => {
+export function useDeleteTableMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -216,9 +216,9 @@ export const useDeleteTableMutation = () => {
     onSuccess: async () =>
       queryClient.refetchQueries({ queryKey: queryKeys.tables }),
   });
-};
+}
 
-export const useCreateRowMutation = (table: string) => {
+export function useCreateRowMutation(table: string) {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -235,9 +235,9 @@ export const useCreateRowMutation = (table: string) => {
           error.details.message ?? error.details.error ?? error.message,
       }),
   });
-};
+}
 
-export const useUpdateRowMutation = (table: string) => {
+export function useUpdateRowMutation(table: string) {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -253,9 +253,9 @@ export const useUpdateRowMutation = (table: string) => {
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.tableData(table) }),
   });
-};
+}
 
-export const useDeleteRowMutation = (table: string) => {
+export function useDeleteRowMutation(table: string) {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -267,15 +267,18 @@ export const useDeleteRowMutation = (table: string) => {
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.tableData(table) }),
   });
-};
+}
 
-export const useCreateProjectMutation = (teamId: string) => {
+export function useCreateProjectMutation(teamId: string) {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
   return useMutation({
     mutationKey: ['project', 'create'],
-    mutationFn: async (data: { name: string; hostnames: string[] }) =>
+    mutationFn: async (data: {
+      name: string;
+      hostnames: string[];
+    }) =>
       await client.json({
         path: `/teams/${teamId}/projects/create`,
         method: 'POST',
@@ -284,9 +287,9 @@ export const useCreateProjectMutation = (teamId: string) => {
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.projects(teamId) }),
   });
-};
+}
 
-export const useCreateTeamMutation = () => {
+export function useCreateTeamMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -300,9 +303,9 @@ export const useCreateTeamMutation = () => {
       }),
     onSuccess: () => queryClient.refetchQueries({ queryKey: queryKeys.teams }),
   });
-};
+}
 
-export const useDeleteUploadMutation = () => {
+export function useDeleteUploadMutation() {
   const queryClient = useQueryClient();
   const { client } = useRouteContext({ from: '__root__' });
 
@@ -317,4 +320,4 @@ export const useDeleteUploadMutation = () => {
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: queryKeys.storage }),
   });
-};
+}

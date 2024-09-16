@@ -84,7 +84,7 @@ pub async fn list(
 }
 
 pub async fn get_upload(
-    // _: AnyUser, // TODO(@Xenfo): re-enable this
+    // _: AnyUser, // TODO(@samchouse): re-enable this
     Project(project): Project,
     ProjectDatabase(db): ProjectDatabase,
     State(AppState { s3, .. }): State<AppState>,

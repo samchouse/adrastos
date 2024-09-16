@@ -1,4 +1,4 @@
-import { User as UserType } from '@adrastos/lib';
+import type { User as UserType } from '@adrastos/lib';
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { LogOut, User as UserIcon } from 'lucide-react';
 
@@ -27,14 +27,11 @@ export const User: React.FC<{
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="relative h-[40px] w-[40px] rounded-full"
-        >
-          <Avatar className="h-[40px] w-[40px]">
+        <Button variant="ghost" className="relative size-[40px] rounded-full">
+          <Avatar className="size-[40px]">
             <AvatarImage
-              src={`https://github.com/${user.username}.png`}
               alt={`@${user.username}`}
+              src={`https://github.com/${user.username}.png`}
             />
             <AvatarFallback>{`${user.firstName[0]}${user.lastName[0]}`}</AvatarFallback>
           </Avatar>
@@ -43,8 +40,8 @@ export const User: React.FC<{
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.username}</p>
-            <p className="text-xs leading-none text-muted-foreground">
+            <p className="font-medium text-sm leading-none">{user.username}</p>
+            <p className="text-muted-foreground text-xs leading-none">
               {user.email}
             </p>
           </div>
@@ -52,12 +49,13 @@ export const User: React.FC<{
         <DropdownMenuSeparator />
         <Link to="/dashboard/profile">
           <DropdownMenuItem className="cursor-pointer">
-            <UserIcon className="mr-2 h-4 w-4" />
+            <UserIcon className="mr-2 size-4" />
             <span>Profile</span>
           </DropdownMenuItem>
         </Link>
         <DropdownMenuSeparator />
         <DropdownMenuItem
+          className="cursor-pointer"
           onSelect={() =>
             void (async () => {
               await mutateAsync();
@@ -67,9 +65,8 @@ export const User: React.FC<{
               });
             })()
           }
-          className="cursor-pointer"
         >
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="mr-2 size-4" />
           <span>Logout</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

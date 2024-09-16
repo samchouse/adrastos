@@ -21,7 +21,7 @@ pub async fn run(req: Request, next: Next) -> Result<Response, Error> {
         .and_then(|v| v.parse::<i64>().ok())
     {
         if content_length > (config.max_files.unwrap() * max_file_size + 10 * 1000 * 1000) {
-            // TODO(@Xenfo): https://github.com/hyperium/hyper/issues/2384
+            // TODO(@samchouse): https://github.com/hyperium/hyper/issues/2384
             return Err(Error::Custom(
                 StatusCode::PAYLOAD_TOO_LARGE,
                 "Payload is too large".into(),

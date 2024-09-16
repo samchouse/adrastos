@@ -8,9 +8,11 @@ edition = "2021"
 [dependencies]
 adrastos_macros = { path = "../macros" }
 argon2 = "0.5.3"
-aws-config = { version = "1.5.1", features = ["behavior-version-latest"] }
-aws-credential-types = { version = "1.2.0", features = ["hardcoded-credentials"] }
-aws-sdk-s3 = "1.36.0"
+aws-config = { version = "1.5.4", features = ["behavior-version-latest"] }
+aws-credential-types = { version = "1.2.0", features = [
+	"hardcoded-credentials",
+] }
+aws-sdk-s3 = "1.41.0"
 axum = "0.7.5"
 axum-extra = { version = "0.9.3", features = ["cookie"] }
 chrono = "0.4.38"
@@ -25,8 +27,8 @@ nanoid = "0.4.0"
 oauth2 = "4.4.2"
 rand = "0.8.5"
 regex = "1.10.5"
-reqwest = { version = "0.12.4", features = ["json"] }
-rustls = "0.23.10"
+reqwest = { version = "0.12.5", features = ["json"] }
+rustls = "0.23.11"
 rustls-pemfile = "2.1.2"
 sea-query = { version = "0.30.7", features = [
 	"attr",
@@ -36,8 +38,8 @@ sea-query = { version = "0.30.7", features = [
 ] }
 secrecy = { version = "0.8.0", features = ["serde"] }
 semver = "1.0.23"
-serde = { version = "1.0.203", features = ["derive"] }
-serde_json = "1.0.117"
+serde = { version = "1.0.204", features = ["derive"] }
+serde_json = "1.0.120"
 time = "0.3.36"
 tokio = { version = "1.38.0", features = ["macros"] }
 tokio-postgres = { version = "0.7.10", features = [
@@ -49,7 +51,7 @@ totp-rs = { version = "5.5.1", features = ["gen_secret", "qr"] }
 tracing = "0.1.40"
 tracing-unwrap = "1.0.1"
 validator = { version = "0.18.1", features = ["derive"] }
-webauthn-rs = { git = "https://github.com/Xenfo/webauthn-rs", rev = "cad800c", features = [
+webauthn-rs = { git = "https://github.com/samchouse/webauthn-rs", rev = "cad800c", features = [
 	"danger-allow-state-serialisation",
-	"danger-no-uuid"
+	"danger-no-uuid",
 ] }

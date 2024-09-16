@@ -11,18 +11,18 @@ const client = redis.createClient({ url: env.REDIS_URL });
 
 logger.info('Worker started');
 
-const worker = async () => {
+async function worker() {
   await client.connect();
 
   const subscriber = client.duplicate();
   await subscriber.connect();
 
   await subscriber.subscribe(
-    `${env.REDIS_PREFIX && `${env.REDIS_PREFIX}:`}emails`,
+    `${env.REDIS_PREFIX ? `${env.REDIS_PREFIX}:` : ''}emails`,
     async (token) => {
       logger.info(`Received request with token: ${token}`);
       await client.publish(
-        `${env.REDIS_PREFIX && `${env.REDIS_PREFIX}:`}html:${token}`,
+        `${env.REDIS_PREFIX ? `${env.REDIS_PREFIX}:` : ''}html:${token}`,
         render(
           <VerificationEmail
             token={token}
@@ -33,6 +33,6 @@ const worker = async () => {
       logger.info(`Finished request with token: ${token}`);
     },
   );
-};
+}
 
 void worker();

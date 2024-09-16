@@ -1,14 +1,14 @@
 import { ResponseError } from './errors';
 import { AccountsModule, ConfigModule, TablesModule } from './modules';
-import { Request } from './types';
+import type { Request } from './types';
 
 export {
-  table,
-  Table,
-  TFWithModifiers,
-  TInfer,
-  TField,
   CustomTable,
+  TFWithModifiers,
+  TField,
+  TInfer,
+  Table,
+  table,
 } from './modules';
 
 export class Client {

@@ -1,8 +1,8 @@
 import { useSuspenseQueries } from '@tanstack/react-query';
 import {
-  createFileRoute,
   Link,
   Outlet,
+  createFileRoute,
   redirect,
 } from '@tanstack/react-router';
 import clsx from 'clsx';
@@ -27,9 +27,13 @@ export const Route = createFileRoute('/dashboard/projects/$projectId/tables')({
     );
 
     if (tables.length !== 0 && location.pathname.endsWith('/tables'))
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({
         to: '/dashboard/projects/$projectId/tables/$tableId',
-        params: { projectId: projectId, tableId: tables?.[0].name },
+        params: {
+          projectId: projectId,
+          tableId: tables[0].name,
+        },
       });
   },
 });
@@ -43,25 +47,28 @@ function RouteComponent() {
   });
 
   return (
-    <section className="flex h-full w-full flex-row">
+    <section className="flex size-full flex-row">
       {tables.length === 0 ? (
-        <div className="flex h-full w-full flex-col items-center justify-center space-y-5">
+        <div className="flex size-full flex-col items-center justify-center space-y-5">
           <h1 className="text-2xl text-muted-foreground">
             No tables have been created
           </h1>
-          <TableSheet client={client} className="w-72" tables={tables} />
+          <TableSheet client={client} tables={tables} className="w-72" />
         </div>
       ) : (
         <>
           <div className="flex h-full w-72 flex-col justify-between border-r p-4">
             <div>
-              <h2 className="mb-2 ml-3 text-lg font-semibold">Tables</h2>
+              <h2 className="mb-2 ml-3 font-semibold text-lg">Tables</h2>
               <div className="flex flex-col space-y-1">
-                {tables?.map((table) => (
+                {tables.map((table) => (
                   <Link
                     key={table.id}
-                    to={`/dashboard/projects/$projectId/tables/$tableId`}
-                    params={{ projectId: projectId, tableId: table.name }}
+                    to="/dashboard/projects/$projectId/tables/$tableId"
+                    params={{
+                      projectId: projectId,
+                      tableId: table.name,
+                    }}
                   >
                     {({ isActive }) => (
                       <Button

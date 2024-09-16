@@ -275,7 +275,7 @@ pub async fn verify(
     Query(params): Query<VerifyParams>,
     State(AppState { redis_pool, .. }): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    // TODO(@Xenfo): make this middleware
+    // TODO(@samchouse): make this middleware
     let refresh_token = auth::TokenType::verify(
         &config.clone(),
         util::get_auth_cookies(&jar)?.refresh_token.value().into(),

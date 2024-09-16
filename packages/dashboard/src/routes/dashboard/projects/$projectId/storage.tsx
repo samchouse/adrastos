@@ -1,7 +1,7 @@
 import { useSuspenseQueries } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
-  ColumnDef,
+  type ColumnDef,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
@@ -45,7 +45,7 @@ import {
 } from '~/components/ui/table';
 import { storageQueryOptions, useDeleteUploadMutation } from '~/hooks';
 import { cn } from '~/lib';
-import { Upload } from '~/types';
+import type { Upload } from '~/types';
 
 export const Route = createFileRoute('/dashboard/projects/$projectId/storage')({
   component: StorageComponent,
@@ -59,8 +59,8 @@ export const Route = createFileRoute('/dashboard/projects/$projectId/storage')({
 const columnHelper = createColumnHelper<Upload>();
 
 interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  columns: ColumnDef<TData, TValue>[];
 }
 
 export function DataTable<TData, TValue>({
@@ -74,7 +74,12 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     initialState: {
-      sorting: [{ id: 'createdAt', desc: true }],
+      sorting: [
+        {
+          id: 'createdAt',
+          desc: true,
+        },
+      ],
       pagination: {
         pageSize: 15,
       },
@@ -110,12 +115,12 @@ export function DataTable<TData, TValue>({
           ))}
         </TableHeader>
         <TableBody>
-          {table.getRowModel().rows?.length ? (
+          {table.getRowModel().rows.length ? (
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
-                data-state={row.getIsSelected() && 'selected'}
                 className="cursor-pointer"
+                data-state={row.getIsSelected() && 'selected'}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell
@@ -176,27 +181,29 @@ function StorageComponent() {
             <a
               target="_blank"
               href={`${import.meta.env.VITE_BACKEND_URL ?? ''}/api/storage/get/${row.original.id}/${row.original.name}?projectId=${client.projectId}`}
+              rel="noreferrer"
             >
-              <div className="flex h-10 w-10 items-center justify-center">
+              <div className="flex size-10 items-center justify-center">
                 {row.original.type.startsWith('image/') ? (
                   <>
                     {!loadedImages.includes(row.original.id) && (
-                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <Skeleton className="size-10 rounded-full" />
                     )}
                     <img
                       src={`${import.meta.env.VITE_BACKEND_URL ?? ''}/api/storage/get/${row.original.id}/${row.original.name}?projectId=${client.projectId}`}
-                      className={cn(
-                        'h-10 w-10 rounded-full object-cover',
-                        !loadedImages.includes(row.original.id) && 'hidden',
-                      )}
+                      alt="User upload"
                       onLoad={() =>
                         !loadedImages.includes(row.original.id) &&
                         setLoadedImages((i) => [...i, row.original.id])
                       }
+                      className={cn(
+                        'size-10 rounded-full object-cover',
+                        !loadedImages.includes(row.original.id) && 'hidden',
+                      )}
                     />
                   </>
                 ) : (
-                  <File className="h-8 w-8 text-muted-foreground" />
+                  <File className="size-8 text-muted-foreground" />
                 )}
               </div>
             </a>
@@ -210,31 +217,31 @@ function StorageComponent() {
             <Button
               variant="ghost"
               className="group"
-              onClick={() =>
+              onClick={() => {
                 column.toggleSorting(
                   column.getIsSorted() ? column.getIsSorted() === 'asc' : true,
-                )
-              }
+                );
+              }}
             >
               Size
               {column.getIsSorted() === 'asc' ? (
                 <ChevronUp
                   className={cn(
-                    'invisible ml-2 h-4 w-4 group-hover:visible',
+                    'invisible ml-2 size-4 group-hover:visible',
                     column.getIsSorted() && 'visible',
                   )}
                 />
               ) : (
                 <ChevronDown
                   className={cn(
-                    'invisible ml-2 h-4 w-4 group-hover:visible',
+                    'invisible ml-2 size-4 group-hover:visible',
                     column.getIsSorted() && 'visible',
                   )}
                 />
               )}
             </Button>
           ),
-          cell: ({ getValue }) => filesize(getValue?.()),
+          cell: ({ getValue }) => filesize(getValue()),
         }),
         columnHelper.accessor('createdAt', {
           enableSorting: true,
@@ -247,24 +254,24 @@ function StorageComponent() {
             <Button
               variant="ghost"
               className="group"
-              onClick={() =>
+              onClick={() => {
                 column.toggleSorting(
                   column.getIsSorted() ? column.getIsSorted() === 'asc' : true,
-                )
-              }
+                );
+              }}
             >
               Created At
               {column.getIsSorted() === 'asc' ? (
                 <ChevronUp
                   className={cn(
-                    'invisible ml-2 h-4 w-4 group-hover:visible',
+                    'invisible ml-2 size-4 group-hover:visible',
                     column.getIsSorted() && 'visible',
                   )}
                 />
               ) : (
                 <ChevronDown
                   className={cn(
-                    'invisible ml-2 h-4 w-4 group-hover:visible',
+                    'invisible ml-2 size-4 group-hover:visible',
                     column.getIsSorted() && 'visible',
                   )}
                 />
@@ -272,13 +279,13 @@ function StorageComponent() {
             </Button>
           ),
           cell: ({ getValue }) => {
-            const value = getValue?.();
+            const value = getValue();
             return (
               <>
                 <p className="mb-[3px] leading-none">
                   {format(value, 'MM-dd-yyyy')}
                 </p>
-                <p className="leading-none text-muted-foreground">
+                <p className="text-muted-foreground leading-none">
                   {format(value, 'h:mm:ss a')}
                 </p>
               </>
@@ -295,21 +302,24 @@ function StorageComponent() {
           },
           cell: ({ row }) => (
             <>
-              <Button asChild variant="ghost" className="h-8 w-8 p-0">
+              <Button asChild variant="ghost" className="size-8 p-0">
                 <a
                   target="_blank"
                   href={`${import.meta.env.VITE_BACKEND_URL ?? ''}/api/storage/get/${row.original.id}/${row.original.name}?projectId=${client.projectId}`}
+                  rel="noreferrer"
                 >
-                  <ExternalLink className="h-4 w-4" />
+                  <ExternalLink className="size-4" />
                 </a>
               </Button>
 
               <Button
                 variant="ghost"
-                className="h-8 w-8 p-0"
-                onClick={() => mutate(row.original.id)}
+                className="size-8 p-0"
+                onClick={() => {
+                  mutate(row.original.id);
+                }}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="size-4" />
               </Button>
             </>
           ),
@@ -320,7 +330,7 @@ function StorageComponent() {
 
   return (
     <div className="px-60 py-7 2xl:px-96">
-      <Tabs defaultValue="files" className="w-full">
+      <Tabs className="w-full" defaultValue="files">
         <div className="flex w-full justify-between">
           <TabsList>
             <TabsTrigger value="files">Files</TabsTrigger>
@@ -352,9 +362,9 @@ function StorageComponent() {
                   type="submit"
                   onClick={() => {
                     const formData = new FormData();
-                    acceptedFiles.forEach((file) =>
-                      formData.append('files[]', file),
-                    );
+                    for (const file of acceptedFiles) {
+                      formData.append('files[]', file);
+                    }
 
                     void (async () => {
                       await client.json({
@@ -374,7 +384,7 @@ function StorageComponent() {
         </div>
 
         <TabsContent value="files">
-          <DataTable columns={columns} data={storage} />
+          <DataTable data={storage} columns={columns} />
         </TabsContent>
         <TabsContent value="usage">Usage statistics.</TabsContent>
       </Tabs>

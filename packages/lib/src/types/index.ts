@@ -3,23 +3,23 @@ export * from './table';
 type Options = Omit<RequestInit, 'body'>;
 
 export interface Request {
-  method: 'GET' | 'DELETE' | 'POST' | 'PATCH' | 'PUT';
   path: string;
   body?: BodyInit;
   options?: Options;
   projectIdNeeded?: boolean;
+  method: 'GET' | 'DELETE' | 'POST' | 'PATCH' | 'PUT';
 }
 
 export interface User {
   id: string;
-  firstName: string;
-  lastName: string;
   email: string;
-  username: string;
-  verified: boolean;
   banned: boolean;
   createdAt: Date;
+  lastName: string;
+  username: string;
   updatedAt?: Date;
+  firstName: string;
+  verified: boolean;
 }
 
 export type AndNullable<T> = {

@@ -33,16 +33,16 @@ import {
 } from '~/components';
 import { useCreateTeamMutation } from '~/hooks';
 import { cn } from '~/lib';
-import { Team } from '~/types';
+import type { Team } from '~/types';
 
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Name is required' }),
 });
 
-export const TeamCombobox: React.FC<{ teams: Team[]; teamId: string }> = ({
-  teams,
-  teamId,
-}) => {
+export const TeamCombobox: React.FC<{
+  teams: Team[];
+  teamId: string;
+}> = ({ teams, teamId }) => {
   const [open, setOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [value, setValue] = useState(
@@ -50,6 +50,7 @@ export const TeamCombobox: React.FC<{ teams: Team[]; teamId: string }> = ({
   );
 
   const team = useMemo(
+    // biome-ignore lint/style/noNonNullAssertion: there will always be a default team
     () => teams.find((team) => team.name.toLowerCase() === value)!,
     [teams, value],
   );
@@ -66,9 +67,9 @@ export const TeamCombobox: React.FC<{ teams: Team[]; teamId: string }> = ({
   return (
     <div className="flex flex-row items-center">
       <Link
-        to="/dashboard/teams/$teamId"
         params={{ teamId: team.id }}
         className="mr-1 font-medium"
+        to="/dashboard/teams/$teamId"
       >
         {teams.find((team) => team.name.toLowerCase() === value)?.name}
       </Link>
@@ -77,18 +78,18 @@ export const TeamCombobox: React.FC<{ teams: Team[]; teamId: string }> = ({
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
-              variant="outline"
               role="combobox"
+              variant="outline"
               aria-expanded={open}
               className="border-0 px-2"
             >
-              <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+              <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-[250px] p-0"
             align="end"
             alignOffset={-65}
+            className="w-[250px] p-0"
           >
             <Command>
               <CommandInput placeholder="Search teams..." />
@@ -99,8 +100,8 @@ export const TeamCombobox: React.FC<{ teams: Team[]; teamId: string }> = ({
                   {teams.map((team) => (
                     <Link
                       key={team.id}
-                      to="/dashboard/teams/$teamId"
                       params={{ teamId: team.id }}
+                      to="/dashboard/teams/$teamId"
                     >
                       <CommandItem
                         value={team.name}
@@ -111,7 +112,7 @@ export const TeamCombobox: React.FC<{ teams: Team[]; teamId: string }> = ({
                       >
                         <Check
                           className={cn(
-                            'mr-2 h-4 w-4',
+                            'mr-2 size-4',
                             value === team.name.toLowerCase()
                               ? 'opacity-100'
                               : 'opacity-0',
@@ -128,10 +129,12 @@ export const TeamCombobox: React.FC<{ teams: Team[]; teamId: string }> = ({
                 <CommandGroup>
                   <DialogTrigger className="w-full">
                     <CommandItem
-                      onSelect={() => setOpen(false)}
                       onClick={() => undefined}
+                      onSelect={() => {
+                        setOpen(false);
+                      }}
                     >
-                      <PlusCircle className="mr-2 h-4 w-4" /> Create new team
+                      <PlusCircle className="mr-2 size-4" /> Create new team
                     </CommandItem>
                   </DialogTrigger>
                 </CommandGroup>
@@ -156,8 +159,8 @@ export const TeamCombobox: React.FC<{ teams: Team[]; teamId: string }> = ({
             >
               <div className="space-y-5">
                 <FormField
-                  control={form.control}
                   name="name"
+                  control={form.control}
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Name</FormLabel>

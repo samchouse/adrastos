@@ -1,33 +1,35 @@
-import { Field, FieldCrud } from '../../types';
+import type { Field, FieldCrud } from '../../types';
 import { merge } from '../../util';
 import { BaseModule } from '../util';
-import { Table, TFWithModifiers, TInfer } from './fields';
+/* eslint-disable @stylistic/max-len */
+import {
+  type BaseData,
+  type Row,
+  TFWithModifiers,
+  type TInfer,
+  Table,
+} from './fields';
 
-export { table, Table, TFWithModifiers, TInfer, TField } from './fields';
+export { Row, TFWithModifiers, TField, TInfer, Table, table } from './fields';
 
 export interface CustomTable {
   id: string;
   name: string;
   fields: Field[];
+  createdAt: string;
+  updatedAt: string;
   permissions: {
     view: string | null;
     create: string | null;
     update: string | null;
     delete: string | null;
   };
-  createdAt: string;
-  updatedAt: string;
 }
 
-interface BaseData {
-  id: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface UnknownData
-  extends BaseData,
-    Record<string, string | number | boolean | string[] | Date | undefined> {}
+type TableName<T> = T extends Table<infer U> ? U : string;
+type OptionalTableData<T extends Row | Table> = Partial<
+  T extends Table ? TInfer<T> : T
+>;
 
 export class TablesModule extends BaseModule {
   public async list() {
@@ -39,11 +41,7 @@ export class TablesModule extends BaseModule {
   }
 
   public async create<T>(
-    table: T extends Table<infer _, string>
-      ? T
-      : ReturnType<
-          Table<Record<string, TFWithModifiers>, string>['requestBody']
-        >,
+    table: T extends Table ? T : ReturnType<Table['requestBody']>,
   ) {
     return this.client.json<CustomTable>({
       path: '/tables/create',
@@ -56,7 +54,7 @@ export class TablesModule extends BaseModule {
   }
 
   public async update<T>(
-    name: T extends Table<infer _, infer U> ? U : string,
+    name: TableName<T>,
     body: {
       name?: string;
       fields?: FieldCrud[];
@@ -76,7 +74,7 @@ export class TablesModule extends BaseModule {
     });
   }
 
-  public async delete<T>(name: T extends Table<infer _, infer U> ? U : string) {
+  public async delete<T>(name: TableName<T>) {
     return this.client.json({
       path: `/tables/delete/${name}`,
       method: 'DELETE',
@@ -84,42 +82,39 @@ export class TablesModule extends BaseModule {
     });
   }
 
-  public async get<T, U extends boolean>(
-    name: T extends Table<infer _, infer U> ? U : string,
-    one: U = true as U,
-    options?: U extends true
-      ? {
-          match?: T extends Table<infer _, string>
-            ? Partial<TInfer<T>>
-            : Partial<BaseData>;
-        }
-      : {
-          one: false;
-          page?: number;
-          limit?: number;
-        } & {
-          match?: T extends Table<infer _, string>
-            ? Partial<TInfer<T>>
-            : Partial<BaseData>;
-        },
+  public async getOne<T extends Row | Table = Row>(
+    name: TableName<T>,
+    id: string,
   ) {
-    return this.client.json<
-      T extends Table<infer _, string>
-        ? TInfer<T>
-        : U extends true
-          ? UnknownData
-          : {
-              rows: UnknownData[];
-              pagination: { records: number; pages: number };
-            }
-    >({
+    return this.client.json<T extends Table ? TInfer<T> : T>({
+      path: `/tables/${name}/rows/${id}`,
+      method: 'GET',
+      projectIdNeeded: true,
+    });
+  }
+
+  public async get<T extends Row | Table>(
+    name: TableName<T>,
+    options: {
+      page?: number;
+      limit?: number;
+      match?: OptionalTableData<T>;
+    },
+  ) {
+    return this.client.json<{
+      rows: (T extends Table ? TInfer<T> : T)[];
+      pagination: {
+        records: number;
+        pages: number;
+      };
+    }>({
       path: merge(
-        one === true ? `/tables/${name}/row` : `/tables/${name}/rows`,
-        options?.match &&
+        `/tables/${name}/rows`,
+        options.match &&
           `?${Object.entries<
             string | number | boolean | string[] | Date | undefined
           >(options.match)
-            .map(([k, v]) => `${k}=${v?.toString()}`)
+            .map(([k, v]) => `${k}=${v?.toString() ?? ''}`)
             .join('&')}`,
       ),
       method: 'GET',
@@ -127,11 +122,11 @@ export class TablesModule extends BaseModule {
     });
   }
 
-  public async createRow<T>(
-    table: T extends Table<infer _, infer U> ? U : string,
-    data: T extends Table<infer _, string>
+  public async createRow<T extends Row | Table = Row>(
+    table: TableName<T>,
+    data: T extends Table
       ? TInfer<T>
-      : Omit<UnknownData, keyof BaseData> & Partial<BaseData>,
+      : Omit<T, keyof BaseData> & Partial<BaseData>,
   ) {
     return this.client.json<Required<typeof data>>({
       path: `/tables/${table}/create`,
@@ -141,14 +136,10 @@ export class TablesModule extends BaseModule {
     });
   }
 
-  public async updateRow<T>(
-    table: T extends Table<infer _, infer U> ? U : string,
-    match: T extends Table<infer _, string>
-      ? Partial<TInfer<T>>
-      : Partial<BaseData>,
-    data: T extends Table<infer _, string>
-      ? Partial<TInfer<T>>
-      : Partial<UnknownData>,
+  public async updateRow<T extends Row | Table = Row>(
+    table: TableName<T>,
+    match: OptionalTableData<T>,
+    data: OptionalTableData<T>,
   ) {
     return this.client.json<Required<typeof data>>({
       path: merge(
@@ -156,7 +147,7 @@ export class TablesModule extends BaseModule {
         Object.entries<string | number | boolean | string[] | Date | undefined>(
           match,
         )
-          .map(([k, v]) => `${k}=${v?.toString()}`)
+          .map(([k, v]) => `${k}=${v?.toString() ?? ''}`)
           .join('&'),
       ),
       method: 'PATCH',
@@ -165,11 +156,9 @@ export class TablesModule extends BaseModule {
     });
   }
 
-  public async deleteRow<T>(
-    table: T extends Table<infer _, infer U> ? U : string,
-    match: T extends Table<infer _, string>
-      ? Partial<TInfer<T>>
-      : Partial<BaseData>,
+  public async deleteRow<T extends Row | Table = Row>(
+    table: TableName<T>,
+    match: OptionalTableData<T>,
   ) {
     return this.client.json({
       path: merge(
@@ -177,7 +166,7 @@ export class TablesModule extends BaseModule {
         Object.entries<string | number | boolean | string[] | Date | undefined>(
           match,
         )
-          .map(([k, v]) => `${k}=${v?.toString()}`)
+          .map(([k, v]) => `${k}=${v?.toString() ?? ''}`)
           .join('&'),
       ),
       method: 'DELETE',
@@ -185,3 +174,8 @@ export class TablesModule extends BaseModule {
     });
   }
 }
+
+const a = new TablesModule();
+
+const b = a.get('asds');
+void b.then((d) => d.rows[0].asd);

@@ -11,7 +11,7 @@ pub struct UploadMetadata {
     pub id: String,
     #[adrastos(find)]
     pub name: String,
-    // #[adrastos(relation = User)] // TODO(@Xenfo): undo this
+    // #[adrastos(relation = User)] // TODO(@samchouse): undo this
     pub user_id: String,
     pub created_at: DateTime<Utc>,
 }

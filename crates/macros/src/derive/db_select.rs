@@ -220,7 +220,7 @@ pub fn db_select(item: TokenStream) -> TokenStream {
             pub async fn all(&mut self, db: &deadpool_postgres::Pool) -> Result<Vec<#ident>, crate::error::Error> {
                 self.query_builder.reset_limit();
 
-                // TODO(@Xenfo): add pagination, etc.
+                // TODO(@samchouse): add pagination, etc.
                 Ok(self
                     .finish(db)
                     .await?

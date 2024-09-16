@@ -1,13 +1,13 @@
-import { ResponseError } from '@adrastos/lib';
+import type { ResponseError } from '@adrastos/lib';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   SiDiscord,
   SiFacebook,
   SiGithub,
   SiGoogle,
-  SiTwitter,
+  SiX,
 } from '@icons-pack/react-simple-icons';
-import { startRegistration, WebAuthnError } from '@simplewebauthn/browser';
+import { type WebAuthnError, startRegistration } from '@simplewebauthn/browser';
 import { useSuspenseQueries } from '@tanstack/react-query';
 import { createFileRoute, useRouterState } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
@@ -78,11 +78,11 @@ export const Route = createFileRoute('/dashboard/profile')({
 });
 
 const providerIcons = {
-  google: <SiGoogle className="h-4 w-4" />,
-  facebook: <SiFacebook className="h-4 w-4" />,
-  github: <SiGithub className="h-4 w-4" />,
-  twitter: <SiTwitter className="h-4 w-4" />,
-  discord: <SiDiscord className="h-4 w-4" />,
+  google: <SiGoogle className="size-4" />,
+  facebook: <SiFacebook className="size-4" />,
+  github: <SiGithub className="size-4" />,
+  twitter: <SiX className="size-4" />,
+  discord: <SiDiscord className="size-4" />,
 };
 
 const formSchema = z.object({
@@ -120,15 +120,18 @@ const EditPasskeyDialog: React.FC<{
           <form
             onSubmit={(e) =>
               void form.handleSubmit(async (values) => {
-                await mutateAsync({ id: passkey.id, body: values });
+                await mutateAsync({
+                  id: passkey.id,
+                  body: values,
+                });
                 onOpenChange?.(false);
               })(e)
             }
           >
             <div className="space-y-5">
               <FormField
-                control={form.control}
                 name="name"
+                control={form.control}
                 render={({ field }) => (
                   <FormItem className="w-full">
                     <FormLabel>Name</FormLabel>
@@ -219,6 +222,7 @@ function ProfileComponent() {
                 void form.handleSubmit(async (values) => {
                   await registerFinishPasskeyMutateAsync({
                     ...values,
+                    // biome-ignore lint/style/noNonNullAssertion: should revisit this
                     passkey: passkey!,
                   });
 
@@ -232,8 +236,8 @@ function ProfileComponent() {
             >
               <div className="space-y-5">
                 <FormField
-                  control={form.control}
                   name="name"
+                  control={form.control}
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Name</FormLabel>
@@ -257,7 +261,7 @@ function ProfileComponent() {
 
       <main className="h-full overflow-y-auto bg-background">
         <div className="flex flex-col gap-y-5 p-5">
-          {!user?.verified && (
+          {!user.verified && (
             <Alert
               variant="default"
               className="flex flex-row items-center justify-between"
@@ -271,10 +275,12 @@ function ProfileComponent() {
 
               <Button
                 variant="outline"
-                onClick={() => mutate()}
                 disabled={isPending}
+                onClick={() => {
+                  mutate();
+                }}
               >
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
                 Resend verification
               </Button>
             </Alert>
@@ -315,7 +321,7 @@ function ProfileComponent() {
                   })();
                 }}
               >
-                <Plus className="mr-2 h-4 w-4" /> Add a passkey
+                <Plus className="mr-2 size-4" /> Add a passkey
               </Button>
             </CardHeader>
 
@@ -347,9 +353,9 @@ function ProfileComponent() {
                                     <DropdownMenuTrigger asChild>
                                       <Button
                                         variant="ghost"
-                                        className="h-8 w-8 p-0"
+                                        className="size-8 p-0"
                                       >
-                                        <MoreHorizontal className="h-4 w-4 text-white" />
+                                        <MoreHorizontal className="size-4 text-white" />
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent
@@ -358,17 +364,17 @@ function ProfileComponent() {
                                     >
                                       <mdb.Trigger value="edit">
                                         <DropdownMenuItem>
-                                          <Pencil className="mr-2 h-4 w-4" />{' '}
+                                          <Pencil className="mr-2 size-4" />{' '}
                                           Edit
                                         </DropdownMenuItem>
                                       </mdb.Trigger>
 
                                       <DropdownMenuItem
-                                        onClick={() =>
-                                          deletePasskeyMutate(passkey.id)
-                                        }
+                                        onClick={() => {
+                                          deletePasskeyMutate(passkey.id);
+                                        }}
                                       >
-                                        <Trash2 className="mr-2 h-4 w-4" />{' '}
+                                        <Trash2 className="mr-2 size-4" />{' '}
                                         Delete
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -377,8 +383,8 @@ function ProfileComponent() {
                                   <mdb.Container value="edit">
                                     {({ open, onOpenChange }) => (
                                       <EditPasskeyDialog
-                                        passkey={passkey}
                                         open={open}
+                                        passkey={passkey}
                                         onOpenChange={onOpenChange}
                                       />
                                     )}
@@ -408,8 +414,8 @@ function ProfileComponent() {
               <div className="grid w-full grid-cols-5 gap-2">
                 {providers.map((provider) => (
                   <Button
-                    key={provider}
                     asChild
+                    key={provider}
                     variant="outline"
                     className="w-full"
                   >
